@@ -1,0 +1,4 @@
+notifications:
+  # Disable Graph for integration tests so the logging fallback is used.
+  graph:
+    enabled: false

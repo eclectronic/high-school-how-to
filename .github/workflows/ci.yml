@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: ci
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (Gradle)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Build
+        run: ./gradlew clean build
+
+  frontend:
+    name: Frontend (Angular)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            frontend/pnpm-lock.yaml
+            frontend/yarn.lock
+
+      - name: Detect lockfile
+        id: detect_lockfile
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "has_npm_lock=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_npm_lock=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies (npm)
+        if: ${{ steps.detect_lockfile.outputs.has_npm_lock == 'true' }}
+        run: npm ci
+
+      - name: Install dependencies (no lockfile fallback)
+        if: ${{ steps.detect_lockfile.outputs.has_npm_lock != 'true' }}
+        run: npm install
+
+      - name: Test (if configured)
+        run: npm run test --if-present -- --watch=false --browsers=ChromeHeadless
+
+      - name: Build (if configured)
+        run: npm run build --if-present -- --configuration production

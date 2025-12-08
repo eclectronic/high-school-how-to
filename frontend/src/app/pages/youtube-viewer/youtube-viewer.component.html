@@ -1,0 +1,23 @@
+<section class="video-viewer" *ngIf="video && embedUrl">
+  <button type="button" class="video-viewer__back" (click)="handleBack(video.slug)">
+    Back to videos
+  </button>
+
+  <div class="video-viewer__card" (click)="handleBack(video.slug)">
+    <div class="video-viewer__info">
+      <p class="video-viewer__eyebrow">Video</p>
+      <h1>{{ video.title }}</h1>
+      <p class="video-viewer__description" *ngIf="video.description">{{ video.description }}</p>
+    </div>
+
+    <div class="video-viewer__frame">
+      <iframe
+        [src]="embedUrl"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        [title]="video.title"
+      ></iframe>
+    </div>
+  </div>
+</section>

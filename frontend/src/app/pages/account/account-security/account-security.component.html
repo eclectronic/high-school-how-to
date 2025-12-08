@@ -1,0 +1,58 @@
+<section class="account-security auth-form">
+  <h2>Account security</h2>
+  <p class="auth-form__intro">Change your password to keep your account locked down.</p>
+
+  <div *ngIf="error()" class="auth-alert auth-alert--error" role="status">
+    {{ error() }}
+  </div>
+
+  <div *ngIf="success()" class="auth-alert auth-alert--success" role="status">
+    {{ success() }}
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <label class="form-field">
+      <span>Current password</span>
+      <input
+        type="password"
+        formControlName="currentPassword"
+        autocomplete="current-password"
+        required
+        [class.form-field__input--invalid]="
+          form.controls.currentPassword.invalid && form.controls.currentPassword.touched
+        "
+      />
+      <small *ngIf="form.controls.currentPassword.invalid && form.controls.currentPassword.touched">
+        Enter your current password.
+      </small>
+    </label>
+
+    <label class="form-field">
+      <span>New password</span>
+      <input
+        type="password"
+        formControlName="newPassword"
+        autocomplete="new-password"
+        required
+        [class.form-field__input--invalid]="form.controls.newPassword.invalid && form.controls.newPassword.touched"
+      />
+      <small>At least 12 characters with upper/lowercase, number, and symbol.</small>
+    </label>
+
+    <label class="form-field">
+      <span>Confirm new password</span>
+      <input
+        type="password"
+        formControlName="confirmPassword"
+        autocomplete="new-password"
+        required
+        [class.form-field__input--invalid]="passwordsDoNotMatch()"
+      />
+      <small *ngIf="passwordsDoNotMatch()">Passwords must match.</small>
+    </label>
+
+    <button type="submit" class="auth-button" [disabled]="loading()">
+      {{ loading() ? 'Updating…' : 'Update password' }}
+    </button>
+  </form>
+</section>

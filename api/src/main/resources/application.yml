@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: highschoolhowto-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/highschoolhowto
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+auth:
+  jwt:
+    issuer: highschoolhowto-api
+    access-token-ttl: PT15M
+    refresh-token-ttl: P7D
+    verification-token-ttl: PT24H
+    reset-token-ttl: PT15M
+    private-key-path: classpath:keys/dev-private.pem
+    public-key-path: classpath:keys/dev-public.pem
+  links:
+    verification: http://localhost:8080/api/auth/verify-email
+    reset: http://localhost:4200/reset-password
+
+notifications:
+  test:
+    enabled: false
+  graph:
+    enabled: true
+    from-address: admin@highschoolhowto.com

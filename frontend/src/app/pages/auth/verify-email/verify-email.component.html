@@ -1,0 +1,22 @@
+<section class="auth-form">
+  <h2>Email verification</h2>
+  <div
+    class="auth-alert"
+    [ngClass]="{
+      'auth-alert--success': status() === 'success',
+      'auth-alert--error': status() === 'error'
+    }"
+    role="status"
+  >
+    {{ message() }}
+  </div>
+
+  <div class="auth-form__links" *ngIf="status() === 'success'">
+    <a routerLink="/auth/login">Continue to login</a>
+  </div>
+
+  <div class="auth-form__links" *ngIf="status() === 'error'">
+    <a routerLink="/auth/signup">Need another link? Sign up again</a>
+    <a routerLink="/auth/login">Back to login</a>
+  </div>
+</section>

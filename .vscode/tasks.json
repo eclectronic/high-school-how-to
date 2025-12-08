@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Gradle: integTest (Spock)",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "integTest"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/api"
+            },
+            "group": "test",
+            "problemMatcher": [],
+            "detail": "Runs the Spock-based integration suite via Gradle's integTest task."
+        },
+        {
+            "label": "Gradle: test (Spock/unit)",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": [
+                "test"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/api"
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": [],
+            "detail": "Runs the default Gradle test task, including Spock unit specs."
+        }
+    ]
+}

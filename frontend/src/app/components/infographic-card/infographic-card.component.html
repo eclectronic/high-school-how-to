@@ -1,0 +1,16 @@
+<button
+  type="button"
+  class="infographic-card"
+  [class.infographic-card--active]="active"
+  (click)="select.emit()"
+  [attr.aria-label]="title"
+>
+  <div class="infographic-card__thumb">
+    <img [src]="image" [alt]="title" loading="lazy" />
+  </div>
+
+  <div class="infographic-card__body">
+    <h3 class="infographic-card__title">{{ title }}</h3>
+    <p class="infographic-card__description" *ngIf="description">{{ description }}</p>
+  </div>
+</button>

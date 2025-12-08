@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bulletin Board Tile Demo</title>
+    <style>
+      :root {
+        font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+        color: #2c1206;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background-image: url("./design/bulletin_board.tile.png");
+        background-size: 256px 256px;
+        background-repeat: repeat;
+      }
+
+      body[data-tile="256"] {
+        background-image: url("./design/bulletin_board.tile.png");
+        background-size: 256px 256px;
+      }
+
+      body[data-tile="128"] {
+        background-image: url("./design/bulletin_board.tile.128.png");
+        background-size: 128px 128px;
+      }
+
+      body[data-tile="64"] {
+        background-image: url("./design/bulletin_board.tile.64.png");
+        background-size: 64px 64px;
+      }
+
+      body[data-tile="100-tl"] {
+        background-image: url("./design/bulletin_board.tile.100.tl.png");
+        background-size: 100px 100px;
+      }
+
+      body[data-tile="100-tr"] {
+        background-image: url("./design/bulletin_board.tile.100.tr.png");
+        background-size: 100px 100px;
+      }
+
+      body[data-tile="100-center"] {
+        background-image: url("./design/bulletin_board.tile.100.center.png");
+        background-size: 100px 100px;
+      }
+
+      body[data-tile="100-bl"] {
+        background-image: url("./design/bulletin_board.tile.100.bl.png");
+        background-size: 100px 100px;
+      }
+
+      body[data-tile="100-br"] {
+        background-image: url("./design/bulletin_board.tile.100.br.png");
+        background-size: 100px 100px;
+      }
+
+      body[data-tile="100-midleft"] {
+        background-image: url("./design/bulletin_board.tile.100.midleft.png");
+        background-size: 100px 100px;
+      }
+
+      body[data-tile="100-midright"] {
+        background-image: url("./design/bulletin_board.tile.100.midright.png");
+        background-size: 100px 100px;
+      }
+
+      .card {
+        background-color: rgba(255, 255, 255, 0.85);
+        padding: 2rem 3rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.35);
+        max-width: 420px;
+      }
+
+      .card h1 {
+        margin-top: 0;
+        font-size: 2rem;
+      }
+
+      .card p {
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
+      }
+
+      .picker {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        text-align: left;
+      }
+
+      .picker label {
+        font-weight: 600;
+      }
+
+      select {
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.4rem;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        font: inherit;
+      }
+    </style>
+  </head>
+  <body data-tile="256">
+    <div class="card">
+      <h1>Tiled Cork Texture</h1>
+      <p>
+        The background behind this note repeats <code>design/bulletin_board.tile.png</code>.
+        Drop this CSS into your Angular styles to tile the cork texture anywhere.
+      </p>
+      <div class="picker">
+        <label for="tile-picker">Tile selection</label>
+        <select id="tile-picker">
+          <option value="256" selected>256px (original crop)</option>
+          <option value="128">128px</option>
+          <option value="64">64px</option>
+          <option value="100-center">100px center</option>
+          <option value="100-tl">100px top-left</option>
+          <option value="100-tr">100px top-right</option>
+          <option value="100-bl">100px bottom-left</option>
+          <option value="100-br">100px bottom-right</option>
+          <option value="100-midleft">100px mid-left</option>
+          <option value="100-midright">100px mid-right</option>
+        </select>
+      </div>
+    </div>
+
+    <script>
+      const picker = document.getElementById("tile-picker");
+      picker.addEventListener("change", () => {
+        document.body.dataset.tile = picker.value;
+      });
+    </script>
+  </body>
+</html>

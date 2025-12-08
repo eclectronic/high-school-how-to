@@ -1,0 +1,94 @@
+.infographic-card {
+  border: none;
+  background: none;
+  padding: 0;
+  border-radius: 1.75rem;
+  border: 2px solid rgba(45, 26, 16, 0.2);
+  background: #fffef8;
+  box-shadow: 0 20px 35px rgba(45, 26, 16, 0.18);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 260px;
+  min-height: 260px;
+   scroll-margin-top: 100px;
+  color: inherit;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 26px 40px rgba(45, 26, 16, 0.25);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(255, 159, 191, 0.5);
+    outline-offset: 4px;
+  }
+}
+
+.infographic-card--active {
+  border-color: rgba(255, 159, 191, 0.6);
+  box-shadow: 0 26px 40px rgba(255, 159, 191, 0.25);
+}
+
+.infographic-card__thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-bottom: 1px dashed rgba(45, 26, 16, 0.2);
+  background: #fff;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    left: 20%;
+    width: 80px;
+    height: 16px;
+    background: rgba(255, 247, 173, 0.9);
+    border: 1px dashed rgba(45, 26, 16, 0.2);
+    border-radius: 0.5rem;
+    box-shadow: 0 5px 8px rgba(45, 26, 16, 0.2);
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: -14px;
+    right: 15%;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(89, 165, 245, 0.9);
+    box-shadow: 0 3px 6px rgba(45, 26, 16, 0.2);
+  }
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.infographic-card__body {
+  padding: 1.25rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.infographic-card__title {
+  margin: 0;
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.infographic-card__description {
+  margin: 0;
+  color: rgba(45, 26, 16, 0.85);
+  line-height: 1.45;
+  font-size: 0.95rem;
+}

@@ -1,0 +1,11 @@
+<button type="button" class="youtube-card" [class.youtube-card--active]="active" (click)="select.emit()">
+  <div class="youtube-card__thumb">
+    <img *ngIf="thumbnailUrl" [src]="thumbnailUrl" [alt]="title || 'High School How To video'" loading="lazy" />
+    <span class="youtube-card__play" aria-hidden="true"></span>
+  </div>
+
+  <div class="youtube-card__body">
+    <h3 class="youtube-card__title" *ngIf="title">{{ title }}</h3>
+    <p class="youtube-card__description" *ngIf="description">{{ description }}</p>
+  </div>
+</button>

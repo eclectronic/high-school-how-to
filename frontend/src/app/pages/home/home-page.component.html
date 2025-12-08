@@ -1,0 +1,133 @@
+<section class="home">
+  <header class="home__top-bar">
+    <div class="home__hero-intro">
+      <figure class="home__logo-card">
+        <span class="home__card-tape" aria-hidden="true"></span>
+        <img src="/assets/images/home-logo.png" alt="High School How To illustrated logo" loading="lazy" />
+      </figure>
+
+      <div class="home__note-card" aria-label="High School How To mission statement">
+        <span class="home__note-card-tape" aria-hidden="true"></span>
+        <div class="note-card note-card--wide">
+          <p class="note-card__copy">
+            <span class="note-card__line">
+              Helping you navigate, organize, and lock in for school.
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="home__actions">
+      <button type="button" class="home__auth-btn" (click)="handleAuthCta()">
+        {{ isAuthenticated() ? 'Go to your dashboard' : 'Log in / Sign Up' }}
+      </button>
+
+      <figure class="home__socials" aria-label="Follow High School How To on social media">
+        <img src="/assets/images/home-socials.png" alt="" aria-hidden="true" loading="lazy" />
+        <a
+          class="home__social-link home__social-link--instagram"
+          href="https://www.instagram.com/highschoolhowto"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Instagram"
+        ></a>
+        <a
+          class="home__social-link home__social-link--tiktok"
+          href="https://www.tiktok.com/@HighSchoolHowTo"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="TikTok"
+        ></a>
+        <a
+          class="home__social-link home__social-link--youtube"
+          href="https://www.youtube.com/@HighSchool-HowTo"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="YouTube"
+        ></a>
+      </figure>
+    </div>
+  </header>
+
+  <section class="embedded-content" aria-label="High School How To video walkthroughs">
+    <div class="embedded-content__intro">
+      <div class="embedded-content__label">
+        <span class="embedded-content__label-pin" aria-hidden="true"></span>
+        <h2>Watch & Learn</h2>
+        <p>How-to videos from @HighSchool-HowTo.</p>
+      </div>
+    </div>
+
+    <div
+      class="featured-video"
+      *ngIf="featuredVideoEmbed"
+      (pointerdown)="handleVideoPointerStart($event)"
+      (pointerup)="handleVideoPointerEnd($event)"
+    >
+      <div class="featured-video__frame">
+        <div class="featured-video__player">
+          <iframe
+            [src]="featuredVideoEmbed"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+            [title]="featuredVideo.title"
+          ></iframe>
+        </div>
+      </div>
+      <div class="featured-video__nav" aria-label="Video navigation">
+        <button type="button" class="carousel-btn" (click)="stepVideo(-1)" aria-label="Previous video">
+          ‹
+        </button>
+        <button type="button" class="carousel-btn" (click)="stepVideo(1)" aria-label="Next video">
+          ›
+        </button>
+      </div>
+      <div class="featured-video__details">
+        <h3>{{ featuredVideo.title }}</h3>
+        <p>{{ featuredVideo.description }}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="infographics" aria-label="High School How To infographics" id="infographics">
+    <div class="infographics__intro">
+      <div class="infographics__label">
+        <span class="infographics__label-pin" aria-hidden="true"></span>
+        <h2>Infographics</h2>
+        <p>Printable, pin-able tips for everything from style experiments to study balance.</p>
+      </div>
+    </div>
+
+    <div
+      class="featured-infographic"
+      (pointerdown)="handleInfographicPointerStart($event)"
+      (pointerup)="handleInfographicPointerEnd($event)"
+    >
+      <div class="featured-infographic__frame">
+        <button
+          type="button"
+          class="carousel-btn carousel-btn--left"
+          (click)="stepInfographic(-1)"
+          aria-label="Previous infographic"
+        >
+          ‹
+        </button>
+        <img [src]="featuredInfographic.webImage" [alt]="featuredInfographic.title" loading="lazy" />
+        <button
+          type="button"
+          class="carousel-btn carousel-btn--right"
+          (click)="stepInfographic(1)"
+          aria-label="Next infographic"
+        >
+          ›
+        </button>
+      </div>
+      <div class="featured-infographic__details">
+        <h3>{{ featuredInfographic.title }}</h3>
+        <p>{{ featuredInfographic.description }}</p>
+      </div>
+    </div>
+  </section>
+</section>

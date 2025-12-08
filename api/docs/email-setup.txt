@@ -1,0 +1,65 @@
+### Azure App Registration Setup
+
+#### Step 1: Create App Registration
+
+1. **Go to Azure Portal**: https://portal.azure.com
+2. **Navigate to**: App registrations
+3. **Click**: "+ New registration"
+4. **Configure**:
+   - **Name**: `My Big Sister Email App` (or preferred name)
+   - **Supported account types**: "Accounts in this organizational directory only"
+   - **Redirect URI**: Leave blank
+5. **Click**: "Register"
+
+#### Step 2: Get Credentials
+
+From the app **Overview** page, copy these values:
+- **Application (client) ID**
+- **Directory (tenant) ID**
+
+#### Step 3: Create Client Secret
+
+1. **Go to**: "Certificates & secrets"
+2. **Click**: "+ New client secret"
+3. **Description**: `Email Secret`
+4. **Expires**: Select "24 months"
+5. **Click**: "Add"
+6. **⚠️ IMPORTANT**: Copy the secret value immediately (won't be shown again)
+
+#### Step 4: Set API Permissions
+
+1. **Go to**: "API permissions"
+2. **Click**: "+ Add a permission"
+3. **Select**: "Microsoft Graph"
+4. **Choose**: "Application permissions"
+5. **Find and check**: ✅ **Mail.Send**
+6. **Click**: "Add permissions"
+7. **Click**: "Grant admin consent" → "Yes"
+
+### Microsoft Graph (OAuth) mail
+
+1. Ensure the Azure app registration has `Mail.Send` application permission and admin consent (see steps above).
+2. In `application.yml`, set:
+   - `notifications.graph.enabled=true`
+   - `notifications.graph.tenant-id=<directory/tenant id>`
+   - `notifications.graph.client-id=<app registration client id>`
+   - `notifications.graph.client-secret=<client secret>`
+   - `notifications.graph.from-address=<mailbox to send from>`
+3. Enable the dev test endpoint if you want to send manual smoke tests: set `notifications.test.enabled=true`.
+4. Run the API: `./gradlew bootRun`
+5. Send a test email (verification template by default):
+   ```bash
+   curl -X POST http://localhost:8080/api/dev/test-email \
+     -H "Content-Type: application/json" \
+     -d '{"to":"you@example.com","link":"https://example.com/test-link"}'
+   ```
+   For a reset-style email, set `"type":"reset"`.
+
+Shortcut script:
+```bash
+# ensure notifications.test.enabled=true and API is running
+chmod +x ./api/scripts/send-test-email.sh
+TO=you@example.com TYPE=reset LINK=https://example.com/reset \
+  API_BASE=http://localhost:8080 ./api/scripts/send-test-email.sh
+```
+The script also accepts flags: `--to`, `--type`, `--link`, `--api-base`.

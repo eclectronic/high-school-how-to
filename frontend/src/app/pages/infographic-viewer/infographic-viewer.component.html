@@ -1,0 +1,17 @@
+<section class="infographic-viewer" *ngIf="infographic as graphic">
+  <button type="button" class="infographic-viewer__back-btn" (click)="handleBack(graphic.slug)">
+    Back to infographics
+  </button>
+
+  <div class="infographic-viewer__card" (click)="handleBack(graphic.slug)">
+    <div class="infographic-viewer__content">
+      <p class="infographic-viewer__eyebrow">Infographic</p>
+      <h1>{{ graphic.title }}</h1>
+      <p class="infographic-viewer__description" *ngIf="graphic.description">{{ graphic.description }}</p>
+    </div>
+
+    <div class="infographic-viewer__image">
+      <img [src]="graphic.printableImage || graphic.webImage" [alt]="graphic.title" loading="lazy" />
+    </div>
+  </div>
+</section>
