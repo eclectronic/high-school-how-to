@@ -25,10 +25,10 @@ export class HomePageComponent implements OnInit {
   protected featuredVideo: YoutubeVideoResource = youtubeVideos[0];
   protected featuredVideoEmbed?: SafeResourceUrl;
   protected featuredInfographic: InfographicResource = infographics[0];
-  protected readonly isAuthenticated = this.sessionStore.isAuthenticated;
   private readonly sanitizer = inject(DomSanitizer);
   private readonly router = inject(Router);
   private readonly sessionStore = inject(SessionStore);
+  protected readonly isAuthenticated = this.sessionStore.isAuthenticated;
   private videoTouchStart: number | null = null;
   private infographicTouchStart: number | null = null;
 
