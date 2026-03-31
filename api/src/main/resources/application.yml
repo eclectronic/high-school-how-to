@@ -1,10 +1,11 @@
 spring:
   application:
     name: highschoolhowto-backend
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/highschoolhowto
-    username: postgres
-    password: postgres
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
@@ -35,12 +36,12 @@ auth:
     private-key-path: classpath:keys/dev-private.pem
     public-key-path: classpath:keys/dev-public.pem
   links:
-    verification: http://localhost:8080/api/auth/verify-email
-    reset: http://localhost:4200/reset-password
+    verification: https://highschoolhowto.com/api/auth/verify-email
+    verification-redirect: https://highschoolhowto.com/auth/login
+    reset: https://highschoolhowto.com/auth/reset-password
 
 notifications:
-  test:
+  ses:
     enabled: false
-  graph:
-    enabled: true
+    region: us-west-2
     from-address: admin@highschoolhowto.com

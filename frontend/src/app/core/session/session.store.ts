@@ -48,13 +48,20 @@ export class SessionStore {
 
   getAccessToken(): string | null {
     const snapshot = this.state();
-    if (!snapshot.accessToken || this.isExpired(snapshot)) {
-      if (snapshot.accessToken) {
-        this.clearSession();
-      }
+    if (!snapshot.accessToken) {
+      return null;
+    }
+    if (this.isExpired(snapshot)) {
+      // Keep refresh token so we can recover the session via refresh flow.
+      this.state.update(current => ({ ...current, accessToken: null, expiresAt: null }));
+      this.persist(this.state());
       return null;
     }
     return snapshot.accessToken;
+  }
+
+  getRefreshToken(): string | null {
+    return this.state().refreshToken;
   }
 
   private hydrate() {
@@ -69,6 +76,9 @@ export class SessionStore {
       const parsed = JSON.parse(raw) as SessionState;
       if (parsed.accessToken && !this.isExpired(parsed)) {
         this.state.set(parsed);
+      } else if (parsed.refreshToken) {
+        this.state.set({ accessToken: null, refreshToken: parsed.refreshToken, expiresAt: null });
+        this.persist(this.state());
       } else {
         this.clearSession();
       }

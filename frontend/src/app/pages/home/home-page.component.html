@@ -6,21 +6,31 @@
         <img src="/assets/images/home-logo.png" alt="High School How To illustrated logo" loading="lazy" />
       </figure>
 
-      <div class="home__note-card" aria-label="High School How To mission statement">
-        <span class="home__note-card-tape" aria-hidden="true"></span>
-        <div class="note-card note-card--wide">
-          <p class="note-card__copy">
-            <span class="note-card__line">
-              Helping you navigate, organize, and lock in for school.
-            </span>
-          </p>
+      <div class="home__note-stack">
+        <div class="home__note-card" aria-label="High School How To note">
+          <span class="home__note-card-tape" aria-hidden="true"></span>
+          <div class="note-card note-card--wide">
+            <p class="note-card__copy">
+              <span class="note-card__line">
+                Helping you navigate, organize, and lock in for school.
+              </span>
+            </p>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="home__actions">
       <button type="button" class="home__auth-btn" (click)="handleAuthCta()">
-        {{ isAuthenticated() ? 'Go to your dashboard' : 'Log in / Sign Up' }}
+        {{ isAuthenticated() ? 'Focus Board' : 'Log in / Sign Up' }}
+      </button>
+      <button
+        *ngIf="isAuthenticated()"
+        type="button"
+        class="home__logout-btn"
+        (click)="handleLogout()"
+      >
+        Log out
       </button>
 
       <figure class="home__socials" aria-label="Follow High School How To on social media">
@@ -44,9 +54,34 @@
           href="https://www.youtube.com/@HighSchool-HowTo"
           target="_blank"
           rel="noreferrer"
-          aria-label="YouTube"
-        ></a>
+        aria-label="YouTube"
+      ></a>
       </figure>
+    </div>
+
+    <div class="home__mission-card" aria-label="High School How To mission statement">
+      <div class="mission-card">
+        <div class="mission-card__panel mission-card__panel--front" tabindex="0">
+          <span class="mission-card__tape" aria-hidden="true"></span>
+          <div class="mission-card__banner">
+            <span class="mission-card__title">My Mission</span>
+            <span class="mission-card__subtitle">
+              HighSchoolHowTo is a busy student's bulletin board, helping you stay stress-free by keeping things streamlined and convenient.
+            </span>
+            <a class="mission-card__more" href="#mission-details">More...</a>
+          </div>
+        </div>
+
+        <div class="mission-card__panel mission-card__panel--detail">
+          <div class="note-card note-card--wide note-card--mission" id="mission-details">
+            <p class="note-card__mission-copy">
+              <span>You no longer have to open a million apps just to stay organized, because your Focus Board keeps every tool a student needs to stay organized all in one convenient place.</span>
+              <span>You can also pin our infographics, animated videos, and guides that cover everything from academics to fun.</span>
+              <span>High school doesn’t have to be scary - we’re here to help! Sign up today to get started for free.</span>
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 

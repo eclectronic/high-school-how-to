@@ -52,6 +52,17 @@ describe('LoginComponent', () => {
     expect(router.navigateByUrl).toHaveBeenCalledWith('/account/security');
   });
 
+  it('logs in and navigates to home when no returnUrl', async () => {
+    await createComponent();
+
+    authApi.login.and.returnValue(of({ accessToken: 'a', refreshToken: 'r', expiresIn: 10 }));
+
+    component['form'].setValue({ email: 'user@example.com', password: 'secret' });
+    TestBed.runInInjectionContext(() => component['submit']());
+
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/');
+  });
+
   it('shows friendly message on 401', async () => {
     await createComponent();
 

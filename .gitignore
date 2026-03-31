@@ -3,3 +3,7 @@ bin/
 .gradle/
 .venv/
 .vscode/
+.idea/
+/.claude/
+/.gradle/
+app.jar

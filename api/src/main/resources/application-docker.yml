@@ -25,3 +25,15 @@ management:
     web:
       exposure:
         include: health,info
+
+auth:
+  links:
+    verification: http://localhost:8080/api/auth/verify-email
+    verification-redirect: http://localhost:4300/auth/login
+    reset: http://localhost:4200/auth/reset-password
+
+notifications:
+  test:
+    enabled: true
+  graph:
+    enabled: false

@@ -8,22 +8,22 @@ DIST_DIR="${FRONTEND_DIR}/dist/highschoolhowto/browser"
 S3_DEST="s3://highschoolhowto/prod/"
 AWS_REGION="${AWS_REGION:-us-west-2}"
 CLOUDFRONT_DISTRIBUTION_ID="${CLOUDFRONT_DISTRIBUTION_ID:-E1S3AKUQUXDIGC}"
-RUN_BUILD=false
+RUN_BUILD=true
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [--build|-b]
+Usage: $(basename "$0") [--skip-build|-n]
 
 Options:
-  -b, --build     Run 'npm run build -- --configuration production' before deploying.
-  -h, --help      Show this help message.
+  -n, --skip-build   Skip 'npm run build -- --configuration production' before deploying.
+  -h, --help         Show this help message.
 EOF
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -b|--build)
-      RUN_BUILD=true
+    -n|--skip-build)
+      RUN_BUILD=false
       shift
       ;;
     -h|--help)
@@ -51,7 +51,7 @@ fi
 if [[ ! -d "${DIST_DIR}" ]]; then
   cat >&2 <<EOF
 Build output not found at ${DIST_DIR}
-Run with --build or execute 'cd frontend && npm run build -- --configuration production' first.
+Run without --skip-build or execute 'cd frontend && npm run build -- --configuration production' first.
 EOF
   exit 1
 fi

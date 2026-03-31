@@ -16,6 +16,7 @@ import com.highschoolhowto.auth.token.PasswordResetToken;
 import com.highschoolhowto.auth.token.PasswordResetTokenRepository;
 import com.highschoolhowto.auth.token.RefreshToken;
 import com.highschoolhowto.auth.token.RefreshTokenService;
+import com.highschoolhowto.auth.token.RefreshTokenRepository;
 import com.highschoolhowto.config.AuthLinkProperties;
 import com.highschoolhowto.config.JwtProperties;
 import com.highschoolhowto.notification.NotificationService;
@@ -31,6 +32,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -38,6 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -47,6 +52,7 @@ public class AuthService {
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenService refreshTokenService;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final AuditService auditService;
     private final NotificationService notificationService;
     private final AuthLinkProperties linkProperties;
@@ -61,6 +67,7 @@ public class AuthService {
             EmailVerificationTokenRepository emailVerificationTokenRepository,
             PasswordResetTokenRepository passwordResetTokenRepository,
             RefreshTokenService refreshTokenService,
+            RefreshTokenRepository refreshTokenRepository,
             AuditService auditService,
             NotificationService notificationService,
             AuthLinkProperties linkProperties,
@@ -73,6 +80,7 @@ public class AuthService {
         this.emailVerificationTokenRepository = emailVerificationTokenRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.refreshTokenService = refreshTokenService;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.auditService = auditService;
         this.notificationService = notificationService;
         this.linkProperties = linkProperties;
@@ -156,11 +164,35 @@ public class AuthService {
     }
 
     @Transactional
+    public void resendVerification(ForgotPasswordRequest request) {
+        userRepository
+                .findByEmailIgnoreCase(request.email().toLowerCase(Locale.US))
+                .ifPresentOrElse(user -> {
+                    if (user.getStatus() != UserStatus.PENDING_VERIFICATION) {
+                        log.info("Resend verification skipped for user {} (status={})", user.getEmail(), user.getStatus());
+                        return;
+                    }
+                    EmailVerificationToken token = new EmailVerificationToken();
+                    token.setUser(user);
+                    token.setExpiresAt(Instant.now().plus(jwtProperties.getVerificationTokenTtl()));
+                    emailVerificationTokenRepository.save(token);
+                    String jwt = jwtService.generateVerificationToken(user.getId(), token.getId());
+                    String link = appendToken(linkProperties.getVerification(), jwt);
+                    notificationService.sendVerificationEmail(user, link);
+                    auditService.record(AuditEventType.EMAIL_VERIFICATION_TRIGGERED, user, user.getEmail(), "resend");
+                    log.info("Verification email resent for {}", user.getEmail());
+                }, () -> log.info("Resend verification requested for unknown email {}", request.email().toLowerCase(Locale.US)));
+    }
+
+    @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
         userRepository
                 .findByEmailIgnoreCase(request.email().toLowerCase(Locale.US))
-                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
-                .ifPresent(user -> {
+                .ifPresentOrElse(user -> {
+                    if (user.getStatus() != UserStatus.ACTIVE) {
+                        log.info("Password reset skipped for inactive user {}", user.getEmail());
+                        return;
+                    }
                     PasswordResetToken token = new PasswordResetToken();
                     token.setUser(user);
                     token.setExpiresAt(Instant.now().plus(jwtProperties.getResetTokenTtl()));
@@ -169,7 +201,8 @@ public class AuthService {
                     String link = appendToken(linkProperties.getReset(), jwt);
                     notificationService.sendPasswordResetEmail(user, link);
                     auditService.record(AuditEventType.PASSWORD_RESET_REQUESTED, user, user.getEmail(), null);
-                });
+                    log.info("Password reset email dispatched for {}", user.getEmail());
+                }, () -> log.info("Password reset requested for unknown email {}", request.email().toLowerCase(Locale.US)));
     }
 
     @Transactional
@@ -241,6 +274,32 @@ public class AuthService {
         }
         User saved = userRepository.save(user);
         return userMapper.toResponse(saved);
+    }
+
+    @Transactional
+    public AuthenticationResponse refresh(String refreshToken) {
+        RefreshToken token = refreshTokenRepository
+                .findByTokenAndRevokedFalse(refreshToken)
+                .orElseThrow(() -> unauthorized("Invalid refresh token"));
+        if (token.getExpiresAt().isBefore(Instant.now())) {
+            token.setRevoked(true);
+            refreshTokenRepository.save(token);
+            throw unauthorized("Refresh token expired");
+        }
+        User user = token.getUser();
+        if (user.getStatus() != UserStatus.ACTIVE || user.getEmailVerifiedAt() == null) {
+            token.setRevoked(true);
+            refreshTokenRepository.save(token);
+            throw unauthorized("User inactive");
+        }
+        token.setRevoked(true);
+        refreshTokenRepository.save(token);
+
+        String accessToken = jwtService.generateAccessToken(user);
+        RefreshToken newRefresh = refreshTokenService.issue(user);
+        auditService.record(AuditEventType.LOGIN_SUCCESS, user, user.getEmail(), "refresh");
+        long expiresIn = jwtProperties.getAccessTokenTtl().toSeconds();
+        return new AuthenticationResponse(accessToken, newRefresh.getToken(), expiresIn);
     }
 
     private void validatePassword(String password) {

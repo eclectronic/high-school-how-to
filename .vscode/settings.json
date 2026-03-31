@@ -2,5 +2,50 @@
     "java.compile.nullAnalysis.mode": "automatic",
     "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
     "chatgpt.openOnStartup": true,
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "localhost",
+            "database": "highschoolhowto",
+            "username": "postgres",
+            "password": "postgres"
+        },
+        {
+            "pgOptions": {
+                "ssl": {
+                    "rejectUnauthorized": false
+                }
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "highschoolhowto.c388sauoez7e.us-west-2.rds.amazonaws.com",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "aws",
+            "database": "postgres",
+            "username": "postgres",
+            "password": "b4klZDJFtdahsoGMoLva"
+        },
+        {
+            "pgOptions": {
+                "ssl": {
+                    "rejectUnauthorized": false
+                }
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "highschoolhowto.c388sauoez7e.us-west-2.rds.amazonaws.com",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "highschoolhowto",
+            "database": "highschoolhowto",
+            "username": "postgres",
+            "password": "b4klZDJFtdahsoGMoLva"
+        }
+    ]
 }

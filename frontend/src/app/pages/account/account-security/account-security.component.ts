@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -21,6 +21,7 @@ import { AuthApiService } from '../../../core/services/auth-api.service';
 export class AccountSecurityComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authApi = inject(AuthApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -48,7 +49,7 @@ export class AccountSecurityComponent {
         currentPassword: this.form.controls.currentPassword.value,
         newPassword: this.form.controls.newPassword.value
       })
-      .pipe(takeUntilDestroyed(), finalize(() => this.loading.set(false)))
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => {
           this.success.set('Password updated successfully.');

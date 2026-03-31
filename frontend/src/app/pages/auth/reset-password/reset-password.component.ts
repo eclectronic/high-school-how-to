@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -23,6 +23,7 @@ export class ResetPasswordComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authApi = inject(AuthApiService);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -38,7 +39,7 @@ export class ResetPasswordComponent {
   );
 
   constructor() {
-    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       this.token.set(params.get('token'));
     });
   }
@@ -59,7 +60,7 @@ export class ResetPasswordComponent {
         token: this.token()!,
         newPassword: this.form.controls.newPassword.value
       })
-      .pipe(takeUntilDestroyed(), finalize(() => this.loading.set(false)))
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => this.complete.set(true),
         error: () => this.error.set('That link may have expired. Request a new one and try again.')

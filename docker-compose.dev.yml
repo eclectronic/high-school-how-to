@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: db-highschoolhowto
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: highschoolhowto
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d highschoolhowto"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    profiles: ["dev"]
+    image: gradle:8.10-jdk21-alpine
+    working_dir: /workspace/api
+    command: ./gradlew bootRun --no-daemon
+    env_file:
+      - $HOME/docker.env
+    volumes:
+      - ./api:/workspace/api
+      - gradle-cache:/home/gradle/.gradle
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NOTIFICATIONS_TEST_ENABLED: "false"
+      NOTIFICATIONS_GRAPH_ENABLED: "true"
+      NOTIFICATIONS_GRAPH_FROM_ADDRESS: ${NOTIFICATIONS_GRAPH_FROM_ADDRESS:-admin@highschoolhowto.com}
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/highschoolhowto
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      AUTH_LINKS_RESET: http://localhost:4300/auth/reset-password
+
+  frontend:
+    profiles: ["dev"]
+    image: node:20
+    working_dir: /workspace/frontend
+    command: >
+      sh -c "npm install &&
+             npx ng serve --host 0.0.0.0 --port 4200 --poll 500 --proxy-config proxy.conf.json"
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "4300:4200"
+    volumes:
+      - ./frontend:/workspace/frontend
+      - frontend-node-modules:/workspace/frontend/node_modules
+
+volumes:
+  gradle-cache:
+  frontend-node-modules:
+  pgdata:

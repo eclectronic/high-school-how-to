@@ -9,6 +9,7 @@ import { ForgotPasswordComponent } from './pages/auth/forgot-password/forgot-pas
 import { ResetPasswordComponent } from './pages/auth/reset-password/reset-password.component';
 import { VerifyEmailComponent } from './pages/auth/verify-email/verify-email.component';
 import { AccountSecurityComponent } from './pages/account/account-security/account-security.component';
+import { DashboardComponent } from './pages/account/dashboard/dashboard.component';
 import { authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
@@ -32,6 +33,11 @@ export const routes: Routes = [
     path: 'account/security',
     canActivate: [authGuard],
     component: AccountSecurityComponent
+  },
+  {
+    path: 'account/dashboard',
+    canActivate: [authGuard],
+    component: DashboardComponent
   },
   {
     path: 'infographics/:slug',

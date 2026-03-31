@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://highschoolhowto.c388sauoez7e.us-west-2.rds.amazonaws.com:5432/highschoolhowto?sslmode=require
+
+notifications:
+  ses:
+    enabled: true

@@ -41,10 +41,15 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         List<String> publicEndpoints = new ArrayList<>(List.of(
                 "/api/auth/login",
+                "/api/auth/refresh",
                 "/api/auth/register",
                 "/api/auth/verify-email",
+                "/api/auth/resend-verification",
                 "/api/auth/forgot-password",
-                "/api/auth/reset-password"));
+                "/api/auth/reset-password",
+                "/actuator/health",
+                "/actuator/health/**",
+                "/actuator/info"));
         if (testEmailEndpointEnabled) {
             publicEndpoints.add("/api/dev/test-email");
         }

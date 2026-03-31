@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { finalize } from 'rxjs';
+import { TimeoutError, finalize, timeout } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthApiService } from '../../../core/services/auth-api.service';
 
@@ -17,6 +17,7 @@ import { AuthApiService } from '../../../core/services/auth-api.service';
 export class SignupComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authApi = inject(AuthApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -38,7 +39,11 @@ export class SignupComponent {
     this.error.set(null);
     this.authApi
       .register(this.form.getRawValue())
-      .pipe(takeUntilDestroyed(), finalize(() => this.loading.set(false)))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        timeout(15000),
+        finalize(() => this.loading.set(false))
+      )
       .subscribe({
         next: () => {
           this.complete.set(true);
@@ -50,6 +55,9 @@ export class SignupComponent {
   }
 
   private humanizeError(error: unknown): string {
+    if (error instanceof TimeoutError) {
+      return 'Signup is taking too long. Check your connection and try again.';
+    }
     if (error instanceof HttpErrorResponse) {
       if (error.status === 409) {
         return 'That email is already registered. Try logging in.';

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @ConditionalOnProperty(
-        prefix = "notifications.graph",
+        prefix = "notifications.ses",
         name = "enabled",
         havingValue = "false",
         matchIfMissing = true)
@@ -18,11 +18,17 @@ public class LoggingNotificationService implements NotificationService {
 
     @Override
     public void sendVerificationEmail(User user, String verificationLink) {
-        log.info("Sending verification email to {} -> {}", user.getEmail(), verificationLink);
+        log.warn(
+                "DEV MODE: notifications.ses.enabled=false, so no real email sent. Verification link for {} -> {}",
+                user.getEmail(),
+                verificationLink);
     }
 
     @Override
     public void sendPasswordResetEmail(User user, String resetLink) {
-        log.info("Sending password reset email to {} -> {}", user.getEmail(), resetLink);
+        log.warn(
+                "DEV MODE: notifications.ses.enabled=false, so no real email sent. Password reset link for {} -> {}",
+                user.getEmail(),
+                resetLink);
     }
 }

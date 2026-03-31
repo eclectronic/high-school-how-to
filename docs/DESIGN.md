@@ -2,37 +2,6 @@
 
 Use this doc to keep the Canva mockup and design tokens close to the Angular codebase.
 
-## Canva setup
-1. Create/maintain the homepage mockup in Canva.
-2. Share it with a view link that does not require login (Ideally: "Anyone with the link can view"). Paste that link below.
-3. Export design tokens from Canva (colors, fonts, spacing) and note them below. Export any static assets (logos/icons) and place them in `frontend/src/assets/`.
-4. For component specs, keep brief notes/screenshots: layout grid, padding, breakpoints, and reusable components/atoms.
-
-### Canva link
-- Homepage mockup: https://www.canva.com/design/DAG0UAuZQyY/-NNAoiA_u7Yjj0mKq4gTrw/view?utm_content=DAG0UAuZQyY&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hfd0e7a95e6
-
-### Design tokens
-- Colors: _list hex/rgba values_
-- Fonts: _font families, weights, sizes/line-heights_
-- Spacing: _scale for margins/padding/gaps_
-- Components: _buttons, cards, nav, widget shells, etc._
-
-## Using Codex with the mockup
-1. Provide the Canva link (above) when asking Codex for UI implementation help or when invoking the Codex Canva plug-in.
-2. Mention key components/sections you want generated (e.g., hero, nav, task list, event timeline, bookmark grid, video widget) plus any asset slices needed.
-3. Codex can map the mockup to Angular components and SCSS: expect suggestions for component hierarchy, shared styles, responsive behavior, and a checklist of assets to export (images/icons/backgrounds).
-4. When using the Canva plug-in, specify which frames/pages correspond to the home page. Ask for an asset manifest (e.g., hero background, widget thumbnails, icons) and reference placements (pixel dimensions, spacing, typography). Update the table below after exporting assets.
-
-### Asset manifest (fill as you export from Canva via Codex plug-in)
-| Asset | Canva Frame/Layer | Export format | Target path |
-|-------|-------------------|---------------|-------------|
-| Hero background | | PNG @2x | `src/assets/images/hero-bg.png` |
-| Logo | | SVG | `src/assets/images/logo.svg` |
-| Task icon | | SVG | `src/assets/icons/task.svg` |
-| Event icon | | SVG | `src/assets/icons/event.svg` |
-| Bookmark icon | | SVG | `src/assets/icons/bookmark.svg` |
-| Video widget thumbnail | | PNG | `src/assets/images/video-thumb.png` |
-
 ## Implementation notes
 - Keep shared styles (colors/fonts/spacing) in a theme SCSS file and import where needed.
 - Place images/icons from Canva exports under `src/assets/` and reference them via Angular assets pipeline.
@@ -110,6 +79,12 @@ Add a minimalist auth layout (logo + card) with child routes for each form. Use 
   - Lives under `/account/security`. Form fields: current password, new password, confirm.  
   - Calls `PUT /api/users/me/password`, which verifies the current password, enforces the password policy, updates the hash, and revokes refresh tokens so other sessions log out.  
   - Keep behind `featureAccountSecurity` flag until the rest of the account shell ships.
+
+### Profile + session UX
+- **Profile surface (future)**: `/account/security` currently only handles password updates; add profile fields (first/last name, grade level, bio, interests) once backend endpoints are ready. Prefill from `GET /api/users/me` and show optimistic save with inline validation.  
+- **Logout**: when authenticated, show a `Log out` affordance on the home hero and inside the account shell. Clearing session should drop tokens from `SessionStore`/localStorage and return to the home route.  
+- **Persistent session**: `SessionStore` hydrates from localStorage on load. If a stored token is expired, auto-clear and prompt login; avoid showing protected CTAs without a valid token.  
+- **Registration → verification**: after signup success state, remind users they must click the email link before login works; keep copy generic to avoid revealing account existence.
 
 ### CTA + navigation updates
 - Update the hero button to navigate to `/auth/login` (or to `/auth/signup` if we track referral from marketing).  

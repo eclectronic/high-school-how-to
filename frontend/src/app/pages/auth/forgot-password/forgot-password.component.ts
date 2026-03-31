@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -16,6 +16,7 @@ import { AuthApiService } from '../../../core/services/auth-api.service';
 export class ForgotPasswordComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authApi = inject(AuthApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(false);
   protected readonly sent = signal(false);
@@ -32,7 +33,7 @@ export class ForgotPasswordComponent {
     this.loading.set(true);
     this.authApi
       .forgotPassword(this.form.getRawValue())
-      .pipe(takeUntilDestroyed(), finalize(() => this.loading.set(false)))
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.loading.set(false)))
       .subscribe({
         next: () => this.sent.set(true),
         error: () => this.sent.set(true)

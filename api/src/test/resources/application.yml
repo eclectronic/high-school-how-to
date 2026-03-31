@@ -24,4 +24,4 @@ auth:
     public-key-path: classpath:keys/dev-public.pem
   links:
     verification: http://localhost:8080/api/auth/verify-email
-    reset: http://localhost:4200/reset-password
+    reset: http://localhost:4200/auth/reset-password

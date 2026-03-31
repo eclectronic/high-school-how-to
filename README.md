@@ -4,7 +4,7 @@ This repo will host both the Angular frontend and the Spring Boot backend for hi
 
 ## Repo layout (proposed)
 - `frontend/` — Angular app (Angular CLI project; Node 18+; npm or pnpm).
-- `backend/` — Spring Boot service (Java 21; Gradle wrapper).
+- `api/` — Spring Boot service (Java 21; Gradle wrapper).
 - `api-contract/` (optional) — OpenAPI spec and generated clients if you want typed contracts between frontend and backend.
 
 ## Local development
@@ -110,14 +110,20 @@ docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO:latest
 ```
 
 ### Local stack with Docker Compose
-`docker-compose.yml` controls a Postgres 16 container, the API image, and an Nginx-served Angular bundle. The frontend proxies `/api/*` traffic to the API container so you can exercise the entire site locally.
+`docker-compose.yml` builds and runs Postgres 16, the API image, and an Nginx-served Angular bundle.
 
 ```bash
-# Build images and start the full stack
+# Build images and start the full stack (production-style images)
 docker compose up --build
 
 # Tear everything down (removes containers but keeps the pgdata volume)
 docker compose down
+```
+
+To run in developer mode (live reload, source mounts), layer the dev override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
 The Angular site is served at http://localhost:4200 (API remains on http://localhost:8080). The Postgres volume is stored under the `pgdata` named volume; remove it with `docker volume rm high-school-how-to_pgdata` if you need a clean schema.

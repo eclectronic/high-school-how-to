@@ -9,6 +9,10 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RefreshRequest {
+  refreshToken: string;
+}
+
 export interface RegistrationRequest {
   email: string;
   password: string;

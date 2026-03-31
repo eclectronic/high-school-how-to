@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
@@ -17,12 +17,13 @@ type VerifyStatus = 'pending' | 'success' | 'error';
 export class VerifyEmailComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly authApi = inject(AuthApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly status = signal<VerifyStatus>('pending');
   protected readonly message = signal('Verifying your email…');
 
   constructor() {
-    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe(params => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
       const token = params.get('token');
       if (!token) {
         this.status.set('error');
@@ -34,7 +35,7 @@ export class VerifyEmailComponent {
       this.authApi
         .verifyEmail(token)
         .pipe(
-          takeUntilDestroyed(),
+          takeUntilDestroyed(this.destroyRef),
           finalize(() => {
             if (this.status() === 'pending') {
               this.status.set('error');

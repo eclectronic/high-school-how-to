@@ -29,6 +29,7 @@ export class HomePageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly sessionStore = inject(SessionStore);
   protected readonly isAuthenticated = this.sessionStore.isAuthenticated;
+  protected readonly clearSession = () => this.sessionStore.clearSession();
   private videoTouchStart: number | null = null;
   private infographicTouchStart: number | null = null;
 
@@ -87,9 +88,14 @@ export class HomePageComponent implements OnInit {
 
   protected handleAuthCta(): void {
     if (this.isAuthenticated()) {
-      this.router.navigate(['/account/security']);
+      this.router.navigate(['/account/dashboard']);
       return;
     }
     this.router.navigate(['/auth/login']);
+  }
+
+  protected handleLogout(): void {
+    this.clearSession();
+    this.router.navigate(['/']);
   }
 }

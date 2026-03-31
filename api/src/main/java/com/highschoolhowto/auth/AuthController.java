@@ -5,9 +5,12 @@ import com.highschoolhowto.auth.dto.ForgotPasswordRequest;
 import com.highschoolhowto.auth.dto.LoginRequest;
 import com.highschoolhowto.auth.dto.RegistrationRequest;
 import com.highschoolhowto.auth.dto.ResetPasswordRequest;
+import com.highschoolhowto.auth.dto.RefreshRequest;
 import com.highschoolhowto.auth.dto.VerificationResponse;
+import com.highschoolhowto.config.AuthLinkProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.net.URI;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,14 +26,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final AuthLinkProperties linkProperties;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, AuthLinkProperties linkProperties) {
         this.authService = authService;
+        this.linkProperties = linkProperties;
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthenticationResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthenticationResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ResponseEntity.ok(authService.refresh(request.refreshToken()));
     }
 
     @PostMapping("/register")
@@ -41,23 +51,26 @@ public class AuthController {
 
     @GetMapping(value = "/verify-email", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_HTML_VALUE})
     public ResponseEntity<?> verifyEmail(@RequestParam("token") String token, HttpServletRequest request) {
-        authService.verifyEmail(token);
-        String message = "Thanks! If your link was valid your email is now verified.";
+        boolean success = authService.verifyEmail(token);
+        String message =
+                success ? "Thanks! Your email is verified. You can log in now." : "Verification link invalid or expired.";
         String accept = request.getHeader(HttpHeaders.ACCEPT);
         if (accept != null && accept.contains(MediaType.TEXT_HTML_VALUE)) {
-            String html = """
-                    <html>
-                      <body>
-                        <p>%s</p>
-                      </body>
-                    </html>
-                    """
-                    .formatted(message);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.TEXT_HTML)
-                    .body(html);
+            String redirect = appendStatus(linkProperties.getVerificationRedirect(), success ? "success" : "error");
+            return ResponseEntity.status(302).location(URI.create(redirect)).build();
         }
         return ResponseEntity.ok(new VerificationResponse(message));
+    }
+
+    private String appendStatus(String base, String status) {
+        String sep = base.contains("?") ? "&" : "?";
+        return base + sep + "verified=" + status;
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.resendVerification(request);
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/forgot-password")

@@ -4,6 +4,7 @@ import {
   AuthenticationResponse,
   ForgotPasswordRequest,
   LoginRequest,
+  RefreshRequest,
   RegistrationRequest,
   ResetPasswordRequest,
   UpdatePasswordRequest,
@@ -18,6 +19,10 @@ export class AuthApiService {
 
   login(payload: LoginRequest) {
     return this.http.post<AuthenticationResponse>('/api/auth/login', payload);
+  }
+
+  refresh(payload: RefreshRequest) {
+    return this.http.post<AuthenticationResponse>('/api/auth/refresh', payload);
   }
 
   register(payload: RegistrationRequest) {

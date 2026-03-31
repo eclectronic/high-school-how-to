@@ -64,6 +64,6 @@ describe('HomePageComponent', () => {
     navigateSpy.calls.reset();
     sessionStore.isAuthenticated.and.returnValue(true);
     component['handleAuthCta']();
-    expect(router.navigate).toHaveBeenCalledWith(['/account/security']);
+    expect(router.navigate).toHaveBeenCalledWith(['/account/dashboard']);
   });
 });

@@ -2,6 +2,10 @@
   <h2>Log in</h2>
   <p class="auth-form__intro">Sign in to access your saved goals and recommendations.</p>
 
+  <div *ngIf="info()" class="auth-alert auth-alert--success" role="status">
+    {{ info() }}
+  </div>
+
   <div *ngIf="error()" class="auth-alert auth-alert--error" role="status">
     {{ error() }}
   </div>
