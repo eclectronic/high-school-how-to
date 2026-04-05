@@ -125,9 +125,9 @@ The IAM user needs these permissions:
 ### Infrastructure
 
 - **API**: AWS App Runner service `highschoolhowto-api` (us-west-2), pulling from ECR repo `highschoolhowto/api`
-- **Frontend**: S3 bucket `highschoolhowto-site`, path `prod/`, served via CloudFront distribution `E1S3AKUQUXDIGC`
+- **Frontend**: S3 bucket `highschoolhowto`, path `prod/`, served via CloudFront distribution `E1S3AKUQUXDIGC`
 - **Database**: Amazon Aurora PostgreSQL at `highschoolhowto.c388sauoez7e.us-west-2.rds.amazonaws.com`
-- **Media**: S3 bucket `highschoolhowto-site`, path `media/`, served via same CloudFront distribution
+- **Media**: S3 bucket `highschoolhowto`, path `media/`, served via same CloudFront distribution
 
 ## Architecture
 
@@ -150,10 +150,10 @@ Content images (infographics, thumbnails, cover images) live in the top-level `m
 - **Production**: Media files are served by CloudFront backed by S3. Content card URLs in the database should be absolute CloudFront/S3 URLs. After adding or changing files in `media/`, sync to S3:
   ```bash
   # Push local to S3
-  aws s3 sync ./media s3://highschoolhowto-site/media --delete
+  aws s3 sync ./media s3://highschoolhowto/media --delete
 
   # Pull S3 to local
-  aws s3 sync s3://highschoolhowto-site/media ./media
+  aws s3 sync s3://highschoolhowto/media ./media
   ```
 - **Adding new media**: Drop files into `media/` (commit them), then use the admin content editor to set the card's media URL to `/media/path/to/file.jpg` (local) or the absolute CloudFront URL (prod).
 
