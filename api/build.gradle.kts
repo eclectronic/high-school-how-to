@@ -98,11 +98,13 @@ val awsAccountId = System.getenv("AWS_ACCOUNT_ID") ?: "123456789012"
 val awsRegion = System.getenv("AWS_REGION") ?: "us-west-2"
 val awsEcrRepo = System.getenv("AWS_ECR_REPO_NAME") ?: "highschoolhowto/api"
 val awsImageTag = System.getenv("AWS_IMAGE_TAG") ?: "latest"
-val awsImage = "$awsAccountId.dkr.ecr.$awsRegion.amazonaws.com/$awsEcrRepo:$awsImageTag"
+val awsImageBase = "$awsAccountId.dkr.ecr.$awsRegion.amazonaws.com/$awsEcrRepo"
 
 jib {
     to {
-        image = awsImage
+        image = "$awsImageBase:$awsImageTag"
+        // Always also tag as latest so App Runner pulls the current build
+        tags = setOf("latest")
     }
     from {
         platforms {
