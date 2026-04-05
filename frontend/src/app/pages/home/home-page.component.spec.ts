@@ -27,10 +27,8 @@ describe('HomePageComponent', () => {
 
     contentApi = jasmine.createSpyObj<ContentApiService>('ContentApiService', [
       'getHomeLayout',
-      'getAllTags',
     ]);
     contentApi.getHomeLayout.and.returnValue(of({ featuredCard: null, sections: [] }));
-    contentApi.getAllTags.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [HomePageComponent, RouterTestingModule],
@@ -47,9 +45,8 @@ describe('HomePageComponent', () => {
     fixture.detectChanges();
   });
 
-  it('loads layout and tags on init', () => {
+  it('loads layout on init', () => {
     expect(contentApi.getHomeLayout).toHaveBeenCalled();
-    expect(contentApi.getAllTags).toHaveBeenCalled();
   });
 
   it('routes to login when unauthenticated', () => {
