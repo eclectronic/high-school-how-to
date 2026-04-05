@@ -147,14 +147,15 @@ The IAM user needs these permissions:
 Content images (infographics, thumbnails, cover images) live in the top-level `media/` directory, checked into the repo. They are **not** bundled with the frontend app.
 
 - **Local dev (Docker)**: `./media` is mounted into the frontend container at `/workspace/frontend/public/media`, so the Angular dev server serves them at `/media/**`. The API knows nothing about media files.
-- **Production**: Media files are served by CloudFront backed by S3. Content card URLs in the database should be absolute CloudFront/S3 URLs. After adding or changing files in `media/`, sync to S3:
+- **Production**: Media files are served by CloudFront backed by S3. The S3 origin has `OriginPath: /prod`, so media must be synced under `s3://highschoolhowto/prod/media/`. The deploy script handles this automatically. Manual commands:
   ```bash
   # Push local to S3
-  aws s3 sync ./media s3://highschoolhowto/media --delete
+  aws s3 sync ./media s3://highschoolhowto/prod/media --delete
 
   # Pull S3 to local
-  aws s3 sync s3://highschoolhowto/media ./media
+  aws s3 sync s3://highschoolhowto/prod/media ./media
   ```
+  Helper scripts are also available: `frontend/scripts/deploy-prod.sh` (push) and `frontend/scripts/pull-media.sh` (pull).
 - **Adding new media**: Drop files into `media/` (commit them), then use the admin content editor to set the card's media URL to `/media/path/to/file.jpg` (local) or the absolute CloudFront URL (prod).
 
 ### Backend

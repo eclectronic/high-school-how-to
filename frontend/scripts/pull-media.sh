@@ -9,7 +9,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 MEDIA_DIR="${REPO_ROOT}/media"
-S3_SOURCE="s3://highschoolhowto/media"
+S3_SOURCE="s3://highschoolhowto/prod/media"
 AWS_REGION="${AWS_REGION:-us-west-2}"
 
 if ! command -v aws >/dev/null 2>&1; then
