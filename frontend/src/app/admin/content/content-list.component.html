@@ -1,0 +1,87 @@
+<div class="admin-page">
+  <div class="admin-page__header">
+    <h1>Content</h1>
+    <a class="btn btn--primary" routerLink="new">+ New Card</a>
+  </div>
+
+  @if (error()) {
+    <div class="admin-error">{{ error() }}</div>
+  }
+
+  <!-- Tag filter -->
+  @if (tags().length) {
+    <div class="tag-filter">
+      <button
+        type="button"
+        class="tag-filter__btn"
+        [class.tag-filter__btn--active]="selectedTagSlug() === null"
+        (click)="selectTag(null)">
+        All
+      </button>
+      @for (tag of tags(); track tag.id) {
+        <button
+          type="button"
+          class="tag-filter__btn"
+          [class.tag-filter__btn--active]="selectedTagSlug() === tag.slug"
+          (click)="selectTag(tag.slug)">
+          {{ tag.name }}
+        </button>
+      }
+    </div>
+  }
+
+  @if (loading()) {
+    <p>Loading...</p>
+  } @else {
+    <div class="card-grid">
+      @for (card of filteredCards(); track card.id) {
+        <div class="content-card">
+          <div class="content-card__thumb-wrap">
+            @if (card.thumbnailUrl || card.mediaUrl) {
+              <img class="content-card__thumb"
+                [src]="card.thumbnailUrl || card.mediaUrl"
+                [alt]="card.title"
+                [class.content-card__thumb--contain]="!card.thumbnailUrl && card.cardType === 'INFOGRAPHIC'" />
+            } @else if (card.cardType === 'ARTICLE' && textPreview(card)) {
+              <div class="content-card__text-preview"
+                [style.background-color]="card.backgroundColor || null"
+                [style.color]="card.textColor || null">
+                {{ textPreview(card) }}
+              </div>
+            } @else {
+              <div class="content-card__thumb-placeholder" [attr.data-type]="card.cardType">
+                {{ card.cardType }}
+              </div>
+            }
+            <span class="content-card__type-badge" [attr.data-type]="card.cardType">{{ card.cardType }}</span>
+            <span class="content-card__status-badge" [attr.data-status]="card.status">{{ card.status }}</span>
+          </div>
+          <div class="content-card__body">
+            <strong class="content-card__title">{{ card.title }}</strong>
+            <code class="content-card__slug">{{ card.slug }}</code>
+            @if (card.tags.length) {
+              <div class="content-card__tags">
+                @for (tag of card.tags; track tag.id) {
+                  <span class="tag-chip">{{ tag.name }}</span>
+                }
+              </div>
+            }
+          </div>
+          <div class="content-card__actions">
+            <a class="btn btn--secondary btn--sm" [routerLink]="[card.id, 'edit']">Edit</a>
+            <button class="btn btn--danger btn--sm" (click)="delete(card)">Delete</button>
+          </div>
+        </div>
+      }
+      @empty {
+        <p class="empty-state">
+          @if (selectedTagSlug()) {
+            No cards in this tag. <button type="button" class="link-btn" (click)="selectTag(null)">Show all.</button>
+          } @else {
+            No content cards yet. <a routerLink="new">Create one.</a>
+          }
+        </p>
+      }
+    </div>
+  }
+</div>

@@ -11,6 +11,7 @@ import { VerifyEmailComponent } from './pages/auth/verify-email/verify-email.com
 import { AccountSecurityComponent } from './pages/account/account-security/account-security.component';
 import { DashboardComponent } from './pages/account/dashboard/dashboard.component';
 import { authGuard } from './core/auth/auth.guard';
+import { adminGuard } from './core/auth/admin.guard';
 
 export const routes: Routes = [
   {
@@ -46,6 +47,23 @@ export const routes: Routes = [
   {
     path: 'videos/:slug',
     component: YoutubeViewerComponent
+  },
+  {
+    path: 'admin',
+    canActivate: [adminGuard],
+    loadChildren: () => import('./admin/admin.routes').then((m) => m.adminRoutes),
+  },
+  {
+    path: 'topics/:slug',
+    loadComponent: () =>
+      import('./pages/topic/topic-page.component').then((m) => m.TopicPageComponent),
+  },
+  {
+    path: 'content/:slug',
+    loadComponent: () =>
+      import('./pages/content-viewer/content-viewer.component').then(
+        (m) => m.ContentViewerComponent,
+      ),
   },
   {
     path: '**',

@@ -47,6 +47,10 @@ public class User {
     @Column(nullable = false, length = 32)
     private UserStatus status = UserStatus.PENDING_VERIFICATION;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private UserRole role = UserRole.USER;
+
     @Column(name = "email_verified_at")
     private Instant emailVerifiedAt;
 
@@ -137,6 +141,14 @@ public class User {
 
     public void setStatus(UserStatus status) {
         this.status = status;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
     }
 
     public Instant getEmailVerifiedAt() {

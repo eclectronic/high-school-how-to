@@ -7,3 +7,21 @@ databaseChangeLog:
       file: db/changelog/task-order-0005.sql
   - include:
       file: db/changelog/task-color-0006.sql
+  - include:
+      file: db/changelog/v2-role-0007.sql
+  - include:
+      file: db/changelog/v2-content-0008.sql
+  - include:
+      file: db/changelog/v2-seed-0014.sql
+  - include:
+      file: db/changelog/v2-admin-upsert-0019.sql
+  - include:
+      file: db/changelog/v2-media-urls-0020.sql
+  - include:
+      file: db/changelog/v2-mission-article-0021.sql
+  - include:
+      file: db/changelog/v2-article-bg-color-0022.sql
+  - include:
+      file: db/changelog/v2-article-text-color-0023.sql
+  - include:
+      file: db/changelog/v2-featured-tag-drop-layout-0024.sql

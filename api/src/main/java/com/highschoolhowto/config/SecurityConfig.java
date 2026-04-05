@@ -56,10 +56,15 @@ public class SecurityConfig {
 
         http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers(publicEndpoints.toArray(new String[0])).permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(publicEndpoints.toArray(new String[0])).permitAll()
+                        .requestMatchers("/api/tags", "/api/tags/**").permitAll()
+                        .requestMatchers("/api/content/cards", "/api/content/cards/**").permitAll()
+                        .requestMatchers("/api/pages/home/layout").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())
-                .authenticationProvider(daoAuthenticationProvider())
+                .authenticationProvider(buildDaoAuthenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
                     response.sendError(HttpStatus.UNAUTHORIZED.value(), "Unauthorized");
@@ -67,8 +72,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public DaoAuthenticationProvider daoAuthenticationProvider() {
+    private DaoAuthenticationProvider buildDaoAuthenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());

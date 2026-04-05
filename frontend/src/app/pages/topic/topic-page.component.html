@@ -1,0 +1,44 @@
+<div class="topic-page">
+  <div class="topic-page__header">
+    <a class="back-link" routerLink="/">← Home</a>
+    @if (tag(); as tag) {
+      <h1>{{ tag.name }}</h1>
+      @if (tag.description) {
+        <p class="topic-page__desc">{{ tag.description }}</p>
+      }
+    }
+  </div>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="loading">Loading...</p>
+  } @else {
+    @if (cards().length) {
+      <div class="card-grid">
+        @for (card of cards(); track card.id) {
+          <a class="content-card" [routerLink]="['/content', card.slug]" [queryParams]="{ tag: tag()?.slug }">
+            @if (cardThumbnail(card)) {
+              <img class="content-card__thumb" [class.content-card__thumb--infographic]="card.cardType === 'INFOGRAPHIC'" [src]="cardThumbnail(card)!" [alt]="card.title" loading="lazy" />
+            } @else {
+              <div class="content-card__thumb content-card__thumb--placeholder">
+                <span>{{ card.cardType[0] }}</span>
+              </div>
+            }
+            <div class="content-card__body">
+              <span class="content-card__type-badge">{{ card.cardType }}</span>
+              <strong class="content-card__title">{{ card.title }}</strong>
+              @if (card.description) {
+                <p class="content-card__desc">{{ card.description }}</p>
+              }
+            </div>
+          </a>
+        }
+      </div>
+    } @else {
+      <p class="empty">No content yet for this topic.</p>
+    }
+  }
+</div>

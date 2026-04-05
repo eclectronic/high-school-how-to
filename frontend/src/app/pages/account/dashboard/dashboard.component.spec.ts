@@ -32,17 +32,15 @@ describe('DashboardComponent', () => {
     fixture.detectChanges();
   };
 
-  it('creates the starter "Did I..." list when none exist', () => {
+  it('starts with an empty list when no task lists exist', () => {
     taskApi.getTaskLists.and.returnValue(of([]));
     taskApi.createList.and.returnValue(
-      of({ id: 'new-id', title: 'Did I...', tasks: [] } as TaskList)
+      of({ id: 'new-id', title: 'Did I...', tasks: [], color: '' } as TaskList)
     );
 
     render();
 
-    expect(taskApi.createList).toHaveBeenCalledWith('Did I...');
-    expect((component as any).taskLists().length).toBe(1);
-    expect((component as any).taskLists()[0].title).toBe('Did I...');
+    expect((component as any).taskLists().length).toBe(0);
   });
 
   it('shows an error when creating a list fails', () => {
@@ -60,10 +58,10 @@ describe('DashboardComponent', () => {
 
   it('adds a list when submitted via the form', () => {
     taskApi.getTaskLists.and.returnValue(
-      of([{ id: 'existing', title: 'Existing', tasks: [] } as TaskList])
+      of([{ id: 'existing', title: 'Existing', tasks: [], color: '' } as TaskList])
     );
     taskApi.createList.and.returnValue(
-      of({ id: 'created', title: 'My List', tasks: [] } as TaskList)
+      of({ id: 'created', title: 'My List', tasks: [], color: '' } as TaskList)
     );
 
     render();
@@ -71,7 +69,7 @@ describe('DashboardComponent', () => {
     component['newListTitle'] = 'My List';
     component['createList']();
 
-    expect(taskApi.createList).toHaveBeenCalledWith('My List');
+    expect(taskApi.createList).toHaveBeenCalledWith('My List', jasmine.any(String));
     const lists = (component as any).taskLists();
     expect(lists.find((l: TaskList) => l.id === 'created')).toBeTruthy();
   });

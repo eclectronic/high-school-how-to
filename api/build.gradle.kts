@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.highschoolhowto"
-version = "1.0.0"
+version = "2.0.0"
 
 val spockVersion = "2.3-groovy-4.0"
 val testcontainersVersion = "1.20.3"
@@ -36,6 +36,9 @@ dependencies {
     implementation("org.postgresql:postgresql")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
+    implementation("software.amazon.awssdk:s3:2.29.52")
+    implementation("net.coobird:thumbnailator:0.4.20")
+    implementation("com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20240325.1")
 
     liquibaseRuntime("org.liquibase:liquibase-core")
     liquibaseRuntime("org.postgresql:postgresql")

@@ -1,0 +1,23 @@
+<div class="admin-layout">
+  <nav class="admin-nav">
+    <div class="admin-nav__brand">
+      <a routerLink="/" class="admin-nav__home">← Site</a>
+      <span class="admin-nav__title">Admin</span>
+    </div>
+    <ul class="admin-nav__links">
+      <li>
+        <a routerLink="content" routerLinkActive="admin-nav__link--active" class="admin-nav__link">
+          Content
+        </a>
+      </li>
+      <li>
+        <a routerLink="tags" routerLinkActive="admin-nav__link--active" class="admin-nav__link">
+          Tags
+        </a>
+      </li>
+    </ul>
+  </nav>
+  <main class="admin-main">
+    <router-outlet />
+  </main>
+</div>

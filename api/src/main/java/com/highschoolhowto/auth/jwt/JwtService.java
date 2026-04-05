@@ -32,6 +32,7 @@ public class JwtService {
     public String generateAccessToken(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("email", user.getEmail());
+        claims.put("role", user.getRole().name());
         return sign(user.getId(), TokenScope.ACCESS, properties.getAccessTokenTtl(), UUID.randomUUID(), claims);
     }
 
@@ -71,7 +72,8 @@ public class JwtService {
                     Optional.ofNullable(jwtId),
                     claimsSet.getIssueTime().toInstant(),
                     expiresAt,
-                    Optional.ofNullable(claimsSet.getStringClaim("email")));
+                    Optional.ofNullable(claimsSet.getStringClaim("email")),
+                    Optional.ofNullable(claimsSet.getStringClaim("role")));
         } catch (ParseException | JOSEException | IllegalArgumentException e) {
             throw new JwtValidationException("Unable to parse token", e);
         }

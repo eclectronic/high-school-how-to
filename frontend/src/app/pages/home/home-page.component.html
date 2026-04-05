@@ -1,4 +1,5 @@
 <section class="home">
+  <!-- ── Header ── -->
   <header class="home__top-bar">
     <div class="home__hero-intro">
       <figure class="home__logo-card">
@@ -22,147 +23,72 @@
 
     <div class="home__actions">
       <button type="button" class="home__auth-btn" (click)="handleAuthCta()">
-        {{ isAuthenticated() ? 'Focus Board' : 'Log in / Sign Up' }}
+        {{ isAuthenticated() ? 'My Locker' : 'Log in / Sign Up' }}
       </button>
-      <button
-        *ngIf="isAuthenticated()"
-        type="button"
-        class="home__logout-btn"
-        (click)="handleLogout()"
-      >
-        Log out
-      </button>
+      @if (isAuthenticated()) {
+        <button type="button" class="home__logout-btn" (click)="handleLogout()">
+          Log out
+        </button>
+      }
+      @if (isAdmin()) {
+        <a routerLink="/admin" class="home__admin-link">Admin</a>
+      }
 
       <figure class="home__socials" aria-label="Follow High School How To on social media">
         <img src="/assets/images/home-socials.png" alt="" aria-hidden="true" loading="lazy" />
-        <a
-          class="home__social-link home__social-link--instagram"
-          href="https://www.instagram.com/highschoolhowto"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Instagram"
-        ></a>
-        <a
-          class="home__social-link home__social-link--tiktok"
-          href="https://www.tiktok.com/@HighSchoolHowTo"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="TikTok"
-        ></a>
-        <a
-          class="home__social-link home__social-link--youtube"
-          href="https://www.youtube.com/@HighSchool-HowTo"
-          target="_blank"
-          rel="noreferrer"
-        aria-label="YouTube"
-      ></a>
+        <a class="home__social-link home__social-link--instagram"
+           href="https://www.instagram.com/highschoolhowto"
+           target="_blank" rel="noreferrer" aria-label="Instagram"></a>
+        <a class="home__social-link home__social-link--youtube"
+           href="https://www.youtube.com/@HighSchool-HowTo"
+           target="_blank" rel="noreferrer" aria-label="YouTube"></a>
       </figure>
     </div>
 
-    <div class="home__mission-card" aria-label="High School How To mission statement">
-      <div class="mission-card">
-        <div class="mission-card__panel mission-card__panel--front" tabindex="0">
-          <span class="mission-card__tape" aria-hidden="true"></span>
-          <div class="mission-card__banner">
-            <span class="mission-card__title">My Mission</span>
-            <span class="mission-card__subtitle">
-              HighSchoolHowTo is a busy student's bulletin board, helping you stay stress-free by keeping things streamlined and convenient.
-            </span>
-            <a class="mission-card__more" href="#mission-details">More...</a>
-          </div>
-        </div>
-
-        <div class="mission-card__panel mission-card__panel--detail">
-          <div class="note-card note-card--wide note-card--mission" id="mission-details">
-            <p class="note-card__mission-copy">
-              <span>You no longer have to open a million apps just to stay organized, because your Focus Board keeps every tool a student needs to stay organized all in one convenient place.</span>
-              <span>You can also pin our infographics, animated videos, and guides that cover everything from academics to fun.</span>
-              <span>High school doesn’t have to be scary - we’re here to help! Sign up today to get started for free.</span>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
   </header>
 
-  <section class="embedded-content" aria-label="High School How To video walkthroughs">
-    <div class="embedded-content__intro">
-      <div class="embedded-content__label">
-        <span class="embedded-content__label-pin" aria-hidden="true"></span>
-        <h2>Watch & Learn</h2>
-        <p>How-to videos from @HighSchool-HowTo.</p>
-      </div>
-    </div>
+  <!-- ── Tag navigation (in-page filter) ── -->
+  <nav class="tag-nav" aria-label="Browse by topic">
+    <button type="button" class="tag-nav__link"
+            [class.tag-nav__link--active]="selectedTagSlug() === null"
+            (click)="selectTag(null)">All</button>
+    @for (tag of navTags(); track tag.id) {
+      <button type="button" class="tag-nav__link"
+              [class.tag-nav__link--active]="selectedTagSlug() === tag.slug"
+              (click)="selectTag(tag.slug)">{{ tag.name }}</button>
+    }
+  </nav>
 
-    <div
-      class="featured-video"
-      *ngIf="featuredVideoEmbed"
-      (pointerdown)="handleVideoPointerStart($event)"
-      (pointerup)="handleVideoPointerEnd($event)"
-    >
-      <div class="featured-video__frame">
-        <div class="featured-video__player">
-          <iframe
-            [src]="featuredVideoEmbed"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-            [title]="featuredVideo.title"
-          ></iframe>
-        </div>
-      </div>
-      <div class="featured-video__nav" aria-label="Video navigation">
-        <button type="button" class="carousel-btn" (click)="stepVideo(-1)" aria-label="Previous video">
-          ‹
-        </button>
-        <button type="button" class="carousel-btn" (click)="stepVideo(1)" aria-label="Next video">
-          ›
-        </button>
-      </div>
-      <div class="featured-video__details">
-        <h3>{{ featuredVideo.title }}</h3>
-        <p>{{ featuredVideo.description }}</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="infographics" aria-label="High School How To infographics" id="infographics">
-    <div class="infographics__intro">
-      <div class="infographics__label">
-        <span class="infographics__label-pin" aria-hidden="true"></span>
-        <h2>Infographics</h2>
-        <p>Printable, pin-able tips for everything from style experiments to study balance.</p>
-      </div>
-    </div>
-
-    <div
-      class="featured-infographic"
-      (pointerdown)="handleInfographicPointerStart($event)"
-      (pointerup)="handleInfographicPointerEnd($event)"
-    >
-      <div class="featured-infographic__frame">
-        <button
-          type="button"
-          class="carousel-btn carousel-btn--left"
-          (click)="stepInfographic(-1)"
-          aria-label="Previous infographic"
-        >
-          ‹
-        </button>
-        <img [src]="featuredInfographic.webImage" [alt]="featuredInfographic.title" loading="lazy" />
-        <button
-          type="button"
-          class="carousel-btn carousel-btn--right"
-          (click)="stepInfographic(1)"
-          aria-label="Next infographic"
-        >
-          ›
-        </button>
-      </div>
-      <div class="featured-infographic__details">
-        <h3>{{ featuredInfographic.title }}</h3>
-        <p>{{ featuredInfographic.description }}</p>
-      </div>
-    </div>
-  </section>
+  <!-- ── Content sections ── -->
+  @if (!loading()) {
+    @for (section of visibleSections(); track section.tag.id) {
+      @if (section.cards.length) {
+        <section class="content-section" [id]="'section-' + section.tag.slug">
+          <div class="content-section__header">
+            <h2 class="content-section__title">{{ section.heading }}</h2>
+          </div>
+          <div class="card-grid">
+            @for (card of section.cards; track card.id) {
+              <a class="content-card" [routerLink]="['/content', card.slug]" [queryParams]="{ tag: section.tag.slug }">
+                @if (cardThumbnail(card)) {
+                  <img class="content-card__thumb" [class.content-card__thumb--infographic]="card.cardType === 'INFOGRAPHIC'" [src]="cardThumbnail(card)!" [alt]="card.title" loading="lazy" />
+                } @else {
+                  <div class="content-card__thumb content-card__thumb--placeholder">
+                    <span>{{ card.cardType[0] }}</span>
+                  </div>
+                }
+                <div class="content-card__body">
+                  <span class="content-card__type-badge">{{ card.cardType }}</span>
+                  <strong class="content-card__title">{{ card.title }}</strong>
+                  @if (card.description) {
+                    <p class="content-card__desc">{{ card.description }}</p>
+                  }
+                </div>
+              </a>
+            }
+          </div>
+        </section>
+      }
+    }
+  }
 </section>

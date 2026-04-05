@@ -1,0 +1,109 @@
+<div class="viewer-page">
+  @if (loading()) {
+    <p class="viewer-loading">Loading...</p>
+  } @else if (error()) {
+    <div class="viewer-error">
+      <p>{{ error() }}</p>
+      <a routerLink="/">← Back to home</a>
+    </div>
+  } @else if (card(); as card) {
+
+    <div class="viewer-nav">
+      <a class="viewer-nav__logo" routerLink="/">
+        <img src="/assets/images/home-logo.png" alt="High School How To" />
+      </a>
+      <a class="back-link" routerLink="/">← Home</a>
+      @if (tagName()) {
+        <div class="viewer-nav__tag-header">
+          <h2 class="viewer-nav__tag-title">{{ tagName() }}</h2>
+        </div>
+      }
+    </div>
+
+    <div class="viewer-stage">
+      <div class="viewer-arrow-col">
+        @if (prevCard(); as prev) {
+          <button class="viewer-arrow" (click)="navigateTo(prev)" [title]="prev.title" aria-label="Previous: {{ prev.title }}">‹</button>
+        }
+      </div>
+
+      <div class="viewer-content">
+        <!-- VIDEO ─────────────────────────────────── -->
+        @if (card.cardType === 'VIDEO') {
+          <article class="viewer-article">
+            <header class="viewer-header">
+              <h1>{{ card.title }}</h1>
+              @if (card.description) {
+                <p class="viewer-desc">{{ card.description }}</p>
+              }
+            </header>
+            @if (safeEmbed()) {
+              <div class="video-frame">
+                <iframe
+                  [src]="safeEmbed()!"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                  [title]="card.title"
+                ></iframe>
+              </div>
+            }
+          </article>
+        }
+
+        <!-- INFOGRAPHIC ────────────────────────────── -->
+        @if (card.cardType === 'INFOGRAPHIC') {
+          <article class="viewer-article">
+            <header class="viewer-header">
+              <h1>{{ card.title }}</h1>
+              @if (card.description) {
+                <p class="viewer-desc">{{ card.description }}</p>
+              }
+            </header>
+            @if (card.mediaUrl) {
+              <div class="infographic-frame">
+                <img [src]="card.mediaUrl" [alt]="card.title" loading="eager" />
+              </div>
+            }
+            @if (card.printMediaUrl) {
+              <div class="infographic-actions">
+                <a class="btn-print" [href]="card.printMediaUrl" target="_blank" rel="noreferrer">
+                  Download / Print
+                </a>
+              </div>
+            }
+          </article>
+        }
+
+        <!-- ARTICLE ────────────────────────────────── -->
+        @if (card.cardType === 'ARTICLE') {
+          <article class="viewer-article">
+            @if (card.coverImageUrl) {
+              <div class="article-cover">
+                <img [src]="card.coverImageUrl" [alt]="card.title" loading="eager" />
+              </div>
+            }
+            <header class="viewer-header viewer-header--article">
+              <h1>{{ card.title }}</h1>
+              @if (card.description) {
+                <p class="viewer-desc">{{ card.description }}</p>
+              }
+            </header>
+            @if (safeHtml()) {
+              <div class="article-body"
+                [style.background-color]="card.backgroundColor || null"
+                [style.color]="card.textColor || null"
+                [innerHTML]="safeHtml()!"></div>
+            }
+          </article>
+        }
+      </div>
+
+      <div class="viewer-arrow-col">
+        @if (nextCard(); as next) {
+          <button class="viewer-arrow" (click)="navigateTo(next)" [title]="next.title" aria-label="Next: {{ next.title }}">›</button>
+        }
+      </div>
+    </div>
+  }
+</div>

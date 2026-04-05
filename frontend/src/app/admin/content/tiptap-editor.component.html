@@ -1,0 +1,23 @@
+<div class="tiptap-wrapper">
+  <div class="tiptap-toolbar">
+    <button type="button" class="toolbar-btn" [class.active]="isActive('bold')" (click)="toggleBold()" title="Bold"><b>B</b></button>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('italic')" (click)="toggleItalic()" title="Italic"><i>I</i></button>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('underline')" (click)="toggleUnderline()" title="Underline"><u>U</u></button>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('strike')" (click)="toggleStrike()" title="Strikethrough"><s>S</s></button>
+    <span class="toolbar-sep"></span>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('heading', {level: 1})" (click)="setHeading(1)" title="Heading 1">H1</button>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('heading', {level: 2})" (click)="setHeading(2)" title="Heading 2">H2</button>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('heading', {level: 3})" (click)="setHeading(3)" title="Heading 3">H3</button>
+    <span class="toolbar-sep"></span>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('bulletList')" (click)="toggleBulletList()" title="Bullet List">•—</button>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('orderedList')" (click)="toggleOrderedList()" title="Ordered List">1—</button>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('blockquote')" (click)="toggleBlockquote()" title="Blockquote">"</button>
+    <span class="toolbar-sep"></span>
+    <button type="button" class="toolbar-btn" (click)="setAlign('left')" title="Align Left">←</button>
+    <button type="button" class="toolbar-btn" (click)="setAlign('center')" title="Align Center">↔</button>
+    <button type="button" class="toolbar-btn" (click)="setAlign('right')" title="Align Right">→</button>
+  </div>
+  <div #editorEl class="tiptap-content"
+    [style.background-color]="backgroundColor || null"
+    [style.color]="textColor || null"></div>
+</div>

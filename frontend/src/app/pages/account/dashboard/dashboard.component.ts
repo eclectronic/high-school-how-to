@@ -1,45 +1,216 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, QueryList, ViewChildren, effect, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, QueryList, ViewChildren, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { forkJoin } from 'rxjs';
 import { TaskApiService } from '../../../core/services/task-api.service';
+import { SessionStore } from '../../../core/session/session.store';
 import { TaskItem, TaskList } from '../../../core/models/task.models';
+
+interface LockerColor {
+  id: string;
+  name: string;
+  doorGradient: string;
+  doorSolid: string;
+  shelfText: string;  // text/icon color on the vibrant shelf header
+}
+
+const LOCKER_COLORS: LockerColor[] = [
+  {
+    id: 'blue', name: 'Blue',
+    doorGradient: 'linear-gradient(135deg, #6aabdf 0%, #3d8ed4 45%, #2368b0 100%)',
+    doorSolid: '#3d8ed4', shelfText: '#fff',
+  },
+  {
+    id: 'red', name: 'Red',
+    doorGradient: 'linear-gradient(135deg, #e86060 0%, #d42e2e 45%, #a81818 100%)',
+    doorSolid: '#d42e2e', shelfText: '#fff',
+  },
+  {
+    id: 'green', name: 'Green',
+    doorGradient: 'linear-gradient(135deg, #4dcc7a 0%, #28a855 45%, #157038 100%)',
+    doorSolid: '#28a855', shelfText: '#fff',
+  },
+  {
+    id: 'orange', name: 'Orange',
+    doorGradient: 'linear-gradient(135deg, #f0a040 0%, #e07820 45%, #b85810 100%)',
+    doorSolid: '#e07820', shelfText: '#fff',
+  },
+  {
+    id: 'purple', name: 'Purple',
+    doorGradient: 'linear-gradient(135deg, #9870d8 0%, #7048c0 45%, #5030a0 100%)',
+    doorSolid: '#7048c0', shelfText: '#fff',
+  },
+  {
+    id: 'teal', name: 'Teal',
+    doorGradient: 'linear-gradient(135deg, #30bcd0 0%, #1898a8 45%, #0c7080 100%)',
+    doorSolid: '#1898a8', shelfText: '#fff',
+  },
+  {
+    id: 'yellow', name: 'Yellow',
+    doorGradient: 'linear-gradient(135deg, #e8d040 0%, #c8a810 45%, #a88808 100%)',
+    doorSolid: '#c8a810', shelfText: '#1c1c1e',
+  },
+  {
+    id: 'gray', name: 'Gray',
+    doorGradient: 'linear-gradient(135deg, #8898bc 0%, #6878a0 45%, #485880 100%)',
+    doorSolid: '#6878a0', shelfText: '#fff',
+  },
+];
+
+const LOCKER_COLOR_KEY = 'hsht_lockerColorId';
+
+const LOCKER_ITEM_POOL = [
+  '🧥','🎸','🎒','⚽','🏀','🎧','🥤','🏆','🖌️','💻',
+  '☕','🎀','📸','👟','📐','🎨','🏈','🎯','🧢','🧸',
+  '🎮','📱','🏐','🎺','🎻','🧲','🪴','🎙️','🎹','🥊',
+];
+
+// Zones covering the full interior height (above the bottom book shelf at ~78%).
+// size is in vw — scales with the locker bay width (each bay = 20vw).
+const LOCKER_ZONES = [
+  // ── top row ──
+  { top:  0, left:  0, size: 8.5,  rot: 13 },
+  { top:  0, left: 52, size: 8.0,  rot:-12 },
+  { top:  1, left: 25, size: 7.5,  rot:  8 },
+  // ── upper-mid ──
+  { top: 21, left:  0, size: 10.0, rot:-10 },
+  { top: 19, left: 52, size:  9.5, rot: 11 },
+  { top: 17, left: 22, size: 13.5, rot:  5 },  // big center item
+  // ── mid ──
+  { top: 43, left:  0, size: 10.5, rot: 12 },
+  { top: 41, left: 53, size: 10.0, rot:-13 },
+  { top: 39, left: 24, size: 11.5, rot: -5 },
+  // ── lower (above book shelf ≈ top 78%) ──
+  { top: 60, left:  0, size:  9.5, rot:-13 },
+  { top: 58, left: 53, size:  9.0, rot: 12 },
+  { top: 57, left: 24, size: 10.0, rot:  7 },
+];
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule],
   template: `
-    <section class="dashboard">
+    <!-- ── Locker row animation overlay ── -->
+    <div class="locker-overlay"
+      *ngIf="!lockerDone()"
+      [class.locker-overlay--opening]="lockerOpening()"
+      style="background: #1a2028">
+
+      <ng-container *ngFor="let n of lockerBays; let i = index">
+        <div class="locker-bay" [class.locker-bay--center]="i === 2">
+
+          <!-- Locker interior — only visible through the opening center door -->
+          <div *ngIf="i === 2" class="locker-interior">
+            <!-- Random items scattered throughout -->
+            <span *ngFor="let item of lockerItems"
+              class="locker-item"
+              [style.top.%]="item.top"
+              [style.left.%]="item.left"
+              [style.font-size]="item.size + 'vw'"
+              [style.transform]="'rotate(' + item.rot + 'deg)'">{{ item.emoji }}</span>
+            <!-- Bottom shelf — always books -->
+            <div class="locker-shelf locker-shelf--bottom"></div>
+            <div class="locker-books">📗📘📙📕📓</div>
+          </div>
+
+          <div class="locker-door"
+            [class.locker-door--animated]="i === 2"
+            [style.background]="lockerColor().doorGradient">
+
+            <!-- Sticker on center locker only -->
+            <img *ngIf="i === 2"
+              class="locker-logo"
+              src="/assets/images/home-logo.png"
+              alt="" aria-hidden="true" />
+
+            <!-- Vent groups -->
+            <div class="locker-vents">
+              <div class="locker-vent-group">
+                <div class="locker-vent" *ngFor="let v of ventSlots"></div>
+              </div>
+              <div class="locker-vent-group">
+                <div class="locker-vent" *ngFor="let v of ventSlots"></div>
+              </div>
+              <div class="locker-vent-group">
+                <div class="locker-vent" *ngFor="let v of ventSlots"></div>
+              </div>
+            </div>
+
+            <!-- Combination dial lock -->
+            <div class="locker-lock">
+              <div class="locker-lock__plate">
+                <div class="locker-lock__dial"
+                  [class.locker-lock__dial--spinning]="i === 2 && lockerSpinning()">
+                  <span *ngIf="i === 2" class="locker-lock__indicator"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3D edge strip on opening door only -->
+            <div *ngIf="i === 2" class="locker-door__edge"></div>
+          </div>
+        </div>
+      </ng-container>
+
+    </div>
+
+    <!-- ── Dashboard (locker interior) ── -->
+    <section
+      class="dashboard"
+      [ngStyle]="{
+        '--lc-accent': lockerColor().doorSolid,
+        '--lc-shelf-text': lockerColor().shelfText
+      }"
+      (click)="closeConfig()"
+    >
       <header class="dashboard__header">
         <div class="top-row">
           <div class="brand">
             <a routerLink="/" class="brand__link">
               <img src="/assets/images/home-logo.png" alt="High School How To" />
               <div class="brand__text">
-                <h1>Focus Board</h1>
+                <h1>My Locker</h1>
               </div>
             </a>
           </div>
-          <nav class="nav-links">
-            <a routerLink="/" class="nav-link">Home</a>
-          </nav>
+          <div class="header-right">
+            <div class="locker-color-picker" (click)="$event.stopPropagation()">
+              <span class="locker-color-picker__label">Locker:</span>
+              <div class="locker-color-swatches">
+                <button
+                  type="button"
+                  *ngFor="let c of LOCKER_COLORS"
+                  class="locker-swatch"
+                  [class.locker-swatch--active]="lockerColor().id === c.id"
+                  [style.background]="c.doorSolid"
+                  [attr.aria-label]="'Set locker color to ' + c.name"
+                  (click)="setLockerColor(c)"
+                ></button>
+              </div>
+            </div>
+            <nav class="nav-links">
+              <a routerLink="/" class="nav-link">← Home</a>
+              <a *ngIf="isAdmin()" routerLink="/admin" class="nav-link nav-link--admin">Admin</a>
+              <button type="button" class="nav-link nav-link--logout" (click)="handleLogout()">Log out</button>
+            </nav>
+          </div>
         </div>
-        <form class="new-list" (ngSubmit)="createList()" #listForm="ngForm">
+        <form class="new-list" (ngSubmit)="createList()" #listForm="ngForm" (click)="$event.stopPropagation()">
           <label>
             <span class="sr-only">New list title</span>
             <input
               #listTitleInput
               name="title"
               [(ngModel)]="newListTitle"
-              placeholder="List Name"
+              placeholder="New list name…"
               required
               minlength="1"
             />
           </label>
-          <button type="submit" [disabled]="!newListTitle.trim()">Create Todos</button>
+          <button type="submit" [disabled]="!newListTitle.trim()">+ Create</button>
         </form>
         <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
       </header>
@@ -49,6 +220,7 @@ import { TaskItem, TaskList } from '../../../core/models/task.models';
           class="list-card"
           *ngFor="let list of taskLists(); trackBy: trackByListId"
           [style.background]="list.color || '#fffef8'"
+          (click)="$event.stopPropagation()"
         >
           <header class="list-card__header">
             <h3>{{ list.title }}</h3>
@@ -110,7 +282,7 @@ import { TaskItem, TaskList } from '../../../core/models/task.models';
               </div>
               <div class="config-row">
                 <span>Card color</span>
-    <div class="swatches">
+                <div class="swatches">
                   <button
                     type="button"
                     class="swatch"
@@ -155,16 +327,16 @@ import { TaskItem, TaskList } from '../../../core/models/task.models';
                 <div class="task-row editing">
                   <input
                     #editInput
-                  class="edit-input"
-                  [attr.data-task-id]="task.id"
-                  [(ngModel)]="editDrafts[task.id]"
-                  [ngModelOptions]="{ standalone: true }"
-                  (keydown.enter)="saveEdit(list, task)"
-                  (keydown.escape)="cancelEdit(task)"
-                  (blur)="saveEdit(list, task)"
-                />
-                <button type="button" class="ghost" (click)="removeTask(list, task)">Remove</button>
-              </div>
+                    class="edit-input"
+                    [attr.data-task-id]="task.id"
+                    [(ngModel)]="editDrafts[task.id]"
+                    [ngModelOptions]="{ standalone: true }"
+                    (keydown.enter)="saveEdit(list, task)"
+                    (keydown.escape)="cancelEdit(task)"
+                    (blur)="saveEdit(list, task)"
+                  />
+                  <button type="button" class="ghost" (click)="removeTask(list, task)">Remove</button>
+                </div>
               </ng-template>
             </li>
           </ul>
@@ -175,25 +347,23 @@ import { TaskItem, TaskList } from '../../../core/models/task.models';
               [attr.data-list-id]="list.id"
               name="task-{{ list.id }}"
               [(ngModel)]="taskDrafts[list.id]"
-              placeholder="Todo"
+              placeholder="Add a todo…"
               required
             />
-            <button type="submit" [disabled]="!taskDrafts[list.id]?.trim()">Add Todo</button>
+            <button type="submit" [disabled]="!taskDrafts[list.id]?.trim()">Add</button>
           </form>
         </article>
       </div>
 
       <ng-template #emptyState>
         <div class="empty-card">
-          <div class="empty-card__header">
-            <div class="pin" aria-hidden="true">📌</div>
-            <h2>Let’s get organized</h2>
-          </div>
+          <div class="empty-card__icon" aria-hidden="true">🔓</div>
+          <h2>Your locker is empty</h2>
           <p class="empty-card__lead">
-            Welcome to your Focus Board. Start by creating a todo list—classes, projects, habits, anything you need to juggle—then add tasks.
+            Welcome to your Locker. Start by creating a todo list — classes, projects, habits, anything you need to juggle.
           </p>
           <ul class="empty-card__steps">
-            <li>Add your first todo list using the box above.</li>
+            <li>Add your first todo list using the form above.</li>
             <li>Add tasks under any list and drag to reorder.</li>
             <li>Color-code lists to keep subjects and priorities clear.</li>
           </ul>
@@ -203,55 +373,350 @@ import { TaskItem, TaskList } from '../../../core/models/task.models';
   `,
   styles: [
     `
+      /* ══════════════════════════════════════════════════════════
+         LOCKER DOOR ANIMATION
+         ══════════════════════════════════════════════════════════ */
+
+      .locker-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: flex;
+        align-items: stretch;
+        overflow: hidden;
+      }
+
+      /* One bay per locker — 5 equal columns */
+      .locker-bay {
+        flex: 1;
+        position: relative;
+        border-right: 3px solid rgba(0,0,0,0.32);
+        box-shadow: inset -1px 0 0 rgba(255,255,255,0.08);
+      }
+      .locker-bay:last-child { border-right: none; }
+
+      /* Center bay provides the perspective for the swinging door */
+      .locker-bay--center {
+        perspective: 600px;
+        perspective-origin: 0% 50%;
+      }
+
+      /* ── Locker interior (center bay only, revealed as door opens) ── */
+      .locker-interior {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 90% 18% at 50% 0%, rgba(255,255,255,0.09) 0%, transparent 100%),
+          linear-gradient(180deg, #2c3540 0%, #1e2830 55%, #141c22 100%);
+        overflow: hidden;
+      }
+      .locker-shelf {
+        position: absolute;
+        left: 0; right: 0;
+        height: 8px;
+        background: linear-gradient(180deg, #6a7480 0%, #3a444c 100%);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.16);
+      }
+      .locker-shelf::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 0; right: 0;
+        height: 18px;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.35), transparent);
+      }
+      .locker-shelf--top  { top: 30%; }
+      .locker-shelf--bottom { bottom: 22%; }
+
+      .locker-item {
+        position: absolute;
+        line-height: 1;
+        filter: drop-shadow(0 4px 10px rgba(0,0,0,0.65));
+        user-select: none;
+      }
+      /* Books row sitting on the bottom shelf */
+      .locker-books {
+        position: absolute;
+        bottom: 22%;
+        left: 50%;
+        transform: translate(-50%, -100%);
+        font-size: clamp(1.8rem, 3.5vw, 3rem);
+        line-height: 1;
+        white-space: nowrap;
+        letter-spacing: 0.08em;
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
+        user-select: none;
+      }
+
+      /* All doors fill their bay */
+      .locker-door {
+        position: absolute;
+        inset: 0;
+        background-image: repeating-linear-gradient(
+          90deg,
+          transparent 0px, transparent 49px,
+          rgba(255,255,255,0.05) 49px, rgba(255,255,255,0.05) 50px
+        );
+        box-shadow: inset -6px 0 20px rgba(0,0,0,0.35), inset 4px 0 10px rgba(255,255,255,0.07);
+      }
+
+      /* Inset panel bevel on all doors */
+      .locker-door::before {
+        content: '';
+        position: absolute;
+        inset: 14px;
+        border-top: 2px solid rgba(255,255,255,0.25);
+        border-left: 2px solid rgba(255,255,255,0.25);
+        border-right: 2px solid rgba(0,0,0,0.2);
+        border-bottom: 2px solid rgba(0,0,0,0.2);
+        border-radius: 3px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      /* The animated (center) door */
+      .locker-door--animated {
+        transform-origin: left center;
+        transform-style: preserve-3d;
+        will-change: transform;
+      }
+
+      /* Right-edge depth strip — only needed on the swinging door */
+      .locker-door__edge {
+        position: absolute;
+        right: -18px;
+        top: 0;
+        width: 18px;
+        height: 100%;
+        background: linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.2) 70%, transparent 100%);
+        pointer-events: none;
+      }
+
+      /* Door swing animation */
+      .locker-overlay--opening .locker-door--animated {
+        animation: doorSwing 0.9s cubic-bezier(0.55, 0, 0.15, 1) forwards;
+      }
+      @keyframes doorSwing {
+        0%   { transform: rotateY(0deg); }
+        78%  { transform: rotateY(-110deg); }
+        90%  { transform: rotateY(-103deg); }
+        100% { transform: rotateY(-107deg); }
+      }
+
+      /* ── Logo sticker ── */
+      .locker-logo {
+        position: absolute;
+        top: 36%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-4deg);
+        width: clamp(80px, 58%, 155px);
+        height: auto;
+        z-index: 2;
+        background: #fff;
+        border-radius: 6px;
+        padding: 6px 8px 4px;
+        box-shadow:
+          0 3px 10px rgba(0,0,0,0.35),
+          0 1px 3px rgba(0,0,0,0.2),
+          inset 0 0 0 1px rgba(0,0,0,0.04);
+        pointer-events: none;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+
+      /* ── Vent groups (upper center) ── */
+      .locker-vents {
+        position: absolute;
+        top: clamp(3rem, 12%, 5rem);
+        left: 10%;
+        right: 10%;
+        display: flex;
+        flex-direction: column;
+        gap: clamp(0.5rem, 3%, 0.9rem);
+        z-index: 1;
+      }
+      .locker-vent-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .locker-vent {
+        height: 7px;
+        border-radius: 2px;
+        background: rgba(0,0,0,0.55);
+        box-shadow:
+          inset 0 2px 4px rgba(0,0,0,0.7),
+          0 1px 0 rgba(255,255,255,0.1);
+      }
+
+      /* ── Combination dial lock — right side, vertically centered ── */
+      .locker-lock {
+        position: absolute;
+        right: 18%;
+        top: 55%;
+        transform: translateY(-50%);
+        z-index: 1;
+      }
+      /* Mounting plate */
+      .locker-lock__plate {
+        width: 56px;
+        height: 72px;
+        background: linear-gradient(160deg, #d4d4d8 0%, #a1a1aa 50%, #c4c4c8 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow:
+          0 6px 16px rgba(0,0,0,0.5),
+          inset 0 1px 0 rgba(255,255,255,0.5),
+          inset 0 -1px 0 rgba(0,0,0,0.2);
+      }
+      /* Dial */
+      .locker-lock__dial {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 38% 36%, #52525b 0%, #27272a 55%, #18181b 100%);
+        border: 3px solid #e4e4e7;
+        box-shadow:
+          inset 0 2px 8px rgba(0,0,0,0.75),
+          0 3px 8px rgba(0,0,0,0.45);
+        position: relative;
+        /* Tick marks via conic gradient */
+        background-image:
+          conic-gradient(
+            from 0deg,
+            transparent 0deg 9deg, rgba(255,255,255,0.18) 9deg 11deg,
+            transparent 11deg 21deg, rgba(255,255,255,0.09) 21deg 23deg,
+            transparent 23deg 33deg, rgba(255,255,255,0.18) 33deg 35deg,
+            transparent 35deg 45deg, rgba(255,255,255,0.09) 45deg 47deg,
+            transparent 47deg 57deg, rgba(255,255,255,0.18) 57deg 59deg,
+            transparent 59deg 69deg, rgba(255,255,255,0.09) 69deg 71deg,
+            transparent 71deg 81deg, rgba(255,255,255,0.18) 81deg 83deg,
+            transparent 83deg 93deg, rgba(255,255,255,0.09) 93deg 95deg,
+            transparent 95deg 105deg, rgba(255,255,255,0.18) 105deg 107deg,
+            transparent 107deg 117deg, rgba(255,255,255,0.09) 117deg 119deg,
+            transparent 119deg 129deg, rgba(255,255,255,0.18) 129deg 131deg,
+            transparent 131deg 141deg, rgba(255,255,255,0.09) 141deg 143deg,
+            transparent 143deg 153deg, rgba(255,255,255,0.18) 153deg 155deg,
+            transparent 155deg 165deg, rgba(255,255,255,0.09) 165deg 167deg,
+            transparent 167deg 177deg, rgba(255,255,255,0.18) 177deg 179deg,
+            transparent 179deg 189deg, rgba(255,255,255,0.09) 189deg 191deg,
+            transparent 191deg 201deg, rgba(255,255,255,0.18) 201deg 203deg,
+            transparent 203deg 213deg, rgba(255,255,255,0.09) 213deg 215deg,
+            transparent 215deg 225deg, rgba(255,255,255,0.18) 225deg 227deg,
+            transparent 227deg 237deg, rgba(255,255,255,0.09) 237deg 239deg,
+            transparent 239deg 249deg, rgba(255,255,255,0.18) 249deg 251deg,
+            transparent 251deg 261deg, rgba(255,255,255,0.09) 261deg 263deg,
+            transparent 263deg 273deg, rgba(255,255,255,0.18) 273deg 275deg,
+            transparent 275deg 285deg, rgba(255,255,255,0.09) 285deg 287deg,
+            transparent 287deg 297deg, rgba(255,255,255,0.18) 297deg 299deg,
+            transparent 299deg 309deg, rgba(255,255,255,0.09) 309deg 311deg,
+            transparent 311deg 321deg, rgba(255,255,255,0.18) 321deg 323deg,
+            transparent 323deg 333deg, rgba(255,255,255,0.09) 333deg 335deg,
+            transparent 335deg 345deg, rgba(255,255,255,0.18) 345deg 347deg,
+            transparent 347deg 360deg
+          ),
+          radial-gradient(circle at 38% 36%, #52525b 0%, #27272a 55%, #18181b 100%);
+      }
+      /* Arrow indicator — fixed pointer at top of plate, not on dial */
+      .locker-lock__indicator {
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 8px solid #a1a1aa;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+      }
+      /* Dial spin */
+      .locker-lock__dial--spinning {
+        animation: dialSpin 1.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      @keyframes dialSpin {
+        0%   { transform: rotate(0deg); }
+        30%  { transform: rotate(-720deg); }
+        62%  { transform: rotate(-360deg); }
+        82%  { transform: rotate(-540deg); }
+        100% { transform: rotate(-540deg); }
+      }
+
+      /* ══════════════════════════════════════════════════════════
+         DASHBOARD (locker interior)
+         Uses CSS custom properties set via [ngStyle]:
+           --lc-interior  background paint color
+           --lc-shelf     header/shelf color
+           --lc-accent    door color used for buttons/highlights
+         ══════════════════════════════════════════════════════════ */
+
       .dashboard {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: clamp(1.5rem, 3vw, 3rem);
+        min-height: 100dvh;
+        background-color: var(--lc-accent, #3d8ed4);
+        background-image: repeating-linear-gradient(
+          0deg, transparent 0, transparent 3px,
+          rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px
+        );
+        color: #1c1c1e;
+        padding: clamp(1.5rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.5rem);
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
-        background: transparent;
-        border-radius: 18px;
-        box-shadow: none;
       }
+
+      /* ── Header / shelf — frosted white over the vibrant background ── */
       .dashboard__header {
         display: flex;
         flex-wrap: wrap;
         align-items: flex-start;
         justify-content: space-between;
         gap: 1rem;
+        background: rgba(255,255,255,0.82);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem;
+        border: 1px solid rgba(255,255,255,0.6);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
       }
       .top-row {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
         gap: 1rem;
         width: 100%;
+        flex-wrap: wrap;
       }
       .brand {
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 0.5rem 0.9rem;
-        background: #fffef8;
-        border: 1px dashed rgba(45, 26, 16, 0.25);
-        border-radius: 12px;
-        box-shadow: 0 8px 16px rgba(45, 26, 16, 0.08);
       }
       .brand__link {
         display: inline-flex;
         align-items: center;
         gap: 0.75rem;
-        color: inherit;
+        color: #1c1c1e;
         text-decoration: none;
       }
       .brand img {
-        height: 46px;
+        height: 40px;
         width: auto;
         display: block;
       }
       .brand__text h1 {
         margin: 0;
+        font-size: 1.4rem;
+        color: #1c1c1e;
+        letter-spacing: 0.5px;
+      }
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
       }
       .nav-links {
         display: flex;
@@ -259,137 +724,126 @@ import { TaskItem, TaskList } from '../../../core/models/task.models';
         gap: 0.75rem;
       }
       .nav-link {
-        color: #2d1a10;
+        color: #3f3f46;
         text-decoration: none;
-        font-weight: 800;
-        border-radius: 999px;
-        padding: 0.6rem 1.2rem;
-        background: #fffef9;
-        border: 2px solid #2d1a10;
-        box-shadow: 0 12px 20px rgba(45, 26, 16, 0.15);
-        transition: transform 120ms ease, box-shadow 120ms ease;
+        font-weight: 700;
+        font-size: 0.875rem;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        background: rgba(0,0,0,0.06);
+        border: 1px solid rgba(0,0,0,0.1);
+        transition: background 0.12s;
         display: inline-block;
       }
-      .nav-link:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 16px 26px rgba(45, 26, 16, 0.2);
+      .nav-link:hover { background: rgba(0,0,0,0.12); color: #1c1c1e; }
+      button.nav-link { cursor: pointer; font-family: inherit; }
+      .nav-link--admin { color: #7048c0; border-color: rgba(112,72,192,0.25); background: rgba(112,72,192,0.08); }
+      .nav-link--admin:hover { background: rgba(112,72,192,0.16); color: #5030a0; }
+      .nav-link--logout { color: #b91c1c; border-color: rgba(185,28,28,0.2); background: rgba(185,28,28,0.06); }
+      .nav-link--logout:hover { background: rgba(185,28,28,0.14); color: #991b1b; }
+
+      /* ── Locker color picker ── */
+      .locker-color-picker {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
       }
+      .locker-color-picker__label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #52525b;
+        white-space: nowrap;
+      }
+      .locker-color-swatches {
+        display: flex;
+        gap: 5px;
+      }
+      .locker-swatch {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        padding: 0;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        transition: transform 0.12s, box-shadow 0.12s;
+      }
+      .locker-swatch:hover {
+        transform: scale(1.2);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+      }
+      .locker-swatch--active {
+        border-color: #1c1c1e;
+        transform: scale(1.15);
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.6), 0 3px 8px rgba(0,0,0,0.3);
+      }
+
       .error {
         color: #b00020;
         margin: 0;
         font-weight: 600;
+        font-size: 0.9rem;
+        width: 100%;
       }
-      .eyebrow {
-        margin: 0;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 700;
-        color: #8a5cf5;
-      }
+
+      /* ── New list form ── */
       .new-list {
         display: flex;
         gap: 0.5rem;
         align-items: center;
         flex-wrap: wrap;
-        padding: 0.85rem 1rem;
-        background: rgba(255, 254, 248, 0.82);
-        border-radius: 14px;
-        border: 1px dashed rgba(45, 26, 16, 0.18);
-        box-shadow: 0 8px 18px rgba(45, 26, 16, 0.1);
+        width: 100%;
       }
-      .new-list input,
-      .new-task input {
-        border: 2px solid rgba(45, 26, 16, 0.2);
-        border-radius: 0.65rem;
-        padding: 0.55rem 0.75rem;
-        min-width: 220px;
-        background: #fffdf7;
+      .new-list input {
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 8px;
+        padding: 0.6rem 0.85rem;
+        min-width: 200px;
+        background: rgba(255,255,255,0.7);
+        color: #1c1c1e;
+        font: inherit;
+        font-size: 0.95rem;
       }
-      button {
-        border: 2px solid #2d1a10;
-        border-radius: 0.6rem;
-        padding: 0.55rem 0.95rem;
-        background: #fffef8;
-        color: #2d1a10;
-        font-weight: 800;
-        cursor: pointer;
-        box-shadow: 0 8px 14px rgba(45, 26, 16, 0.12);
-      }
-      button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-      .ghost {
-        background: rgba(255, 255, 255, 0.7);
-        color: #2d1a10;
-        border: 1px dashed rgba(45, 26, 16, 0.25);
-        padding: 0.35rem 0.65rem;
-      }
-      .ghost.clean {
-        background: rgba(130, 201, 255, 0.25);
-        border-color: rgba(45, 26, 16, 0.18);
-      }
-      .clean__label {
-        text-decoration: line-through;
-      }
-      .danger {
-        border-color: rgba(176, 0, 32, 0.2);
-        color: #8c1f24;
-      }
-      .icon-button {
-        width: 2rem;
-        height: 2rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 999px;
-        font-size: 1.1rem;
-        line-height: 1;
-        padding: 0;
-        background: rgba(255, 255, 255, 0.8);
-        border: 1px dashed rgba(45, 26, 16, 0.25);
-        color: #2d1a10;
-        transition: transform 120ms ease, box-shadow 120ms ease;
-      }
-      .icon-button.gear {
+      .new-list input::placeholder { color: rgba(0,0,0,0.35); }
+      .new-list input:focus {
+        outline: none;
+        border-color: var(--lc-accent, #3d8ed4);
         background: #fff;
-        border: 1px solid rgba(0, 0, 0, 0.4);
-        color: #000;
-        font-size: 1rem;
       }
-      .icon-button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 8px 14px rgba(45, 26, 16, 0.12);
+      .new-list button {
+        background: var(--lc-accent, #3d8ed4);
+        border: none;
+        border-radius: 8px;
+        padding: 0.6rem 1.1rem;
+        color: #fff;
+        font-weight: 800;
+        font-size: 0.9rem;
+        font-family: inherit;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transition: opacity 0.12s;
       }
+      .new-list button:hover { opacity: 0.88; }
+      .new-list button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      /* ── List grid ── */
       .lists {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 1rem;
         align-items: start;
       }
+
+      /* ── List card ── */
       .list-card {
-        border: 2px solid rgba(45, 26, 16, 0.2);
-        border-radius: 1rem;
+        border-radius: 12px;
         padding: 1rem;
-        background: linear-gradient(145deg, #fffef8 0%, #fff4d6 100%);
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
         position: relative;
-        box-shadow: 0 12px 20px rgba(45, 26, 16, 0.14);
-        transform: none;
-      }
-      .list-card::before {
-        content: '';
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: radial-gradient(circle at 30% 30%, #fff 0%, #f7d977 45%, #c9861d 75%);
-        box-shadow: 0 3px 6px rgba(45, 26, 16, 0.25);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
+        border: 1px solid rgba(255,255,255,0.5);
       }
       .list-card__header {
         display: flex;
@@ -398,208 +852,226 @@ import { TaskItem, TaskList } from '../../../core/models/task.models';
         gap: 0.5rem;
         position: relative;
       }
+      .list-card__header h3 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 800;
+        color: #2d1a10;
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* ── Buttons (inside list cards) ── */
+      button {
+        border: 1px solid rgba(45,26,16,0.2);
+        border-radius: 6px;
+        padding: 0.4rem 0.75rem;
+        background: rgba(255,255,255,0.8);
+        color: #2d1a10;
+        font-weight: 700;
+        font-size: 0.8rem;
+        font-family: inherit;
+        cursor: pointer;
+        transition: opacity 0.12s;
+      }
+      button:hover { opacity: 0.8; }
+      button:disabled { opacity: 0.4; cursor: not-allowed; }
+      .ghost {
+        background: rgba(255,255,255,0.5);
+        border: 1px dashed rgba(45,26,16,0.2);
+        padding: 0.3rem 0.6rem;
+      }
+      .ghost.clean { background: rgba(130,201,255,0.2); }
+      .clean__label { text-decoration: line-through; }
+      .danger { color: #b00020; border-color: rgba(176,0,32,0.25); }
+      .icon-button {
+        width: 1.8rem;
+        height: 1.8rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 0;
+        background: rgba(255,255,255,0.7);
+        border: 1px solid rgba(45,26,16,0.2);
+        color: #2d1a10;
+      }
+      .icon-button.gear { background: rgba(255,255,255,0.9); }
       .list-actions {
         display: flex;
-        gap: 0.4rem;
+        gap: 0.3rem;
         align-items: center;
         position: absolute;
-        top: 0.35rem;
-        right: 0.35rem;
+        top: 0;
+        right: 0;
       }
       .confirm-bar {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        background: rgba(176, 0, 32, 0.06);
-        border: 1px solid rgba(176, 0, 32, 0.2);
-        border-radius: 0.6rem;
-        padding: 0.35rem 0.5rem;
-        color: #b00020;
+        gap: 0.4rem;
+        background: rgba(176,0,32,0.08);
+        border: 1px solid rgba(176,0,32,0.2);
+        border-radius: 6px;
+        padding: 0.3rem 0.5rem;
+        color: #8c1f24;
+        font-size: 0.8rem;
+        font-weight: 700;
       }
       .config-panel {
-        padding: 0.5rem;
-        border-radius: 0.6rem;
-        border: 1px dashed rgba(45, 26, 16, 0.2);
-        background: rgba(255, 255, 255, 0.95);
+        padding: 0.6rem;
+        border-radius: 8px;
+        border: 1px solid rgba(45,26,16,0.15);
+        background: #fffef8;
         display: inline-flex;
         flex-direction: column;
         gap: 0.5rem;
         position: absolute;
-        top: 2.4rem;
-        right: 0.5rem;
+        top: 2.2rem;
+        right: 0;
         z-index: 5;
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+        min-width: 220px;
       }
       .config-row {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         font-weight: 700;
+        font-size: 0.85rem;
+        color: #2d1a10;
       }
       .swatches {
         display: grid;
-        grid-template-columns: repeat(4, 32px);
-        gap: 0.35rem;
+        grid-template-columns: repeat(4, 28px);
+        gap: 0.3rem;
       }
       .swatch {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
         border: 2px solid transparent;
         cursor: pointer;
         padding: 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
       }
-      .swatch--active {
-        border-color: rgba(45, 26, 16, 0.5);
-        box-shadow: 0 0 0 2px rgba(45, 26, 16, 0.12);
-      }
+      .swatch--active { border-color: #2d1a10; }
+
+      /* ── Tasks ── */
       .task-list {
         list-style: none;
         padding: 0;
         margin: 0;
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.4rem;
       }
       .task-list li {
         display: flex;
         align-items: stretch;
-        justify-content: space-between;
-        gap: 0.5rem;
-        background: rgba(255, 255, 255, 0.75);
-        border-radius: 0.5rem;
-        padding: 0.25rem 0.35rem;
+        gap: 0.4rem;
+        background: rgba(255,255,255,0.6);
+        border-radius: 6px;
+        padding: 0.2rem 0.4rem;
       }
       .drag-handle {
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        padding: 0.35rem;
+        padding: 0.3rem 0.2rem;
         cursor: grab;
-        color: #8a5c2f;
-        font-size: 1rem;
+        color: rgba(45,26,16,0.4);
+        font-size: 0.85rem;
         user-select: none;
       }
-      .drag-handle:active {
-        cursor: grabbing;
-      }
-      .task-row {
-        flex: 1;
-      }
-      .task-list li.cdk-drag-preview {
-        box-shadow: 0 12px 20px rgba(45, 26, 16, 0.16);
-      }
-      .task-list li.cdk-drag-placeholder {
-        opacity: 0.2;
-      }
+      .drag-handle:active { cursor: grabbing; }
+      .task-list li.cdk-drag-preview { box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+      .task-list li.cdk-drag-placeholder { opacity: 0.2; }
       .task-row {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
         flex: 1;
         justify-content: space-between;
       }
-      .task-row.editing {
-        align-items: stretch;
-      }
-      .task-list label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+      .task-row.editing { align-items: stretch; }
+      .task-text {
         flex: 1;
+        background: transparent;
+        border: none;
+        text-align: left;
+        padding: 0.3rem 0.4rem;
+        font: inherit;
+        font-size: 0.875rem;
+        color: #2d1a10;
+        cursor: text;
       }
-      .task-list span.completed {
-        color: #8a8a8a;
-        text-decoration: line-through;
-      }
+      .task-text.completed { color: #8a8a8a; text-decoration: line-through; }
       .new-task {
         display: flex;
-        gap: 0.5rem;
+        gap: 0.4rem;
         align-items: center;
-        background: rgba(255, 255, 255, 0.75);
-        padding: 0.5rem;
-        border-radius: 0.75rem;
-        border: 1px dashed rgba(45, 26, 16, 0.16);
       }
-      .empty {
-        display: none;
+      .new-task input {
+        flex: 1;
+        border: 1px solid rgba(45,26,16,0.18);
+        border-radius: 6px;
+        padding: 0.45rem 0.65rem;
+        background: rgba(255,255,255,0.75);
+        color: #2d1a10;
+        font: inherit;
+        font-size: 0.875rem;
       }
+      .new-task input::placeholder { color: rgba(45,26,16,0.35); }
+      .new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
+      .title-edit-input,
+      .edit-input {
+        flex: 1;
+        border: 1px solid rgba(45,26,16,0.2);
+        border-radius: 6px;
+        padding: 0.35rem 0.55rem;
+        background: #fffdf7;
+        color: #2d1a10;
+        font: inherit;
+        font-size: 0.875rem;
+        min-width: 120px;
+      }
+
+      /* ── Empty state ── */
       .empty-card {
-        background: #fffef8;
-        border: 2px solid rgba(45, 26, 16, 0.2);
-        border-radius: 1.25rem;
-        padding: clamp(1.25rem, 3vw, 1.75rem);
-        box-shadow: 0 14px 28px rgba(45, 26, 16, 0.12);
-        max-width: 640px;
-        margin: 0 auto;
+        background: #fff;
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 14px;
+        padding: clamp(1.5rem, 3vw, 2rem);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        max-width: 560px;
+        margin: 2rem auto 0;
         display: grid;
         gap: 0.75rem;
+        text-align: center;
       }
-      .empty-card__header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-      .empty-card__header h2 {
-        margin: 0;
-        font-size: 1.5rem;
-      }
-      .empty-card__lead {
-        margin: 0;
-        font-size: 1.05rem;
-        line-height: 1.5;
-      }
+      .empty-card__icon { font-size: 2.5rem; }
+      .empty-card h2 { margin: 0; font-size: 1.4rem; color: #1c1c1e; }
+      .empty-card__lead { margin: 0; font-size: 1rem; line-height: 1.6; color: #3f3f46; }
       .empty-card__steps {
         margin: 0;
         padding-left: 1.2rem;
         display: grid;
         gap: 0.35rem;
         font-weight: 600;
-      }
-      .empty-card__steps li {
-        line-height: 1.5;
-      }
-      .task-actions {
-        display: flex;
-        gap: 0.4rem;
-        align-items: center;
-      }
-      .title-edit-input {
-        flex: 1;
-        border: 2px solid rgba(45, 26, 16, 0.2);
-        border-radius: 0.5rem;
-        padding: 0.4rem 0.6rem;
-        background: #fffdf7;
-        min-width: 140px;
-        font: inherit;
-      }
-      .edit-input {
-        flex: 1;
-        border: 2px solid rgba(45, 26, 16, 0.2);
-        border-radius: 0.5rem;
-        padding: 0.4rem 0.6rem;
-        background: #fffdf7;
-      }
-      .task-text {
-        flex: 1;
-        background: transparent;
-        border: none;
+        font-size: 0.9rem;
+        color: #52525b;
         text-align: left;
-        padding: 0.35rem 0.5rem;
-        font: inherit;
-        color: #2d1a10;
-        cursor: text;
       }
-      .task-text.completed {
-        color: #8a8a8a;
-        text-decoration: line-through;
-      }
+      .empty-card__steps li { line-height: 1.5; }
+
       .sr-only {
         position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
+        width: 1px; height: 1px;
+        padding: 0; margin: -1px;
         overflow: hidden;
         clip: rect(0, 0, 0, 0);
         border: 0;
@@ -607,30 +1079,36 @@ import { TaskItem, TaskList } from '../../../core/models/task.models';
     `
   ]
 })
-export class DashboardComponent implements AfterViewInit {
+export class DashboardComponent implements AfterViewInit, OnInit {
+  private readonly sessionStore = inject(SessionStore);
+  private readonly router = inject(Router);
+
+  protected readonly isAdmin = this.sessionStore.isAdmin;
+
+  protected readonly LOCKER_COLORS = LOCKER_COLORS;
+  protected lockerColor = signal<LockerColor>(this.loadLockerColor());
+
+  // Animation phases
+  protected lockerDone = signal(false);
+  protected lockerSpinning = signal(false);
+  protected lockerOpening = signal(false);
+  protected readonly lockerBays = [0, 1, 2, 3, 4];  // 5 lockers; index 2 is center
+  protected readonly ventSlots = [1, 2, 3, 4, 5];
+  protected lockerItems: { emoji: string; top: number; left: number; size: number; rot: number }[] = [];
+
   protected readonly taskLists = signal<TaskList[]>([]);
   protected newListTitle = '';
   protected taskDrafts: Record<string, string> = {};
   protected errorMessage = '';
   protected editDrafts: Record<string, string> = {};
+
   protected readonly colorPalette = [
-    '#fffef8',
-    '#fef3c7',
-    '#fde68a',
-    '#fcd34d',
-    '#fef2f2',
-    '#fecdd3',
-    '#fda4af',
-    '#fecdd3',
-    '#ede9fe',
-    '#ddd6fe',
-    '#c7d2fe',
-    '#bfdbfe',
-    '#dcfce7',
-    '#bbf7d0',
-    '#a7f3d0',
-    '#e0f2fe'
+    '#fffef8', '#fef3c7', '#fde68a', '#fcd34d',
+    '#fef2f2', '#fecdd3', '#fda4af', '#fbcfe8',
+    '#ede9fe', '#ddd6fe', '#c7d2fe', '#bfdbfe',
+    '#dcfce7', '#bbf7d0', '#a7f3d0', '#e0f2fe',
   ];
+
   private readonly editingTaskIds = new Set<string>();
   private readonly pendingDeleteIds = new Set<string>();
   private readonly pendingCleanIds = new Set<string>();
@@ -638,67 +1116,86 @@ export class DashboardComponent implements AfterViewInit {
   protected colorDrafts: Record<string, string> = {};
   protected colorOriginals: Record<string, string> = {};
   protected titleDrafts: Record<string, string> = {};
+
   @ViewChildren('taskInput') private taskInputRefs!: QueryList<ElementRef<HTMLInputElement>>;
   @ViewChildren('editInput') private editInputRefs!: QueryList<ElementRef<HTMLInputElement>>;
   private pendingFocusListId: string | null = null;
 
   constructor(private readonly taskApi: TaskApiService) {
-    effect(() => {
-      this.loadLists();
-    });
+    effect(() => { this.loadLists(); });
+  }
+
+  ngOnInit(): void {
+    const shuffled = [...LOCKER_ITEM_POOL].sort(() => Math.random() - 0.5);
+    this.lockerItems = LOCKER_ZONES.map((zone, i) => ({
+      emoji: shuffled[i % shuffled.length],
+      top:   zone.top  + (Math.random() - 0.5) * 4,
+      left:  zone.left + (Math.random() - 0.5) * 6,
+      size:  zone.size * (0.88 + Math.random() * 0.24),
+      rot:   (Math.random() * 2 - 1) * zone.rot,
+    }));
+
+    // Phase 1 (500ms pause) → Phase 2: dial spins (1300ms) → Phase 3: door swings open (900ms)
+    setTimeout(() => {
+      this.lockerSpinning.set(true);
+      setTimeout(() => {
+        this.lockerOpening.set(true);
+        setTimeout(() => {
+          this.lockerDone.set(true);
+        }, 900);
+      }, 1300);
+    }, 500);
   }
 
   ngAfterViewInit(): void {
     this.taskInputRefs.changes.subscribe(() => {
-      if (this.pendingFocusListId) {
-        this.tryFocusTaskInput(this.pendingFocusListId);
-      }
+      if (this.pendingFocusListId) this.tryFocusTaskInput(this.pendingFocusListId);
     });
+  }
+
+  protected setLockerColor(color: LockerColor): void {
+    this.lockerColor.set(color);
+    localStorage.setItem(LOCKER_COLOR_KEY, color.id);
+  }
+
+  private loadLockerColor(): LockerColor {
+    const saved = localStorage.getItem(LOCKER_COLOR_KEY);
+    return LOCKER_COLORS.find(c => c.id === saved) ?? LOCKER_COLORS[0];
   }
 
   private loadLists(): void {
     this.taskApi.getTaskLists().subscribe({
-      next: lists => {
-        this.taskLists.set(lists);
-      },
-      error: () => {
-        this.errorMessage = 'Could not load your lists. Please log in again.';
-      }
+      next: lists => { this.taskLists.set(lists); },
+      error: () => { this.errorMessage = 'Could not load your lists. Please log in again.'; },
     });
+  }
+
+  protected closeConfig(): void {
+    if (this.configOpenId) {
+      const list = this.taskLists().find(l => l.id === this.configOpenId);
+      if (list) this.commitColor(list);
+      this.configOpenId = null;
+    }
   }
 
   protected createList(): void {
     const title = this.newListTitle.trim();
-    if (!title) {
-      return;
-    }
+    if (!title) return;
     const color = this.nextAvailableColor();
     this.taskApi.createList(title, color).subscribe({
       next: list => {
-        const withColor = { ...list, color };
-        this.taskLists.update(current => [...current, withColor]);
+        this.taskLists.update(current => [...current, { ...list, color }]);
         this.newListTitle = '';
         this.errorMessage = '';
       },
-      error: () => {
-        this.errorMessage = 'Unable to add a list right now. Please try again or sign in again.';
-      }
+      error: () => { this.errorMessage = 'Unable to add a list right now. Please try again or sign in again.'; },
     });
   }
 
-  protected requestDelete(list: TaskList): void {
-    this.pendingDeleteIds.add(list.id);
-  }
-
-  protected cancelDelete(listId: string): void {
-    this.pendingDeleteIds.delete(listId);
-  }
+  protected requestDelete(list: TaskList): void { this.pendingDeleteIds.add(list.id); }
 
   protected toggleConfig(list: TaskList): void {
-    if (this.configOpenId === list.id) {
-      this.commitColor(list);
-      return;
-    }
+    if (this.configOpenId === list.id) { this.commitColor(list); return; }
     this.colorOriginals = { ...this.colorOriginals, [list.id]: list.color };
     this.colorDrafts = { ...this.colorDrafts, [list.id]: list.color };
     this.titleDrafts = { ...this.titleDrafts, [list.id]: list.title };
@@ -707,76 +1204,53 @@ export class DashboardComponent implements AfterViewInit {
 
   protected setCardColor(list: TaskList, color: string): void {
     this.colorDrafts = { ...this.colorDrafts, [list.id]: color };
-    this.taskLists.update(current =>
-      current.map(item => (item.id === list.id ? { ...item, color } : item))
-    );
+    this.taskLists.update(current => current.map(item => item.id === list.id ? { ...item, color } : item));
   }
 
   protected commitColor(list: TaskList): void {
     const draft = this.colorDrafts[list.id] ?? list.color;
     const original = this.colorOriginals[list.id] ?? list.color;
-    if (!draft || draft === original) {
-      this.configOpenId = null;
-      return;
-    }
+    if (!draft || draft === original) { this.configOpenId = null; return; }
     this.taskApi.updateListColor(list.id, draft).subscribe({
       next: updated => {
-        this.taskLists.update(current =>
-          current.map(item => (item.id === list.id ? { ...item, color: updated.color } : item))
-        );
+        this.taskLists.update(current => current.map(item => item.id === list.id ? { ...item, color: updated.color } : item));
         this.colorOriginals = { ...this.colorOriginals, [list.id]: updated.color };
         this.colorDrafts = { ...this.colorDrafts, [list.id]: updated.color };
         this.configOpenId = null;
       },
       error: () => {
         this.errorMessage = 'Could not save card color. Please try again.';
-        this.taskLists.update(current =>
-          current.map(item => (item.id === list.id ? { ...item, color: original } : item))
-        );
+        this.taskLists.update(current => current.map(item => item.id === list.id ? { ...item, color: original } : item));
         this.configOpenId = null;
-      }
+      },
     });
   }
 
-  private revertColorDraft(listId: string, onlyIfChanged = false): void {
+  private revertColorDraft(listId: string): void {
     const original = this.colorOriginals[listId];
-    const draft = this.colorDrafts[listId];
-    if (original === undefined) {
-      return;
-    }
-    if (onlyIfChanged && draft === original) {
-      return;
-    }
-    this.taskLists.update(current =>
-      current.map(item => (item.id === listId ? { ...item, color: original } : item))
-    );
-    const { [listId]: _, ...restDrafts } = this.colorDrafts;
-    const { [listId]: __, ...restOriginals } = this.colorOriginals;
+    if (original === undefined) return;
+    this.taskLists.update(current => current.map(item => item.id === listId ? { ...item, color: original } : item));
+    const { [listId]: _d, ...restDrafts } = this.colorDrafts;
+    const { [listId]: _o, ...restOriginals } = this.colorOriginals;
     this.colorDrafts = restDrafts;
     this.colorOriginals = restOriginals;
   }
 
   protected saveTitleEdit(list: TaskList, event?: Event, closePanel = false): void {
-    if (event instanceof KeyboardEvent) {
-      event.preventDefault();
-    }
+    if (event instanceof KeyboardEvent) event.preventDefault();
     const draft = this.titleDrafts[list.id]?.trim();
     if (draft && draft !== list.title) {
       this.taskApi.updateListTitle(list.id, draft).subscribe({
         next: updated => {
-          this.taskLists.update(current =>
-            current.map(item => (item.id === list.id ? { ...item, title: updated.title } : item))
-          );
+          this.taskLists.update(current => current.map(item => item.id === list.id ? { ...item, title: updated.title } : item));
         },
         error: () => {
           this.errorMessage = 'Could not save list name. Please try again.';
           this.titleDrafts = { ...this.titleDrafts, [list.id]: list.title };
-        }
+        },
       });
     }
-    if (closePanel) {
-      this.commitColor(list);
-    }
+    if (closePanel) this.commitColor(list);
   }
 
   protected onConfigKeydown(event: Event, list: TaskList): void {
@@ -790,21 +1264,13 @@ export class DashboardComponent implements AfterViewInit {
 
   protected onSwatchKeydown(event: KeyboardEvent, list: TaskList, index: number): void {
     const key = event.key;
-    if (key === 'Enter') {
-      event.preventDefault();
-      this.commitColor(list);
-      return;
-    }
-    if (key !== 'ArrowRight' && key !== 'ArrowDown' && key !== 'ArrowLeft' && key !== 'ArrowUp') {
-      return;
-    }
+    if (key === 'Enter') { event.preventDefault(); this.commitColor(list); return; }
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(key)) return;
     event.preventDefault();
     const delta = key === 'ArrowRight' || key === 'ArrowDown' ? 1 : -1;
     const nextIndex = (index + delta + this.colorPalette.length) % this.colorPalette.length;
-    const nextColor = this.colorPalette[nextIndex];
-    this.setCardColor(list, nextColor);
-    const nextId = `swatch-${list.id}-${nextIndex}`;
-    setTimeout(() => document.getElementById(nextId)?.focus());
+    this.setCardColor(list, this.colorPalette[nextIndex]);
+    setTimeout(() => document.getElementById(`swatch-${list.id}-${nextIndex}`)?.focus());
   }
 
   protected deleteList(list: TaskList): void {
@@ -816,13 +1282,9 @@ export class DashboardComponent implements AfterViewInit {
 
   protected addTask(list: TaskList): void {
     const draft = this.taskDrafts[list.id]?.trim();
-    if (!draft) {
-      return;
-    }
+    if (!draft) return;
     this.taskApi.addTask(list.id, draft).subscribe(task => {
-      this.taskLists.update(current =>
-        current.map(item => (item.id === list.id ? { ...item, tasks: [...item.tasks, task] } : item))
-      );
+      this.taskLists.update(current => current.map(item => item.id === list.id ? { ...item, tasks: [...item.tasks, task] } : item));
       this.taskDrafts = { ...this.taskDrafts, [list.id]: '' };
       this.focusTaskInput(list.id);
     });
@@ -833,7 +1295,7 @@ export class DashboardComponent implements AfterViewInit {
       this.taskLists.update(current =>
         current.map(item =>
           item.id === list.id
-            ? { ...item, tasks: item.tasks.map(t => (t.id === task.id ? updated : t)) }
+            ? { ...item, tasks: item.tasks.map(t => t.id === task.id ? updated : t) }
             : item
         )
       );
@@ -842,52 +1304,32 @@ export class DashboardComponent implements AfterViewInit {
 
   protected clearCompleted(list: TaskList): void {
     const completed = list.tasks.filter(task => task.completed);
-    if (!completed.length) {
-      return;
-    }
-
-    const deletions = completed.map(task => this.taskApi.deleteTask(list.id, task.id));
-    forkJoin(deletions).subscribe({
+    if (!completed.length) return;
+    forkJoin(completed.map(task => this.taskApi.deleteTask(list.id, task.id))).subscribe({
       next: () => {
         this.taskLists.update(current =>
-          current.map(item =>
-            item.id === list.id ? { ...item, tasks: item.tasks.filter(t => !t.completed) } : item
-          )
+          current.map(item => item.id === list.id ? { ...item, tasks: item.tasks.filter(t => !t.completed) } : item)
         );
         this.errorMessage = '';
       },
-      error: () => {
-        this.errorMessage = 'Unable to clean completed items right now.';
-      }
+      error: () => { this.errorMessage = 'Unable to clean completed items right now.'; },
     });
   }
 
   protected removeTask(list: TaskList, task: TaskItem): void {
     this.taskApi.deleteTask(list.id, task.id).subscribe(() => {
       this.taskLists.update(current =>
-        current.map(item =>
-          item.id === list.id ? { ...item, tasks: item.tasks.filter(t => t.id !== task.id) } : item
-        )
+        current.map(item => item.id === list.id ? { ...item, tasks: item.tasks.filter(t => t.id !== task.id) } : item)
       );
     });
   }
 
-  protected isEditing(taskId: string): boolean {
-    return this.editingTaskIds.has(taskId);
-  }
-
-  protected isPendingDelete(listId: string): boolean {
-    return this.pendingDeleteIds.has(listId);
-  }
-
-  protected isPendingClean(listId: string): boolean {
-    return this.pendingCleanIds.has(listId);
-  }
+  protected isEditing(taskId: string): boolean { return this.editingTaskIds.has(taskId); }
+  protected isPendingDelete(listId: string): boolean { return this.pendingDeleteIds.has(listId); }
+  protected isPendingClean(listId: string): boolean { return this.pendingCleanIds.has(listId); }
 
   protected requestClean(list: TaskList): void {
-    if (list.tasks.every(task => !task.completed)) {
-      return;
-    }
+    if (list.tasks.every(task => !task.completed)) return;
     this.pendingCleanIds.add(list.id);
   }
 
@@ -914,15 +1356,12 @@ export class DashboardComponent implements AfterViewInit {
       this.editingTaskIds.delete(task.id);
       return;
     }
-    if (draft === task.description) {
-      this.editingTaskIds.delete(task.id);
-      return;
-    }
+    if (draft === task.description) { this.editingTaskIds.delete(task.id); return; }
     this.taskApi.updateTask(list.id, task.id, { description: draft }).subscribe(updated => {
       this.taskLists.update(current =>
         current.map(item =>
           item.id === list.id
-            ? { ...item, tasks: item.tasks.map(t => (t.id === task.id ? updated : t)) }
+            ? { ...item, tasks: item.tasks.map(t => t.id === task.id ? updated : t) }
             : item
         )
       );
@@ -938,52 +1377,32 @@ export class DashboardComponent implements AfterViewInit {
   protected reorderTasks(list: TaskList, event: CdkDragDrop<TaskItem[]>): void {
     const prevOrder = [...list.tasks];
     const updatedLists = this.taskLists().map(item => {
-      if (item.id !== list.id) {
-        return item;
-      }
+      if (item.id !== list.id) return item;
       const tasks = [...item.tasks];
       moveItemInArray(tasks, event.previousIndex, event.currentIndex);
       return { ...item, tasks };
     });
     this.taskLists.set(updatedLists);
-
-    const updatedList = updatedLists.find(l => l.id === list.id);
-    if (!updatedList) {
-      return;
-    }
-    const orderedIds = updatedList.tasks.map(t => t.id);
+    const orderedIds = updatedLists.find(l => l.id === list.id)?.tasks.map(t => t.id) ?? [];
     this.taskApi.reorderTasks(list.id, orderedIds).subscribe({
-      next: () => {
-        this.errorMessage = '';
-      },
       error: () => {
         this.errorMessage = 'Could not save task order. Please try again.';
-        this.taskLists.set(
-          this.taskLists().map(item => (item.id === list.id ? { ...item, tasks: prevOrder } : item))
-        );
-      }
+        this.taskLists.set(this.taskLists().map(item => item.id === list.id ? { ...item, tasks: prevOrder } : item));
+      },
     });
   }
 
   private focusTaskInput(listId: string): void {
     this.pendingFocusListId = listId;
-    // Queue after DOM updates for both click and Enter submissions.
     requestAnimationFrame(() => {
-      if (!this.tryFocusTaskInput(listId)) {
-        setTimeout(() => this.tryFocusTaskInput(listId), 30);
-      }
+      if (!this.tryFocusTaskInput(listId)) setTimeout(() => this.tryFocusTaskInput(listId), 30);
     });
   }
 
   private tryFocusTaskInput(listId: string): boolean {
     const ref = this.taskInputRefs?.find(el => el.nativeElement.dataset['listId'] === listId);
     const target = ref?.nativeElement ?? this.taskInputRefs?.last?.nativeElement;
-    if (target) {
-      target.focus();
-      target.select();
-      this.pendingFocusListId = null;
-      return true;
-    }
+    if (target) { target.focus(); target.select(); this.pendingFocusListId = null; return true; }
     return false;
   }
 
@@ -992,13 +1411,15 @@ export class DashboardComponent implements AfterViewInit {
     ref?.nativeElement.focus();
   }
 
-  protected trackByListId(_index: number, list: TaskList): string {
-    return list.id;
+  protected trackByListId(_index: number, list: TaskList): string { return list.id; }
+
+  protected handleLogout(): void {
+    this.sessionStore.clearSession();
+    this.router.navigate(['/']);
   }
 
   private nextAvailableColor(): string {
     const used = new Set(this.taskLists().map(l => l.color));
-    const firstUnused = this.colorPalette.find(color => !used.has(color));
-    return firstUnused ?? this.colorPalette[0];
+    return this.colorPalette.find(color => !used.has(color)) ?? this.colorPalette[0];
   }
 }

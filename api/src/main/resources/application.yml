@@ -45,3 +45,10 @@ notifications:
     enabled: false
     region: us-west-2
     from-address: admin@highschoolhowto.com
+
+storage:
+  s3:
+    bucket: ${STORAGE_S3_BUCKET:highschoolhowto-site}
+    region: ${STORAGE_S3_REGION:us-west-2}
+    upload-prefix: uploads/
+    cdn-base-url: ${STORAGE_S3_CDN_BASE_URL:}

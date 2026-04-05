@@ -57,6 +57,7 @@ services:
     volumes:
       - ./frontend:/workspace/frontend
       - frontend-node-modules:/workspace/frontend/node_modules
+      - ./media:/workspace/frontend/public/media
 
 volumes:
   gradle-cache:

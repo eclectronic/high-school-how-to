@@ -10,4 +10,5 @@ public record JwtPayload(
         Optional<UUID> jwtId,
         Instant issuedAt,
         Instant expiresAt,
-        Optional<String> email) {}
+        Optional<String> email,
+        Optional<String> role) {}

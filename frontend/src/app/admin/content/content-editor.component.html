@@ -1,0 +1,203 @@
+<div class="admin-page">
+  <div class="admin-page__header">
+    <h1>{{ editId() ? 'Edit Card' : 'New Card' }}</h1>
+    <a class="btn btn--secondary" routerLink="/admin/content">← Back</a>
+  </div>
+
+  @if (error()) {
+    <div class="admin-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p>Loading...</p>
+  } @else {
+    <div class="editor-layout">
+
+      <!-- Main fields -->
+      <div class="admin-card editor-section">
+        <h2>Basic Info</h2>
+
+        <div class="form-row">
+          <label>Title</label>
+          <input [(ngModel)]="form.title" (input)="onTitleInput()" placeholder="Getting Your Driver's License" />
+        </div>
+
+        <div class="form-row">
+          <label>Slug</label>
+          <input [(ngModel)]="form.slug" placeholder="drivers-license" />
+        </div>
+
+        <div class="form-row">
+          <label>Description</label>
+          <textarea [(ngModel)]="form.description" rows="2" placeholder="Short summary shown in cards"></textarea>
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-row">
+            <label>Type</label>
+            <select [(ngModel)]="form.cardType">
+              @for (t of cardTypes; track t) {
+                <option [value]="t">{{ t }}</option>
+              }
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Status</label>
+            <select [(ngModel)]="form.status">
+              @for (s of statuses; track s) {
+                <option [value]="s">{{ s }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="admin-card editor-section">
+        <h2>Tags <small>(select at least one)</small></h2>
+        <div class="tag-picker">
+          @for (tag of allTags(); track tag.id) {
+            <button
+              type="button"
+              class="tag-option"
+              [class.selected]="form.tagIds.has(tag.id)"
+              (click)="toggleTag(tag.id)"
+            >
+              {{ tag.name }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Media fields -->
+      <div class="admin-card editor-section">
+        <h2>Media</h2>
+
+        @if (form.cardType === 'VIDEO') {
+          <div class="form-row">
+            <label>YouTube URL or Embed URL</label>
+            <input [(ngModel)]="form.mediaUrl" placeholder="https://www.youtube.com/watch?v=..." />
+          </div>
+        }
+
+        @if (form.cardType === 'INFOGRAPHIC') {
+          <div class="form-row">
+            <label>Infographic Image URL</label>
+            <input [(ngModel)]="form.mediaUrl" placeholder="https://..." />
+          </div>
+          <div class="form-row">
+            <label>Print / Full-res URL</label>
+            <input [(ngModel)]="form.printMediaUrl" placeholder="https://..." />
+          </div>
+        }
+
+        <div class="form-row">
+          <label>Thumbnail URL</label>
+          <div class="url-with-upload">
+            <input [(ngModel)]="form.thumbnailUrl" placeholder="https://..." />
+            <label class="btn btn--secondary btn--sm upload-btn">
+              Upload
+              <input type="file" accept="image/*" hidden (change)="uploadFile($event, 'thumbnailUrl')" />
+            </label>
+          </div>
+          @if (form.thumbnailUrl) {
+            <img class="img-preview" [src]="form.thumbnailUrl" alt="thumbnail preview" />
+          }
+        </div>
+
+        <div class="form-row">
+          <label>Cover Image URL <small>(used as hero)</small></label>
+          <div class="url-with-upload">
+            <input [(ngModel)]="form.coverImageUrl" placeholder="https://..." />
+            <label class="btn btn--secondary btn--sm upload-btn">
+              Upload
+              <input type="file" accept="image/*" hidden (change)="uploadFile($event, 'coverImageUrl')" />
+            </label>
+          </div>
+          @if (form.coverImageUrl) {
+            <img class="img-preview" [src]="form.coverImageUrl" alt="cover preview" />
+          }
+        </div>
+
+        @if (uploadingImage()) {
+          <p class="uploading-note">Uploading image...</p>
+        }
+      </div>
+
+      <!-- Article body -->
+      @if (form.cardType === 'ARTICLE') {
+        <div class="admin-card editor-section">
+          <div class="article-section-header">
+            <h2>Article Body</h2>
+            <div class="editor-mode-toggle">
+              <button type="button" class="mode-btn" [class.mode-btn--active]="!previewMode()" (click)="previewMode.set(false)">Edit</button>
+              <button type="button" class="mode-btn" [class.mode-btn--active]="previewMode()" (click)="previewMode.set(true)">Preview</button>
+            </div>
+          </div>
+
+          <div class="color-pickers-row">
+            <div class="form-row form-row--color">
+              <label>Background Color</label>
+              <div class="color-picker-row">
+                <input type="color" [(ngModel)]="form.backgroundColor" [value]="form.backgroundColor || '#fffef9'" />
+                <input type="text" [(ngModel)]="form.backgroundColor" placeholder="#fffef9" class="color-hex-input" />
+                @if (form.backgroundColor) {
+                  <button type="button" class="btn btn--secondary btn--sm" (click)="form.backgroundColor = ''">Clear</button>
+                }
+                <span class="color-preview" [style.background]="form.backgroundColor || 'transparent'"></span>
+              </div>
+            </div>
+            <div class="form-row form-row--color">
+              <label>Text Color</label>
+              <div class="color-picker-row">
+                <input type="color" [(ngModel)]="form.textColor" [value]="form.textColor || '#2d1a10'" />
+                <input type="text" [(ngModel)]="form.textColor" placeholder="#2d1a10" class="color-hex-input" />
+                @if (form.textColor) {
+                  <button type="button" class="btn btn--secondary btn--sm" (click)="form.textColor = ''">Clear</button>
+                }
+                <span class="color-preview" [style.background]="form.textColor || 'transparent'"></span>
+              </div>
+            </div>
+          </div>
+
+          @if (!previewMode()) {
+            <app-tiptap-editor
+              [initialJson]="bodyJson"
+              [initialHtml]="bodyHtml"
+              [backgroundColor]="form.backgroundColor || null"
+              [textColor]="form.textColor || null"
+              (contentChange)="onEditorChange($event)" />
+          } @else {
+            <div class="article-preview">
+              @if (form.title) {
+                <header class="preview-header">
+                  <h1>{{ form.title }}</h1>
+                  @if (form.description) {
+                    <p class="preview-desc">{{ form.description }}</p>
+                  }
+                </header>
+              }
+              @if (safePreviewHtml) {
+                <div class="article-body"
+                [style.background-color]="form.backgroundColor || null"
+                [style.color]="form.textColor || null"
+                [innerHTML]="safePreviewHtml"></div>
+              } @else {
+                <p class="preview-empty">No content yet — switch to Edit to write your article.</p>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Actions -->
+      <div class="editor-actions">
+        <a class="btn btn--secondary" routerLink="/admin/content">Cancel</a>
+        <button class="btn btn--primary" [disabled]="saving()" (click)="save()">
+          {{ saving() ? 'Saving…' : 'Save' }}
+        </button>
+      </div>
+
+    </div>
+  }
+</div>

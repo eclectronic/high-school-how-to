@@ -24,6 +24,12 @@ export class SessionStore {
     return Boolean(snapshot.accessToken && !this.isExpired(snapshot));
   });
 
+  readonly isAdmin = computed(() => {
+    const snapshot = this.state();
+    if (!snapshot.accessToken || this.isExpired(snapshot)) return false;
+    return this.decodeRole(snapshot.accessToken) === 'ADMIN';
+  });
+
   constructor() {
     this.hydrate();
   }
@@ -96,5 +102,15 @@ export class SessionStore {
 
   private isExpired(state: SessionState) {
     return typeof state.expiresAt === 'number' && state.expiresAt <= Date.now();
+  }
+
+  private decodeRole(token: string): string | null {
+    try {
+      const payload = token.split('.')[1];
+      const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+      return decoded['role'] ?? null;
+    } catch {
+      return null;
+    }
   }
 }

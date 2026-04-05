@@ -1,101 +1,70 @@
-import { NgIf } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { InfographicResource, infographics } from '../../resources/infographics';
-import {
-  YoutubeVideoResource,
-  buildYoutubeEmbedUrl,
-  youtubeVideos
-} from '../../resources/youtube-videos';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { SessionStore } from '../../core/session/session.store';
+import { ContentApiService } from '../../core/services/content-api.service';
+import { ContentCard, HomeLayoutResponse } from '../../core/models/content.models';
 
 @Component({
   selector: 'app-home-page',
   standalone: true,
-  imports: [NgIf],
+  imports: [RouterLink],
   templateUrl: './home-page.component.html',
-  styleUrl: './home-page.component.scss'
+  styleUrl: './home-page.component.scss',
 })
 export class HomePageComponent implements OnInit {
-  protected readonly youtubeVideoResources = youtubeVideos;
-  protected readonly infographicResources = infographics;
-  protected videoIndex = 0;
-  protected infographicIndex = 0;
-  protected featuredVideo: YoutubeVideoResource = youtubeVideos[0];
-  protected featuredVideoEmbed?: SafeResourceUrl;
-  protected featuredInfographic: InfographicResource = infographics[0];
-  private readonly sanitizer = inject(DomSanitizer);
-  private readonly router = inject(Router);
   private readonly sessionStore = inject(SessionStore);
+  private readonly router = inject(Router);
+  private readonly api = inject(ContentApiService);
+
   protected readonly isAuthenticated = this.sessionStore.isAuthenticated;
-  protected readonly clearSession = () => this.sessionStore.clearSession();
-  private videoTouchStart: number | null = null;
-  private infographicTouchStart: number | null = null;
+  protected readonly isAdmin = this.sessionStore.isAdmin;
+
+  protected layout = signal<HomeLayoutResponse | null>(null);
+  protected loading = signal(true);
+  protected selectedTagSlug = signal<string | null>(null);
+
+  protected navTags = computed(() => this.layout()?.sections.map((s) => s.tag) ?? []);
+
+  protected visibleSections = computed(() => {
+    const sections = this.layout()?.sections ?? [];
+    const slug = this.selectedTagSlug();
+    return slug ? sections.filter((s) => s.tag.slug === slug) : sections;
+  });
 
   ngOnInit(): void {
-    this.updateFeaturedVideoEmbed();
+    this.api.getHomeLayout().subscribe({
+      next: (layout) => {
+        this.layout.set(layout);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
   }
 
-  protected stepVideo(delta: number): void {
-    this.videoIndex = (this.videoIndex + delta + this.youtubeVideoResources.length) % this.youtubeVideoResources.length;
-    this.featuredVideo = this.youtubeVideoResources[this.videoIndex];
-    this.updateFeaturedVideoEmbed();
-  }
-
-  protected stepInfographic(delta: number): void {
-    this.infographicIndex =
-      (this.infographicIndex + delta + this.infographicResources.length) % this.infographicResources.length;
-    this.featuredInfographic = this.infographicResources[this.infographicIndex];
-  }
-
-  protected handleVideoPointerStart(event: PointerEvent): void {
-    if (event.pointerType === 'touch') {
-      this.videoTouchStart = event.clientX;
-    }
-  }
-
-  protected handleVideoPointerEnd(event: PointerEvent): void {
-    if (event.pointerType === 'touch' && this.videoTouchStart !== null) {
-      const delta = event.clientX - this.videoTouchStart;
-      if (Math.abs(delta) > 40) {
-        this.stepVideo(delta < 0 ? 1 : -1);
-      }
-    }
-    this.videoTouchStart = null;
-  }
-
-  protected handleInfographicPointerStart(event: PointerEvent): void {
-    if (event.pointerType === 'touch') {
-      this.infographicTouchStart = event.clientX;
-    }
-  }
-
-  protected handleInfographicPointerEnd(event: PointerEvent): void {
-    if (event.pointerType === 'touch' && this.infographicTouchStart !== null) {
-      const delta = event.clientX - this.infographicTouchStart;
-      if (Math.abs(delta) > 40) {
-        this.stepInfographic(delta < 0 ? 1 : -1);
-      }
-    }
-    this.infographicTouchStart = null;
-  }
-
-  private updateFeaturedVideoEmbed(autoplay = false): void {
-    const url = buildYoutubeEmbedUrl(this.featuredVideo.url, autoplay);
-    this.featuredVideoEmbed = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  protected selectTag(slug: string | null): void {
+    this.selectedTagSlug.set(slug);
   }
 
   protected handleAuthCta(): void {
     if (this.isAuthenticated()) {
       this.router.navigate(['/account/dashboard']);
-      return;
+    } else {
+      this.router.navigate(['/auth/login']);
     }
-    this.router.navigate(['/auth/login']);
   }
 
   protected handleLogout(): void {
-    this.clearSession();
+    this.sessionStore.clearSession();
     this.router.navigate(['/']);
+  }
+
+  protected cardThumbnail(card: ContentCard): string | null {
+    if (card.thumbnailUrl) return card.thumbnailUrl;
+    if (card.cardType === 'VIDEO' && card.mediaUrl) {
+      const match = card.mediaUrl.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+      if (match) return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
+    }
+    if (card.cardType === 'INFOGRAPHIC' && card.mediaUrl) return card.mediaUrl;
+    return null;
   }
 }

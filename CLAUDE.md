@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Principles
+
+- **Clarity over cleverness**: Prioritize straightforward, readable code and architecture. Avoid over-engineering or premature abstractions.
+- **Consistency**: Follow established patterns and styles in the codebase. When in doubt,
+- mirror existing conventions for file organization, naming, and structure.
+- **Documentation**: Keep CLAUDE.md and any relevant docs up to date as the codebase evolves. When adding or changing architecture, workflows, or conventions, update the relevant section in this file. Use comments and README sections to explain non-obvious decisions, architectural rationale and how different pieces fit together. This is especially important for authentication flows, API contracts, and shared utilities.
+- **Testability**: Write code that is easy to test with unit and integration tests.
+- Design for testability by keeping functions pure where possible, minimizing side effects, and using dependency injection for external services.
+- **Security best practices**: For authentication and sensitive operations, follow security best practices:
+- Use parameterized queries or ORM features to prevent SQL injection.
+- Hash passwords securely (e.g., bcrypt) and never log sensitive information.
+- For JWTs, use asymmetric signing and keep token TTLs short with refresh tokens for better compromise mitigation.
+- unit and integration tests should cover both happy paths and edge cases, especially for auth flows and error handling.
+
 ## Repository Overview
 
 Full-stack monorepo for highschoolhowto.com — an educational platform with task management, event tracking, bookmarks, and content widgets (YouTube/infographics). Angular frontend + Spring Boot backend communicating via JWT-authenticated REST APIs.
@@ -23,7 +37,7 @@ npm test            # Run all unit tests (Karma/Jasmine)
 ng test --include='**/login.component.spec.ts'
 ```
 
-**Production deploy**: `npm run build -- --configuration production`, then `scripts/deploy-prod.sh` syncs to S3 (`s3://highschoolhowto-site/prod/`, region `us-west-2`).
+**Production deploy**: handled automatically by `deploy.yml` on push to `main`. To deploy manually, run `scripts/deploy-prod.sh` from `frontend/` (builds, syncs to S3, invalidates CloudFront). Requires AWS credentials with the permissions listed in the CI/CD section.
 
 ## Backend Commands
 
@@ -53,32 +67,95 @@ Run from `api/`:
 ## Docker
 
 ```bash
-# Full stack (production-style images)
-docker compose up --build
+# Developer mode (live reload, source mounts) — the normal way to run locally
+docker compose -f docker-compose.dev.yml up
 
-# Developer mode (live reload, source mounts)
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Dev mode URLs: frontend http://localhost:4300, API http://localhost:8080
+# Mounts: ./api, ./frontend, ./media — changes are picked up without rebuilding images
+# Requires $HOME/docker.env for env vars (notification credentials etc.)
 
-# Dev mode: frontend at http://localhost:4300, API at http://localhost:8080
-# Requires $HOME/docker.env for env vars in production mode
+# Recreate a single service after changing its docker-compose config (e.g. new volume)
+docker compose -f docker-compose.dev.yml up -d api
 
 # Teardown (keeps DB volume)
-docker compose down
+docker compose -f docker-compose.dev.yml down
 # Teardown with data wipe
-docker compose down && docker volume rm high-school-how-to_pgdata
+docker compose -f docker-compose.dev.yml down && docker volume rm high-school-how-to_pgdata
 ```
+
+## CI/CD
+
+### Workflows
+
+Two GitHub Actions workflows run on push to `main`:
+
+- **`ci.yml`** — runs on all pushes and PRs. Builds and tests both frontend and backend.
+- **`deploy.yml`** — runs on push to `main` and via manual `workflow_dispatch`. Calls the existing deploy scripts to build and ship both services in parallel.
+
+The deploy jobs call the scripts directly:
+- `./api/scripts/deploy.sh` — builds the API Docker image via Jib, pushes to ECR, triggers App Runner redeployment
+- `./frontend/scripts/deploy-prod.sh` — builds the Angular app, syncs to S3, invalidates CloudFront
+
+The API image is tagged with the git commit SHA (`github.sha`) so every deployment is traceable.
+
+### Required GitHub Secrets
+
+Set these under **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | IAM user access key |
+| `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
+| `AWS_ACCOUNT_ID` | 12-digit AWS account ID |
+
+The IAM user needs these permissions:
+- ECR: `ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`, `ecr:PutImage`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`
+- App Runner: `apprunner:StartDeployment`, `apprunner:ListServices`, `apprunner:DescribeService`
+- S3: `s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket` on the frontend bucket
+- CloudFront: `cloudfront:CreateInvalidation`
+
+### Deploy Scripts
+
+| Script | Purpose |
+|---|---|
+| `api/scripts/deploy.sh` | Jib build → ECR push → App Runner trigger. Reads `AWS_ACCOUNT_ID`, `AWS_REGION`, `AWS_ECR_REPO_NAME`, `AWS_IMAGE_TAG`, `SERVICE_NAME` from env. |
+| `frontend/scripts/deploy-prod.sh` | Angular prod build → S3 sync → CloudFront invalidation. Reads `AWS_REGION`, `CLOUDFRONT_DISTRIBUTION_ID` from env. Accepts `--skip-build` flag to reuse an existing dist. |
+| `api/scripts/aws-apprunner-setup.sh` | One-time setup: creates ECR repo, App Runner service, Secrets Manager secret, and Route 53 DNS records. Run manually when provisioning a new environment. |
+
+### Infrastructure
+
+- **API**: AWS App Runner service `highschoolhowto-api` (us-west-2), pulling from ECR repo `highschoolhowto/api`
+- **Frontend**: S3 bucket `highschoolhowto-site`, path `prod/`, served via CloudFront distribution `E1S3AKUQUXDIGC`
+- **Database**: Amazon Aurora PostgreSQL at `highschoolhowto.c388sauoez7e.us-west-2.rds.amazonaws.com`
+- **Media**: S3 bucket `highschoolhowto-site`, path `media/`, served via same CloudFront distribution
 
 ## Architecture
 
 ### Frontend
 
 - **Framework**: Angular 20, esbuild, SCSS, Karma/Jasmine tests
-- **Routing** (`app.routes.ts`): `/` home, `/auth/*` (login/signup/verify-email/reset-password/forgot-password), `/account/security` and `/account/dashboard` (guarded by `authGuard`), `/infographics/:slug`, `/videos/:slug`
-- **Auth flow**: JWT access token (15m TTL) + refresh token (7d TTL). `AuthInterceptor` attaches tokens to requests; `SessionStore` manages auth state with RxJS
-- **Content resources**: Infographics defined in `frontend/src/app/resources/infographics.ts`; YouTube videos in `frontend/src/app/resources/youtube-videos.ts`. Update these files to surface new content without touching templates
-- **Assets**: Infographic images under `frontend/public/assets/infographics/`. Video thumbnails derived dynamically from YouTube image endpoint
-- **Navigation**: Router uses `withInMemoryScrolling`; viewer pages navigate back via fragment identifiers (`#video-<slug>`, `#infographic-<slug>`)
+- **Routing** (`app.routes.ts`): `/` home, `/auth/*` (login/signup/verify-email/reset-password/forgot-password), `/account/security` and `/account/dashboard` (guarded by `authGuard`), `/content/:slug` (unified viewer), `/topics/:slug` (topic page), `/admin/**` (lazy-loaded admin module, requires ADMIN role)
+- **Auth flow**: JWT access token (15m TTL) + refresh token (7d TTL). `AuthInterceptor` attaches tokens to requests; `SessionStore` manages auth state with RxJS signals
+- **Content**: All content (infographics, videos, articles) is data-driven via the API. `ContentApiService` fetches cards, tags, and home layout. The home page, topic pages, and content viewer all load from the API — there are no static content resource files.
+- **Admin module**: Lazy-loaded at `/admin`. Includes tag manager, content list, content editor (Tiptap rich text for articles), and layout editor. Requires `isAdmin` signal from `SessionStore`.
+- **Static app assets**: UI images (logo, backgrounds, social cards) under `frontend/public/assets/images/`. These are checked into the repo and bundled with the app.
+- **Navigation**: Router uses `withInMemoryScrolling`
 - **Code style**: Prettier with 100-char print width, single quotes
+
+### Media Assets
+
+Content images (infographics, thumbnails, cover images) live in the top-level `media/` directory, checked into the repo. They are **not** bundled with the frontend app.
+
+- **Local dev (Docker)**: `./media` is mounted into the frontend container at `/workspace/frontend/public/media`, so the Angular dev server serves them at `/media/**`. The API knows nothing about media files.
+- **Production**: Media files are served by CloudFront backed by S3. Content card URLs in the database should be absolute CloudFront/S3 URLs. After adding or changing files in `media/`, sync to S3:
+  ```bash
+  # Push local to S3
+  aws s3 sync ./media s3://highschoolhowto-site/media --delete
+
+  # Pull S3 to local
+  aws s3 sync s3://highschoolhowto-site/media ./media
+  ```
+- **Adding new media**: Drop files into `media/` (commit them), then use the admin content editor to set the card's media URL to `/media/path/to/file.jpg` (local) or the absolute CloudFront URL (prod).
 
 ### Backend
 
@@ -100,6 +177,10 @@ docker compose down && docker volume rm high-school-how-to_pgdata
 - **Engine**: PostgreSQL 16 (local Docker) / Amazon Aurora PostgreSQL (production)
 - **Migrations**: Liquibase, changelogs under `api/src/main/resources/db/changelog/`. Master file: `db.changelog-master.yaml`. Migrations auto-run on startup (non-prod)
 - **Schema management**: `spring.jpa.hibernate.ddl-auto=validate` — Hibernate never auto-creates or modifies schema; all schema changes must go through Liquibase changesets
+
+When liquibase changesets are generated, rollback scripts should also be created to allow reverting if needed. 
+For example, if you add a new table in a changeset, the rollback should drop that table.
+
 
 ### Auth Flow
 
