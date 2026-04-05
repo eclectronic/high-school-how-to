@@ -35,5 +35,3 @@ auth:
 notifications:
   test:
     enabled: true
-  graph:
-    enabled: false
