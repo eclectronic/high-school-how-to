@@ -6,6 +6,8 @@ REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 FRONTEND_DIR="${REPO_ROOT}/frontend"
 DIST_DIR="${FRONTEND_DIR}/dist/highschoolhowto/browser"
 S3_DEST="s3://highschoolhowto/prod/"
+MEDIA_SRC="${REPO_ROOT}/media"
+MEDIA_DEST="s3://highschoolhowto/media"
 AWS_REGION="${AWS_REGION:-us-west-2}"
 CLOUDFRONT_DISTRIBUTION_ID="${CLOUDFRONT_DISTRIBUTION_ID:-E1S3AKUQUXDIGC}"
 RUN_BUILD=true
@@ -56,8 +58,11 @@ EOF
   exit 1
 fi
 
-echo "Synching ${DIST_DIR} -> ${S3_DEST} (region: ${AWS_REGION})"
+echo "Syncing ${DIST_DIR} -> ${S3_DEST} (region: ${AWS_REGION})"
 aws s3 sync "${DIST_DIR}" "${S3_DEST}" --region "${AWS_REGION}" --delete
+
+echo "Syncing ${MEDIA_SRC} -> ${MEDIA_DEST} (region: ${AWS_REGION})"
+aws s3 sync "${MEDIA_SRC}" "${MEDIA_DEST}" --region "${AWS_REGION}" --delete
 
 if [[ -n "${CLOUDFRONT_DISTRIBUTION_ID}" ]]; then
   echo "Creating CloudFront invalidation for distribution ${CLOUDFRONT_DISTRIBUTION_ID}"
