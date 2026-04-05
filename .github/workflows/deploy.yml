@@ -17,6 +17,7 @@ jobs:
   deploy-api:
     name: Deploy API (ECR + App Runner)
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,6 +51,7 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend (S3 + CloudFront)
     runs-on: ubuntu-latest
+    environment: production
     defaults:
       run:
         working-directory: frontend
