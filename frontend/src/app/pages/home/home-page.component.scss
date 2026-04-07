@@ -773,7 +773,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
 
   &__desc {
     margin: 0;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     font-family: var(--font-body);
     color: #5f4f43;
     display: -webkit-box;
@@ -800,7 +800,8 @@ $color-tape: rgba(220, 220, 214, 0.92);
   background: #fffef9;
   border: 2px solid $color-ink;
   color: $color-ink;
-  font-size: 0.875rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
   font-weight: 700;
   text-decoration: none;
   box-shadow: 0 10px 20px rgba($color-ink, 0.15);
@@ -819,10 +820,10 @@ $color-tape: rgba(220, 220, 214, 0.92);
   background: #fffef9;
   border: 2px solid $color-ink;
   color: $color-ink;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font-body);
   box-shadow: 0 10px 20px rgba($color-ink, 0.15);
   transition: transform 150ms ease, box-shadow 150ms ease;
 

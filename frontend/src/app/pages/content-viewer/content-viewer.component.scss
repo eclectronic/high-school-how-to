@@ -53,7 +53,8 @@ $color-ink: #2d1a10;
   background: #fffef9;
   border: 2px solid $color-ink;
   color: $color-ink;
-  font-size: 0.875rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
   font-weight: 700;
   text-decoration: none;
   box-shadow: 0 10px 20px rgba($color-ink, 0.15);
@@ -147,7 +148,8 @@ $color-ink: #2d1a10;
 
 .viewer-desc {
   margin: 0;
-  font-size: 1.1rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
   color: #5f4f43;
   line-height: 1.5;
 }
@@ -215,7 +217,8 @@ $color-ink: #2d1a10;
 }
 
 .article-body {
-  font-size: 1.05rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
   line-height: 1.7;
   color: $color-ink;
   background: rgba(255, 254, 249, 0.9);
