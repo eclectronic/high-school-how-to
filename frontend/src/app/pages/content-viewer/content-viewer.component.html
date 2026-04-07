@@ -8,21 +8,23 @@
     </div>
   } @else if (card(); as card) {
 
-    <div class="viewer-nav">
-      <a class="viewer-nav__logo" routerLink="/">
-        <img src="/assets/images/home-logo.png" alt="High School How To" />
-      </a>
-      <a class="back-link" routerLink="/">← Home</a>
-      @if (tagName()) {
-        <div class="viewer-nav__tag-header">
-          <h2 class="viewer-nav__tag-title">{{ tagName() }}</h2>
-        </div>
-      }
-    </div>
+    @if (!simpleLayout()) {
+      <div class="viewer-nav">
+        <a class="viewer-nav__logo" routerLink="/">
+          <img src="/assets/images/home-logo.png" alt="High School How To" />
+        </a>
+        <a class="back-link" routerLink="/">← Home</a>
+        @if (tagName()) {
+          <div class="viewer-nav__tag-header">
+            <h2 class="viewer-nav__tag-title">{{ tagName() }}</h2>
+          </div>
+        }
+      </div>
+    }
 
-    <div class="viewer-stage">
+    <div class="viewer-stage" [class.viewer-stage--simple]="simpleLayout()">
       <div class="viewer-arrow-col">
-        @if (prevCard(); as prev) {
+        @if (!simpleLayout() && prevCard(); as prev) {
           <button class="viewer-arrow" (click)="navigateTo(prev)" [title]="prev.title" aria-label="Previous: {{ prev.title }}">‹</button>
         }
       </div>
@@ -100,7 +102,7 @@
       </div>
 
       <div class="viewer-arrow-col">
-        @if (nextCard(); as next) {
+        @if (!simpleLayout() && nextCard(); as next) {
           <button class="viewer-arrow" (click)="navigateTo(next)" [title]="next.title" aria-label="Next: {{ next.title }}">›</button>
         }
       </div>

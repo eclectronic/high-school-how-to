@@ -103,6 +103,7 @@ public class ContentCardService {
         card.setBodyHtml(htmlSanitizer.sanitize(request.bodyHtml()));
         card.setBackgroundColor(request.backgroundColor());
         card.setTextColor(request.textColor());
+        card.setSimpleLayout(request.simpleLayout());
 
         List<Tag> tags = tagRepository.findAllById(request.tagIds());
         if (tags.size() != request.tagIds().size()) {

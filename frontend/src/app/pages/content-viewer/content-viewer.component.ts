@@ -25,6 +25,12 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   protected safeEmbed = signal<SafeResourceUrl | null>(null);
   protected safeHtml = signal<SafeHtml | null>(null);
 
+  /** True when the card should render without nav arrows, back link, or tag header. */
+  protected simpleLayout = computed(() => {
+    const forceSimple = this.route.snapshot.data['forceSimpleLayout'] === true;
+    return forceSimple || (this.card()?.simpleLayout ?? false);
+  });
+
   /** Slug of the tag currently used for prev/next navigation, or null for all content. */
   protected tagSlug = signal<string | null>(null);
 
@@ -66,6 +72,8 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
     );
 
     // React to slug changes so prev/next navigation updates the view in place.
+    // When route data provides a fixed slug (e.g. /about), use that instead of the param.
+    const fixedSlug: string | null = this.route.snapshot.data['slug'] ?? null;
     this.subs.add(
       this.route.paramMap
         .pipe(
@@ -74,7 +82,7 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
             this.error.set(null);
             this.safeEmbed.set(null);
             this.safeHtml.set(null);
-            return this.api.getCardBySlug(params.get('slug')!);
+            return this.api.getCardBySlug(fixedSlug ?? params.get('slug')!);
           }),
         )
         .subscribe({

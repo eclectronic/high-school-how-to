@@ -68,4 +68,16 @@ abstract class BaseIntegrationSpec extends Specification {
         return mockMvc.perform(MockMvcRequestBuilders.get(path)
                 .header("Authorization", "Bearer $bearerToken"))
     }
+
+    protected ResultActions postJsonWithAuth(String path, Object body, String bearerToken) {
+        return mockMvc.perform(MockMvcRequestBuilders.post(path)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer $bearerToken")
+                .content(objectMapper.writeValueAsBytes(body)))
+    }
+
+    protected ResultActions deleteWithAuth(String path, String bearerToken) {
+        return mockMvc.perform(MockMvcRequestBuilders.delete(path)
+                .header("Authorization", "Bearer $bearerToken"))
+    }
 }

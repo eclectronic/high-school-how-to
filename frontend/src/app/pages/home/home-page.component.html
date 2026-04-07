@@ -30,6 +30,7 @@
           Log out
         </button>
       }
+      <a routerLink="/about" class="home__about-link">About</a>
       @if (isAdmin()) {
         <a routerLink="/admin" class="home__admin-link">Admin</a>
       }
@@ -91,4 +92,8 @@
       }
     }
   }
+
+  <footer class="home__footer">
+    <a routerLink="/about" class="home__footer-link">About</a>
+  </footer>
 </section>

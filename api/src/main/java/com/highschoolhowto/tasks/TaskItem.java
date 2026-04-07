@@ -35,6 +35,9 @@ public class TaskItem {
     @Column(nullable = false)
     private boolean completed = false;
 
+    @Column(name = "due_at")
+    private Instant dueAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -87,6 +90,14 @@ public class TaskItem {
 
     public void setCompleted(boolean completed) {
         this.completed = completed;
+    }
+
+    public Instant getDueAt() {
+        return dueAt;
+    }
+
+    public void setDueAt(Instant dueAt) {
+        this.dueAt = dueAt;
     }
 
     public Instant getCreatedAt() {

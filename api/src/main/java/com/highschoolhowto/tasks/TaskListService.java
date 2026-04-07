@@ -37,16 +37,29 @@ public class TaskListService {
                 .toList();
     }
 
+    static final int MAX_LISTS_PER_USER = 20;
+    static final int MAX_TASKS_PER_LIST = 50;
+
     @Transactional
     public TaskListResponse createList(UUID userId, CreateTaskListRequest request) {
         User user = userRepository
                 .findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found", "User not found"));
+        long count = taskListRepository.countByUserId(userId);
+        if (count >= MAX_LISTS_PER_USER) {
+            throw new ApiException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "Limit reached",
+                    "Maximum of " + MAX_LISTS_PER_USER + " lists per user reached");
+        }
         TaskList list = new TaskList();
         list.setUser(user);
         list.setTitle(request.title().trim());
         if (StringUtils.hasText(request.color())) {
             list.setColor(request.color().trim());
+        }
+        if (StringUtils.hasText(request.textColor())) {
+            list.setTextColor(request.textColor().trim());
         }
         TaskList saved = taskListRepository.save(list);
         return toResponse(saved);
@@ -67,9 +80,10 @@ public class TaskListService {
     }
 
     @Transactional
-    public TaskListResponse updateListColor(UUID userId, UUID listId, String color) {
+    public TaskListResponse updateListColor(UUID userId, UUID listId, String color, String textColor) {
         TaskList list = requireList(listId, userId);
         list.setColor(color);
+        list.setTextColor(textColor); // null clears it (reverts to auto-contrast)
         TaskList saved = taskListRepository.save(list);
         return toResponse(saved);
     }
@@ -77,11 +91,19 @@ public class TaskListService {
     @Transactional
     public TaskItemResponse addTask(UUID userId, UUID listId, CreateTaskRequest request) {
         TaskList list = requireList(listId, userId);
+        long taskCount = taskItemRepository.countByTaskListId(listId);
+        if (taskCount >= MAX_TASKS_PER_LIST) {
+            throw new ApiException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "Limit reached",
+                    "Maximum of " + MAX_TASKS_PER_LIST + " tasks per list reached");
+        }
         TaskItem task = new TaskItem();
         task.setTaskList(list);
         task.setSortOrder(nextSortOrder(list));
         task.setDescription(request.description().trim());
         task.setCompleted(false);
+        task.setDueAt(request.dueAt());
         TaskItem saved = taskItemRepository.save(task);
         return toResponse(saved);
     }
@@ -97,6 +119,11 @@ public class TaskListService {
         }
         if (request.completed() != null) {
             task.setCompleted(request.completed());
+        }
+        if (request.clearDueAt()) {
+            task.setDueAt(null);
+        } else if (request.dueAt() != null) {
+            task.setDueAt(request.dueAt());
         }
         TaskItem saved = taskItemRepository.save(task);
         return toResponse(saved);
@@ -150,11 +177,11 @@ public class TaskListService {
                 .sorted(Comparator.comparingInt(TaskItem::getSortOrder).thenComparing(TaskItem::getCreatedAt))
                 .map(this::toResponse)
                 .toList();
-        return new TaskListResponse(list.getId(), list.getTitle(), list.getColor(), tasks);
+        return new TaskListResponse(list.getId(), list.getTitle(), list.getColor(), list.getTextColor(), tasks);
     }
 
     private TaskItemResponse toResponse(TaskItem task) {
-        return new TaskItemResponse(task.getId(), task.getDescription(), task.isCompleted());
+        return new TaskItemResponse(task.getId(), task.getDescription(), task.isCompleted(), task.getDueAt());
     }
 
     private int nextSortOrder(TaskList list) {

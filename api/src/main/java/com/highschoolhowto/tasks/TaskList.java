@@ -34,8 +34,11 @@ public class TaskList {
     @Column(nullable = false, length = 150)
     private String title;
 
-    @Column(nullable = false, length = 32)
+    @Column(nullable = false, length = 255)
     private String color = "#fffef8";
+
+    @Column(name = "text_color", length = 255)
+    private String textColor;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -84,6 +87,14 @@ public class TaskList {
 
     public void setColor(String color) {
         this.color = color;
+    }
+
+    public String getTextColor() {
+        return textColor;
+    }
+
+    public void setTextColor(String textColor) {
+        this.textColor = textColor;
     }
 
     public Instant getCreatedAt() {

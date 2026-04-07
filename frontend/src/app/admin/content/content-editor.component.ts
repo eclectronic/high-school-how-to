@@ -18,6 +18,7 @@ interface CardForm {
   coverImageUrl: string;
   backgroundColor: string;
   textColor: string;
+  simpleLayout: boolean;
   tagIds: Set<number>;
 }
 
@@ -49,6 +50,7 @@ export class ContentEditorComponent implements OnInit {
     coverImageUrl: '',
     backgroundColor: '',
     textColor: '',
+    simpleLayout: false,
     tagIds: new Set(),
   };
 
@@ -95,6 +97,7 @@ export class ContentEditorComponent implements OnInit {
             coverImageUrl: card.coverImageUrl ?? '',
             backgroundColor: card.backgroundColor ?? '',
             textColor: card.textColor ?? '',
+            simpleLayout: card.simpleLayout,
             tagIds: new Set(card.tags.map((t) => t.id)),
           };
           this.bodyJson = card.bodyJson;
@@ -174,6 +177,7 @@ export class ContentEditorComponent implements OnInit {
       bodyHtml: this.bodyHtml,
       backgroundColor: this.form.backgroundColor || null,
       textColor: this.form.textColor || null,
+      simpleLayout: this.form.simpleLayout,
       status: this.form.status,
       tagIds: Array.from(this.form.tagIds),
     };

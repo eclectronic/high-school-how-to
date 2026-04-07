@@ -70,6 +70,9 @@ public class ContentCard {
     @Column(nullable = false, length = 20)
     private CardStatus status = CardStatus.DRAFT;
 
+    @Column(name = "simple_layout", nullable = false)
+    private boolean simpleLayout = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -138,6 +141,9 @@ public class ContentCard {
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    public boolean isSimpleLayout() { return simpleLayout; }
+    public void setSimpleLayout(boolean simpleLayout) { this.simpleLayout = simpleLayout; }
 
     public List<Tag> getTags() { return tags; }
     public void setTags(List<Tag> tags) { this.tags = tags; }

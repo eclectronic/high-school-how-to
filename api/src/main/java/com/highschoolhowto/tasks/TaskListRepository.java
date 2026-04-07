@@ -12,4 +12,6 @@ public interface TaskListRepository extends JpaRepository<TaskList, UUID> {
 
     @EntityGraph(attributePaths = "tasks")
     Optional<TaskList> findByIdAndUserId(UUID id, UUID userId);
+
+    long countByUserId(UUID userId);
 }

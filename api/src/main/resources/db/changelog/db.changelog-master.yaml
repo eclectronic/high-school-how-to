@@ -25,3 +25,15 @@ databaseChangeLog:
       file: db/changelog/v2-article-text-color-0023.sql
   - include:
       file: db/changelog/v2-featured-tag-drop-layout-0024.sql
+  - include:
+      file: db/changelog/v3-phase1-0027.sql
+  - include:
+      file: db/changelog/v3-phase2-0031.sql
+  - include:
+      file: db/changelog/v3-phase3-0032.sql
+  - include:
+      file: db/changelog/v3-phase5-0033.sql
+  - include:
+      file: db/changelog/v3-phase6-0034.sql
+  - include:
+      file: db/changelog/v3-phase7-0035.sql

@@ -9,7 +9,7 @@ import { ForgotPasswordComponent } from './pages/auth/forgot-password/forgot-pas
 import { ResetPasswordComponent } from './pages/auth/reset-password/reset-password.component';
 import { VerifyEmailComponent } from './pages/auth/verify-email/verify-email.component';
 import { AccountSecurityComponent } from './pages/account/account-security/account-security.component';
-import { DashboardComponent } from './pages/account/dashboard/dashboard.component';
+import { LockerComponent } from './pages/account/locker/locker.component';
 import { authGuard } from './core/auth/auth.guard';
 import { adminGuard } from './core/auth/admin.guard';
 
@@ -36,9 +36,9 @@ export const routes: Routes = [
     component: AccountSecurityComponent
   },
   {
-    path: 'account/dashboard',
+    path: 'account/locker',
     canActivate: [authGuard],
-    component: DashboardComponent
+    component: LockerComponent
   },
   {
     path: 'infographics/:slug',
@@ -64,6 +64,14 @@ export const routes: Routes = [
       import('./pages/content-viewer/content-viewer.component').then(
         (m) => m.ContentViewerComponent,
       ),
+  },
+  {
+    path: 'about',
+    loadComponent: () =>
+      import('./pages/content-viewer/content-viewer.component').then(
+        (m) => m.ContentViewerComponent,
+      ),
+    data: { slug: 'my-mission', forceSimpleLayout: true },
   },
   {
     path: '**',

@@ -166,7 +166,7 @@ Content images (infographics, thumbnails, cover images) live in the top-level `m
   - `auth/` — REST endpoints (login, register, verify-email, forgot-password, reset-password, refresh token), JWT creation/validation, token logic
   - `config/` — Spring Security config (JWT filter, CORS, public vs. protected endpoints), `AuthLinkProperties`
   - `security/` — `JwtAuthenticationFilter`, `UserDetailsServiceImpl`
-  - `notification/` — Email via Microsoft Graph (`GraphNotificationService`); `LoggingNotificationService` for local dev
+  - `notification/` — Email via AWS SES (`SesNotificationService`); `LoggingNotificationService` for local dev
   - `user/` — User entity and repository
   - `tasks/` — Task/todo management
   - `audit/` — Auth event audit logging
@@ -185,7 +185,7 @@ For example, if you add a new table in a changeset, the rollback should drop tha
 
 ### Auth Flow
 
-1. Registration: `POST /api/auth/register` → creates user + sends verification email via Microsoft Graph
+1. Registration: `POST /api/auth/register` → creates user + sends verification email via SES
 2. Email verification: `GET /api/auth/verify-email?token=...` → redirects to frontend login
 3. Login: `POST /api/auth/login` → returns `{ accessToken, refreshToken }`
 4. Token refresh: `POST /api/auth/refresh` with `RefreshRequest` body
@@ -197,7 +197,8 @@ Key `application.yml` properties:
 - `auth.jwt.key-paths`: RSA key pair at `classpath:keys/dev-{private,public}.pem`
 - `auth.links.verification-redirect`: Frontend URL after email verification
 - `auth.links.reset`: Frontend reset-password URL
-- `notifications.test.enabled`: Set `true` to log emails instead of sending (useful for local dev without Microsoft Graph credentials)
-- `notifications.graph.enabled`: Set `false` when Graph credentials unavailable
+- `notifications.ses.enabled`: Set `true` in prod to send via SES; `false` falls back to `LoggingNotificationService` (logs links to console)
+- `notifications.ses.region`: AWS region for SES (default `us-west-2`)
+- `notifications.ses.from-address`: Sender address (default `admin@highschoolhowto.com`)
 
 The `docker` Spring profile (`application-docker.yml`) is activated when running in Docker. The `prod` profile (`application-prod.yml`) is for production.
