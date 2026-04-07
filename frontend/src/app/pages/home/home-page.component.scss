@@ -84,7 +84,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
 }
 
 .home__logo-card {
-  max-width: 320px;
+  max-width: 270px;
   width: 100%;
   transform: rotate(0);
   cursor: pointer;
@@ -208,7 +208,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
   border-radius: 1.25rem;
   padding: 1.25rem 1.5rem 1.5rem;
   box-shadow: 0 18px 35px rgba($color-ink, 0.2);
-  font-family: "Patrick Hand", cursive;
+  font-family: var(--font-display);
   font-size: 1.2rem;
   line-height: 1.5;
 }
@@ -222,7 +222,8 @@ $color-tape: rgba(220, 220, 214, 0.92);
 }
 
 .note-card--wide .note-card__copy {
-  font-size: clamp(0.95rem, 2vw, 1.2rem);
+  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  -webkit-text-stroke: 0.6px currentColor;
 }
 
 
@@ -237,7 +238,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
   text-align: center;
   font-size: 1.15rem;
   text-shadow: 0 2px 0 rgba($color-ink, 0.1);
-  font-family: Verdana, "Patrick Hand", cursive;
+  font-family: var(--font-display);
 }
 
 .note-card__line {
@@ -278,9 +279,9 @@ $color-tape: rgba(220, 220, 214, 0.92);
   border-radius: 1.1rem;
   padding: 1rem;
   text-align: center;
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  font-family: "Nunito", sans-serif;
+  font-family: var(--font-display);
   cursor: pointer;
   color: $color-ink;
   box-shadow: 0 14px 25px rgba($color-ink, 0.15);
@@ -315,7 +316,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
 .embedded-content__intro {
   display: flex;
   justify-content: center;
-  font-family: "Nunito", sans-serif;
+  font-family: var(--font-display);
 }
 
 .embedded-content__label {
@@ -620,7 +621,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
     border: 2px solid $color-ink;
     color: $color-ink;
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: 1.1rem;
     font-family: inherit;
     text-decoration: none;
     cursor: pointer;
@@ -753,7 +754,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
   }
 
   &__type-badge {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -762,7 +763,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
   }
 
   &__title {
-    font-size: 0.9rem;
+    font-size: 1.2rem;
     line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -772,7 +773,8 @@ $color-tape: rgba(220, 220, 214, 0.92);
 
   &__desc {
     margin: 0;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    font-family: var(--font-body);
     color: #5f4f43;
     display: -webkit-box;
     -webkit-line-clamp: 2;

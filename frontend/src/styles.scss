@@ -1,8 +1,20 @@
 @import url("https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700&family=Patrick+Hand:wght@400&display=swap");
 
+@font-face {
+  font-family: 'Miras Handwriting';
+  src: url('/assets/fonts/MirasHandwriting-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  --bg-tile-size: 256px;
-  font-family: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --bg-tile-size: 192Ipx;
+  --font-display: 'Miras Handwriting', 'Patrick Hand', cursive;
+  --font-body: 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-display);
+  font-size: 1.15em;
+  -webkit-text-stroke: 0.4px currentColor;
   color: #2d1a10;
   background-color: #f9eddc;
 }
@@ -20,6 +32,22 @@ body {
   background-repeat: repeat;
   background-size: var(--bg-tile-size) var(--bg-tile-size);
   color: inherit;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(249, 237, 220, 0.25);
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+app-root,
+body > *:not(style):not(script) {
+  position: relative;
+  z-index: 1;
 }
 
 app-root {
