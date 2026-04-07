@@ -191,7 +191,7 @@ class TaskListIntegSpec extends BaseIntegrationSpec {
         // Create exactly MAX lists
         (1..TaskListService.MAX_LISTS_PER_USER).each { i ->
             def resp = postJsonWithAuth("/api/tasklists",
-                    [title: "List $i", color: "#fffef8"], token)
+                    [title: "List " + i, color: "#fffef8"], token)
                     .andReturn().response
             assert resp.status == 200
         }
@@ -217,7 +217,7 @@ class TaskListIntegSpec extends BaseIntegrationSpec {
         // Create exactly MAX tasks
         (1..TaskListService.MAX_TASKS_PER_LIST).each { i ->
             def resp = postJsonWithAuth("/api/tasklists/$listId/tasks",
-                    [description: "Task $i"], token)
+                    [description: "Task " + i], token)
                     .andReturn().response
             assert resp.status == 200
         }
