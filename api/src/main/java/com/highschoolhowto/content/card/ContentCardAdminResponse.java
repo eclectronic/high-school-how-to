@@ -20,6 +20,7 @@ public record ContentCardAdminResponse(
         String bodyHtml,
         String backgroundColor,
         String textColor,
+        boolean simpleLayout,
         CardStatus status,
         List<TagResponse> tags,
         Instant createdAt,
@@ -40,6 +41,7 @@ public record ContentCardAdminResponse(
                 card.getBodyHtml(),
                 card.getBackgroundColor(),
                 card.getTextColor(),
+                card.isSimpleLayout(),
                 card.getStatus(),
                 card.getTags().stream()
                         .sorted(Comparator.comparing(Tag::getName))

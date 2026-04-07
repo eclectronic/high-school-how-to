@@ -58,7 +58,7 @@ describe('HomePageComponent', () => {
   it('routes to dashboard when authenticated', () => {
     isAuthSignal.set(true);
     component['handleAuthCta']();
-    expect(router.navigate).toHaveBeenCalledWith(['/account/dashboard']);
+    expect(router.navigate).toHaveBeenCalledWith(['/account/locker']);
   });
 
   it('derives youtube thumbnail from video media url', () => {

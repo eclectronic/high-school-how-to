@@ -47,7 +47,7 @@ export class HomePageComponent implements OnInit {
 
   protected handleAuthCta(): void {
     if (this.isAuthenticated()) {
-      this.router.navigate(['/account/dashboard']);
+      this.router.navigate(['/account/locker']);
     } else {
       this.router.navigate(['/auth/login']);
     }

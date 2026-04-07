@@ -60,7 +60,7 @@ describe('LoginComponent', () => {
     component['form'].setValue({ email: 'user@example.com', password: 'secret' });
     TestBed.runInInjectionContext(() => component['submit']());
 
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/account/dashboard');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/account/locker');
   });
 
   it('shows friendly message on 401', async () => {

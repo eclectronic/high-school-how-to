@@ -22,6 +22,7 @@ export interface ContentCard {
   bodyHtml: string | null;
   backgroundColor: string | null;
   textColor: string | null;
+  simpleLayout: boolean;
   status: CardStatus;
   tags: Tag[];
   createdAt: string;
@@ -52,6 +53,7 @@ export interface SaveCardRequest {
   bodyHtml: string | null;
   backgroundColor: string | null;
   textColor: string | null;
+  simpleLayout: boolean;
   status: CardStatus;
   tagIds: number[];
 }

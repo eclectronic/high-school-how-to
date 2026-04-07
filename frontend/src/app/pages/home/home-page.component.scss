@@ -1,3 +1,5 @@
+@use 'sass:color';
+
 :host {
   display: block;
 }
@@ -638,7 +640,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
       color: #fffef9;
 
       &:hover {
-        background: lighten($color-ink, 10%);
+        background: color.adjust($color-ink, $lightness: 10%);
         color: #fffef9;
       }
     }
@@ -793,6 +795,26 @@ $color-tape: rgba(220, 220, 214, 0.92);
   font-weight: 600;
 }
 
+.home__about-link {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  background: #fffef9;
+  border: 2px solid $color-ink;
+  color: $color-ink;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 10px 20px rgba($color-ink, 0.15);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 26px rgba($color-ink, 0.2);
+  }
+}
+
 .home__admin-link {
   display: inline-block;
   padding: 0.5rem 1.25rem;
@@ -830,5 +852,26 @@ $color-tape: rgba(220, 220, 214, 0.92);
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 16px 26px rgba($color-ink, 0.2);
+  }
+}
+
+.home__footer {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+  margin-top: 2rem;
+  border-top: 1px solid rgba($color-ink, 0.1);
+}
+
+.home__footer-link {
+  color: $color-ink;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  text-decoration: none;
+  opacity: 0.6;
+  transition: opacity 150ms ease;
+
+  &:hover {
+    opacity: 1;
   }
 }

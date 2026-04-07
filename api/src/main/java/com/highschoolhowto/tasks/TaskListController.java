@@ -78,7 +78,7 @@ public class TaskListController {
             @PathVariable("listId") UUID listId,
             @Valid @RequestBody UpdateTaskListColorRequest request) {
         UUID userId = principal.getUser().getId();
-        return ResponseEntity.ok(taskListService.updateListColor(userId, listId, request.color()));
+        return ResponseEntity.ok(taskListService.updateListColor(userId, listId, request.color(), request.textColor()));
     }
 
     @PutMapping("/{listId}/tasks/reorder")

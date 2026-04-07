@@ -71,6 +71,10 @@ $color-ink: #2d1a10;
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
+
+  &--simple {
+    .viewer-arrow-col { display: none; }
+  }
 }
 
 .viewer-arrow-col {

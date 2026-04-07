@@ -1,20 +1,29 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { TaskItem, TaskList } from '../models/task.models';
+import { LockerLayoutItem, TaskItem, TaskList } from '../models/task.models';
 
 interface CreateListRequest {
   title: string;
   color?: string;
+  textColor?: string | null;
 }
 
 interface CreateTaskRequest {
   description: string;
+  dueAt?: string | null;
 }
 
 interface UpdateTaskRequest {
   description?: string;
   completed?: boolean;
+  dueAt?: string | null;
+  clearDueAt?: boolean;
+}
+
+interface UpdateListColorRequest {
+  color: string;
+  textColor?: string | null;
 }
 
 @Injectable({
@@ -27,8 +36,10 @@ export class TaskApiService {
     return this.http.get<TaskList[]>('/api/tasklists');
   }
 
-  createList(title: string, color?: string): Observable<TaskList> {
-    const payload: CreateListRequest = color ? { title, color } : { title };
+  createList(title: string, color?: string, textColor?: string | null): Observable<TaskList> {
+    const payload: CreateListRequest = { title };
+    if (color) payload.color = color;
+    if (textColor !== undefined) payload.textColor = textColor;
     return this.http.post<TaskList>('/api/tasklists', payload);
   }
 
@@ -36,21 +47,31 @@ export class TaskApiService {
     return this.http.put<TaskList>(`/api/tasklists/${listId}/title`, { title });
   }
 
-  updateListColor(listId: string, color: string): Observable<TaskList> {
-    return this.http.put<TaskList>(`/api/tasklists/${listId}/color`, { color });
+  updateListColor(listId: string, color: string, textColor?: string | null): Observable<TaskList> {
+    const payload: UpdateListColorRequest = { color };
+    if (textColor !== undefined) payload.textColor = textColor;
+    return this.http.put<TaskList>(`/api/tasklists/${listId}/color`, payload);
   }
 
   deleteList(listId: string): Observable<void> {
     return this.http.delete<void>(`/api/tasklists/${listId}`);
   }
 
-  addTask(listId: string, description: string): Observable<TaskItem> {
+  addTask(listId: string, description: string, dueAt?: string | null): Observable<TaskItem> {
     const payload: CreateTaskRequest = { description };
+    if (dueAt !== undefined) payload.dueAt = dueAt;
     return this.http.post<TaskItem>(`/api/tasklists/${listId}/tasks`, payload);
   }
 
   updateTask(listId: string, taskId: string, update: UpdateTaskRequest): Observable<TaskItem> {
     return this.http.put<TaskItem>(`/api/tasklists/${listId}/tasks/${taskId}`, update);
+  }
+
+  updateTaskDueDate(listId: string, taskId: string, dueAt: string | null): Observable<TaskItem> {
+    const payload: UpdateTaskRequest = dueAt === null
+      ? { clearDueAt: true }
+      : { dueAt, clearDueAt: false };
+    return this.http.put<TaskItem>(`/api/tasklists/${listId}/tasks/${taskId}`, payload);
   }
 
   reorderTasks(listId: string, taskIds: string[]): Observable<TaskItem[]> {
