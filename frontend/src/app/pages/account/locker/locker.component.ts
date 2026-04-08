@@ -22,6 +22,7 @@ import { StickerComponent } from '../../../shared/sticker/sticker.component';
 import { EmojiPickerComponent } from '../../../shared/sticker/emoji-picker.component';
 import { StickerApiService } from '../../../core/services/sticker-api.service';
 import { DEFAULT_PALETTE, autoContrastColor, isGradient, firstHexFromGradient } from '../../../shared/color-picker/color-utils';
+import { WidgetTitleBarComponent } from '../../../shared/widget-title-bar/widget-title-bar.component';
 
 type LockerCard =
   | { type: 'TASK_LIST'; data: TaskList }
@@ -155,7 +156,8 @@ const LOCKER_ZONES = [
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule,
     ConfirmDialogComponent, InlineTitleEditComponent, ColorPickerComponent, DueDatePopoverComponent,
-    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, StickerComponent, EmojiPickerComponent],
+    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, StickerComponent, EmojiPickerComponent,
+    WidgetTitleBarComponent],
   template: `
     <!-- ── Locker row animation overlay ── -->
     <div class="locker-overlay"
@@ -427,47 +429,52 @@ const LOCKER_ZONES = [
           cdkDrag
           (click)="$event.stopPropagation()"
         >
-          <div class="list-card__drag-handle" cdkDragHandle aria-label="Drag to reorder">⠿</div>
-          <header class="list-card__header">
-            <app-inline-title-edit
-              [title]="list.title"
-              (titleChange)="onListTitleChange(list, $event)"
-            ></app-inline-title-edit>
-            <div class="list-actions">
-              <button type="button" class="ghost clean" (click)="requestClean(list)"><span class="clean__label">Clean</span></button>
-              <button type="button" class="ghost danger" (click)="requestDelete(list)">Delete</button>
-              <button
-                type="button"
-                class="icon-button"
-                [class.palette]="!hasLinkedTimer(list)"
-                [disabled]="!hasLinkedTimer(list) && atTimerLimit()"
-                [title]="hasLinkedTimer(list) ? 'Go to linked timer' : atTimerLimit() ? 'Timer limit reached' : 'Start a Pomodoro timer for this list'"
-                aria-label="Launch Pomodoro timer for this list"
-                (click)="launchTimerFromList(list); $event.stopPropagation()"
-              >⏱</button>
-              <button
-                type="button"
-                class="icon-button palette"
-                aria-label="List color settings"
-                (click)="toggleColorPicker(list, $event)"
-              >
-                <span aria-hidden="true">🎨</span>
-              </button>
-            </div>
-            <div
-              class="color-picker-panel floating"
-              *ngIf="colorPickerListId === list.id"
-              (click)="$event.stopPropagation()"
+          <!-- Title bar -->
+          <app-widget-title-bar
+            [title]="list.title"
+            [minimized]="minimizedLists[list.id] ?? false"
+            (titleChanged)="onListTitleChange(list, $event)"
+            (closeClicked)="requestDelete(list)"
+            (minimizeToggled)="minimizedLists[list.id] = !(minimizedLists[list.id] ?? false)"
+          ></app-widget-title-bar>
+
+          <!-- Body (hidden when minimized) -->
+          <ng-container *ngIf="!(minimizedLists[list.id] ?? false)">
+
+          <!-- Body actions -->
+          <div class="list-card__body-actions">
+            <button type="button" class="ghost clean" (click)="requestClean(list)"><span class="clean__label">Clean</span></button>
+            <button
+              type="button"
+              class="icon-button"
+              [class.palette]="!hasLinkedTimer(list)"
+              [disabled]="!hasLinkedTimer(list) && atTimerLimit()"
+              [title]="hasLinkedTimer(list) ? 'Go to linked timer' : atTimerLimit() ? 'Timer limit reached' : 'Start a Pomodoro timer for this list'"
+              aria-label="Launch Pomodoro timer for this list"
+              (click)="launchTimerFromList(list); $event.stopPropagation()"
+            >⏱</button>
+            <button
+              type="button"
+              class="icon-button palette"
+              aria-label="List color settings"
+              (click)="toggleColorPicker(list, $event)"
             >
-              <app-color-picker
-                [selectedColor]="list.color"
-                [selectedTextColor]="list.textColor ?? null"
-                (colorChange)="onCardColorChange(list, $event)"
-                (textColorChange)="onCardTextColorChange(list, $event)"
-              ></app-color-picker>
-              <button type="button" class="ghost" style="margin-top:0.5rem" (click)="saveCardColor(list)">Done</button>
-            </div>
-          </header>
+              <span aria-hidden="true">🎨</span>
+            </button>
+          </div>
+          <div
+            class="color-picker-panel floating"
+            *ngIf="colorPickerListId === list.id"
+            (click)="$event.stopPropagation()"
+          >
+            <app-color-picker
+              [selectedColor]="list.color"
+              [selectedTextColor]="list.textColor ?? null"
+              (colorChange)="onCardColorChange(list, $event)"
+              (textColorChange)="onCardTextColorChange(list, $event)"
+            ></app-color-picker>
+            <button type="button" class="ghost" style="margin-top:0.5rem" (click)="saveCardColor(list)">Done</button>
+          </div>
 
           <ul class="task-list" cdkDropList (cdkDropListDropped)="reorderTasks(list, $event)">
             <li *ngFor="let task of list.tasks" cdkDrag cdkDragLockAxis="y">
@@ -545,6 +552,8 @@ const LOCKER_ZONES = [
             />
             <button type="submit" [disabled]="!taskDrafts[list.id]?.trim()">Add</button>
           </form>
+
+          </ng-container><!-- end !minimized -->
         </article>
         </ng-container>
 
@@ -1080,32 +1089,24 @@ const LOCKER_ZONES = [
       /* ── List card ── */
       .list-card {
         border-radius: 12px;
-        padding: 1rem;
+        padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 0;
         position: relative;
         z-index: 2;
         box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
         border: 1px solid rgba(255,255,255,0.5);
+        overflow: hidden;
       }
       .list-card--elevated { z-index: 20; }
-      .list-card__header {
+      .list-card__body-actions {
         display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.4rem 0.75rem 0;
+        flex-wrap: wrap;
         position: relative;
-      }
-      .list-card__header h3 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 800;
-        color: #2d1a10;
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
       /* ── Buttons (inside list cards) ── */
@@ -1212,7 +1213,7 @@ const LOCKER_ZONES = [
       /* ── Tasks ── */
       .task-list {
         list-style: none;
-        padding: 0;
+        padding: 0.4rem 0.75rem 0;
         margin: 0;
         display: flex;
         flex-direction: column;
@@ -1262,6 +1263,7 @@ const LOCKER_ZONES = [
         display: flex;
         gap: 0.4rem;
         align-items: center;
+        padding: 0.4rem 0.75rem 0.75rem;
       }
       .new-task input {
         flex: 1;
@@ -1423,19 +1425,6 @@ const LOCKER_ZONES = [
         min-width: 300px;
       }
 
-      /* ── Card drag handle ── */
-      .list-card__drag-handle {
-        position: absolute;
-        top: 0.5rem;
-        left: 0.5rem;
-        cursor: grab;
-        color: rgba(45,26,16,0.3);
-        font-size: 1rem;
-        line-height: 1;
-        user-select: none;
-        padding: 0.15rem;
-      }
-      .list-card__drag-handle:active { cursor: grabbing; }
       .list-card.cdk-drag-preview {
         box-shadow: 0 16px 40px rgba(0,0,0,0.3);
         border-radius: 12px;
@@ -1671,6 +1660,9 @@ export class LockerComponent implements AfterViewInit, OnInit {
   private readonly editingTaskIds = new Set<string>();
   protected colorDrafts: Record<string, string> = {};
   protected colorOriginals: Record<string, string> = {};
+
+  // Minimized state for task list cards (by list id)
+  protected minimizedLists: Record<string, boolean> = {};
 
   // New Phase 1 state
   protected colorPickerListId: string | null = null;

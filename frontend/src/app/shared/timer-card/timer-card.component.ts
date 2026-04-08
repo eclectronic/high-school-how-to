@@ -8,6 +8,7 @@ import { TimerApiService, UpdateTimerRequest } from '../../core/services/timer-a
 import { autoContrastColor, isHexColor, firstHexFromGradient, isGradient } from '../color-picker/color-utils';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { WidgetTitleBarComponent } from '../widget-title-bar/widget-title-bar.component';
 
 export type TimerPhase = 'idle' | 'focus' | 'short-break' | 'long-break' | 'paused' | 'done';
 
@@ -28,33 +29,30 @@ export const TIMER_PRESETS: TimerPreset[] = [
 @Component({
   selector: 'app-timer-card',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColorPickerComponent, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, ColorPickerComponent, ConfirmDialogComponent, WidgetTitleBarComponent],
   host: { '[class.timer-card--elevated]': 'colorPickerOpen || confirmingDelete' },
   template: `
     <article class="timer-card" [style.background]="timer.color"
              [style.color]="textColor()" (click)="$event.stopPropagation()">
 
-      <!-- Header -->
-      <div class="timer-card__header">
-        <input *ngIf="editingTitle; else titleDisplay"
-               class="title-input"
-               [(ngModel)]="titleDraft"
-               (blur)="saveTitle()"
-               (keydown.enter)="saveTitle()"
-               (keydown.escape)="cancelTitleEdit()"
-               [style.color]="textColor()"
-               autofocus />
-        <ng-template #titleDisplay>
-          <span class="timer-card__title" (click)="startTitleEdit()">{{ timer.title }}</span>
-        </ng-template>
+      <!-- Title bar -->
+      <app-widget-title-bar
+        [title]="timer.title"
+        [minimized]="minimized"
+        (titleChanged)="onTitleChanged($event)"
+        (closeClicked)="confirmingDelete = true"
+        (minimizeToggled)="minimized = !minimized"
+      ></app-widget-title-bar>
 
-        <div class="timer-card__actions">
-          <button type="button" class="icon-btn" *ngIf="linkedList()" title="Enter Study Session"
-                  (click)="studySessionRequested.emit(); $event.stopPropagation()">📚</button>
-          <button type="button" class="icon-btn" title="Color" (click)="toggleColorPicker($event)">🎨</button>
-          <button type="button" class="icon-btn" title="Settings" (click)="toggleSettings($event)">⚙️</button>
-          <button type="button" class="icon-btn" title="Delete" (click)="confirmingDelete = true">🗑️</button>
-        </div>
+      <!-- Body (hidden when minimized) -->
+      <ng-container *ngIf="!minimized">
+
+      <!-- Body actions -->
+      <div class="timer-card__body-actions">
+        <button type="button" class="icon-btn" *ngIf="linkedList()" title="Enter Study Session"
+                (click)="studySessionRequested.emit(); $event.stopPropagation()">📚</button>
+        <button type="button" class="icon-btn" title="Color" (click)="toggleColorPicker($event)">🎨</button>
+        <button type="button" class="icon-btn" title="Settings" (click)="toggleSettings($event)">⚙️</button>
       </div>
 
       <!-- Color picker -->
@@ -158,6 +156,8 @@ export const TIMER_PRESETS: TimerPreset[] = [
         </ng-template>
       </div>
 
+      </ng-container><!-- end !minimized -->
+
       <!-- Confirm delete -->
       <app-confirm-dialog
         *ngIf="confirmingDelete"
@@ -177,45 +177,21 @@ export const TIMER_PRESETS: TimerPreset[] = [
 
     .timer-card {
       border-radius: 0.75rem;
-      padding: 1rem;
+      padding: 0;
       box-shadow: 0 2px 8px rgba(45, 26, 16, 0.12);
       border: 1px solid rgba(45, 26, 16, 0.1);
       font-family: var(--locker-font, var(--font-body));
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0;
+      overflow: hidden;
     }
 
-    .timer-card__header {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-    }
-
-    .timer-card__title {
-      font-family: var(--locker-font, var(--font-display));
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: text;
-      word-break: break-word;
-    }
-
-    .title-input {
-      font-family: var(--locker-font, var(--font-display));
-      font-size: 1rem;
-      font-weight: 700;
-      background: transparent;
-      border: none;
-      border-bottom: 2px solid currentColor;
-      outline: none;
-      width: 100%;
-      padding: 0;
-    }
-
-    .timer-card__actions {
+    .timer-card__body-actions {
       display: flex;
       gap: 0.25rem;
       justify-content: flex-end;
+      padding: 0.4rem 0.75rem 0;
     }
 
     .icon-btn {
@@ -242,6 +218,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 0 0.75rem;
     }
 
     .progress-ring {
@@ -305,6 +282,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
       display: flex;
       gap: 0.4rem;
       justify-content: center;
+      padding: 0 0.75rem;
     }
 
     .ctrl-btn {
@@ -332,6 +310,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
       flex-direction: column;
       gap: 0.6rem;
       font-size: 0.82rem;
+      padding: 0 0.75rem 0.75rem;
     }
 
     .settings-panel__title {
@@ -424,7 +403,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
     /* Linked list */
     .linked-list {
       border-top: 1px solid rgba(0,0,0,0.1);
-      padding-top: 0.5rem;
+      padding: 0.5rem 0.75rem 0.75rem;
     }
 
     .tasks-done-banner {
@@ -474,7 +453,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
     }
 
     .color-picker-panel {
-      margin: -0.25rem 0;
+      margin: 0 0.75rem;
     }
   `]
 })
@@ -493,8 +472,7 @@ export class TimerCardComponent implements OnDestroy {
   protected colorPickerOpen = false;
   protected settingsOpen = false;
   protected confirmingDelete = false;
-  protected editingTitle = false;
-  protected titleDraft = '';
+  protected minimized = false;
 
   // Settings drafts
   protected draftFocus = 25;
@@ -710,22 +688,9 @@ export class TimerCardComponent implements OnDestroy {
     });
   }
 
-  protected startTitleEdit(): void {
-    this.titleDraft = this.timer.title;
-    this.editingTitle = true;
-  }
-
-  protected saveTitle(): void {
-    if (!this.editingTitle) return;
-    this.editingTitle = false;
-    const newTitle = this.titleDraft.trim();
-    if (!newTitle || newTitle === this.timer.title) return;
-    const req: UpdateTimerRequest = { title: newTitle, color: this.timer.color };
+  protected onTitleChanged(title: string): void {
+    const req: UpdateTimerRequest = { title, color: this.timer.color };
     this.timerApi.updateTimer(this.timer.id, req).subscribe(updated => this.timerUpdated.emit(updated));
-  }
-
-  protected cancelTitleEdit(): void {
-    this.editingTitle = false;
   }
 
   protected deleteConfirmed(): void {

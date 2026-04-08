@@ -6,44 +6,35 @@ import { Bookmark, BookmarkList } from '../../core/models/task.models';
 import { BookmarkApiService } from '../../core/services/bookmark-api.service';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { WidgetTitleBarComponent } from '../widget-title-bar/widget-title-bar.component';
 import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-picker/color-utils';
 
 @Component({
   selector: 'app-bookmark-card',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, ColorPickerComponent, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, DragDropModule, ColorPickerComponent, ConfirmDialogComponent, WidgetTitleBarComponent],
   host: { '[class.bookmark-card--elevated]': 'colorPickerOpen || confirmingDelete || !!confirmDeleteBookmark' },
   template: `
     <article class="bookmark-card" [style.background]="list.color"
              [style.color]="textColor()" (click)="$event.stopPropagation()">
 
-      <!-- Drag handle -->
-      <div class="bookmark-card__drag-handle" cdkDragHandle aria-label="Drag to reorder">⠿</div>
+      <!-- Title bar -->
+      <app-widget-title-bar
+        [title]="list.title"
+        [minimized]="minimized"
+        (titleChanged)="onTitleChanged($event)"
+        (closeClicked)="requestDeleteList()"
+        (minimizeToggled)="minimized = !minimized"
+      ></app-widget-title-bar>
 
-      <!-- Header -->
-      <div class="bookmark-card__header">
-        <input *ngIf="editingTitle; else titleDisplay"
-               class="title-input"
-               [(ngModel)]="titleDraft"
-               (blur)="saveTitle()"
-               (keydown.enter)="saveTitle()"
-               (keydown.escape)="cancelTitleEdit()"
-               [style.color]="textColor()"
-               autofocus />
-        <ng-template #titleDisplay>
-          <span class="bookmark-card__title" (click)="startTitleEdit()" title="Click to edit title">
-            🔗 {{ list.title }}
-          </span>
-        </ng-template>
+      <!-- Body (hidden when minimized) -->
+      <ng-container *ngIf="!minimized">
 
-        <div class="bookmark-card__actions">
-          <button type="button" class="icon-btn" (click)="toggleColorPicker()" title="Card color" aria-label="Change card color">
-            <span aria-hidden="true">🎨</span>
-          </button>
-          <button type="button" class="icon-btn danger" (click)="requestDeleteList()" title="Delete bookmark list" aria-label="Delete bookmark list">
-            <span aria-hidden="true">🗑</span>
-          </button>
-        </div>
+      <!-- Body actions -->
+      <div class="bookmark-card__body-actions">
+        <button type="button" class="icon-btn" (click)="toggleColorPicker()" title="Card color" aria-label="Change card color">
+          <span aria-hidden="true">🎨</span>
+        </button>
       </div>
 
       <!-- Color picker -->
@@ -111,6 +102,8 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
         (cancelled)="confirmDeleteBookmark = null"
       ></app-confirm-dialog>
 
+      </ng-container><!-- end !minimized -->
+
       <!-- Delete list confirmation -->
       <app-confirm-dialog
         *ngIf="confirmingDelete"
@@ -130,67 +123,21 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
 
     .bookmark-card {
       border-radius: 12px;
-      padding: 1rem;
+      padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
+      gap: 0;
       box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
       border: 1px solid rgba(255,255,255,0.5);
       position: relative;
-    }
-
-    .bookmark-card__drag-handle {
-      position: absolute;
-      top: 0.5rem;
-      left: 0.5rem;
-      cursor: grab;
-      color: rgba(45,26,16,0.3);
-      font-size: 1rem;
-      line-height: 1;
-      user-select: none;
-      padding: 0.15rem;
-    }
-    .bookmark-card__drag-handle:active { cursor: grabbing; }
-
-    .bookmark-card__header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      padding-left: 1.25rem;
-    }
-
-    .bookmark-card__title {
-      font-size: 1rem;
-      font-weight: 800;
-      flex: 1;
-      min-width: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      cursor: text;
-      border-bottom: 1px dashed transparent;
-      transition: border-color 0.12s;
-    }
-    .bookmark-card__title:hover { border-bottom-color: currentColor; }
-
-    .title-input {
-      flex: 1;
-      border: 1px solid rgba(45,26,16,0.2);
-      border-radius: 6px;
-      padding: 0.2rem 0.4rem;
-      background: rgba(255,255,255,0.7);
-      font: inherit;
-      font-size: 1rem;
-      font-weight: 800;
-      min-width: 0;
     }
 
-    .bookmark-card__actions {
+    .bookmark-card__body-actions {
       display: flex;
       gap: 0.3rem;
       align-items: center;
-      flex-shrink: 0;
+      padding: 0.4rem 0.75rem 0;
     }
 
     .icon-btn {
@@ -237,6 +184,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
       border: 1px solid rgba(45,26,16,0.12);
       box-shadow: 0 8px 24px rgba(0,0,0,0.15);
       padding: 0.5rem;
+      margin: 0 0.75rem;
     }
     .done-btn {
       margin-top: 0.5rem;
@@ -254,7 +202,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
 
     .bookmark-list {
       list-style: none;
-      padding: 0;
+      padding: 0.4rem 0.75rem 0;
       margin: 0;
       display: flex;
       flex-direction: column;
@@ -348,6 +296,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
       border-radius: 6px;
       border: 2px dashed rgba(45,26,16,0.2);
       transition: border-color 0.12s, background 0.12s;
+      margin: 0.4rem 0.75rem 0.75rem;
     }
     .bookmark-add.drag-over {
       border-color: rgba(45,26,16,0.5);
@@ -389,8 +338,7 @@ export class BookmarkCardComponent implements OnChanges {
   @Output() listUpdated = new EventEmitter<BookmarkList>();
   @Output() listDeleted = new EventEmitter<string>();
 
-  protected editingTitle = false;
-  protected titleDraft = '';
+  protected minimized = false;
   protected colorPickerOpen = false;
   protected confirmingDelete = false;
   protected confirmDeleteBookmark: Bookmark | null = null;
@@ -425,22 +373,10 @@ export class BookmarkCardComponent implements OnChanges {
 
   // ── Title editing ───────────────────────────────────────────────────────
 
-  protected startTitleEdit(): void {
-    this.titleDraft = this.list.title;
-    this.editingTitle = true;
-  }
-
-  protected saveTitle(): void {
-    const t = this.titleDraft.trim();
-    if (!t) { this.cancelTitleEdit(); return; }
-    if (t === this.list.title) { this.editingTitle = false; return; }
+  protected onTitleChanged(title: string): void {
     this.bookmarkApi.updateBookmarkList(this.list.id, {
-      title: t, color: this.list.color, textColor: this.list.textColor ?? null
-    }).subscribe({ next: updated => { this.listUpdated.emit(updated); this.editingTitle = false; } });
-  }
-
-  protected cancelTitleEdit(): void {
-    this.editingTitle = false;
+      title, color: this.list.color, textColor: this.list.textColor ?? null
+    }).subscribe({ next: updated => this.listUpdated.emit(updated) });
   }
 
   // ── Color picker ────────────────────────────────────────────────────────
