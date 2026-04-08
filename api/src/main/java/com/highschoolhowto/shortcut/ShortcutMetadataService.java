@@ -1,6 +1,6 @@
-package com.highschoolhowto.bookmark;
+package com.highschoolhowto.shortcut;
 
-import com.highschoolhowto.bookmark.dto.BookmarkMetadataResponse;
+import com.highschoolhowto.shortcut.dto.ShortcutMetadataResponse;
 import com.highschoolhowto.web.ApiException;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -16,7 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
-public class BookmarkMetadataService {
+public class ShortcutMetadataService {
 
     private static final int TIMEOUT_SECONDS = 3;
     private static final int MAX_BODY_BYTES = 1_048_576; // 1 MB
@@ -35,7 +35,7 @@ public class BookmarkMetadataService {
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
-    public BookmarkMetadataResponse fetch(String urlStr) {
+    public ShortcutMetadataResponse fetch(String urlStr) {
         validateUrl(urlStr);
         try {
             URI uri = new URI(urlStr);
@@ -59,15 +59,17 @@ public class BookmarkMetadataService {
 
             String faviconUrl = extractFavicon(html, uri);
 
-            return new BookmarkMetadataResponse(title.trim(), faviconUrl);
+            return new ShortcutMetadataResponse(title.trim(), faviconUrl);
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
             // Fallback on network error
             try {
                 URI uri = new URI(urlStr);
-                return new BookmarkMetadataResponse(uri.getHost(), uri.getScheme() + "://" + uri.getHost() + "/favicon.ico");
+                return new ShortcutMetadataResponse(
+                        uri.getHost(),
+                        uri.getScheme() + "://" + uri.getHost() + "/favicon.ico");
             } catch (URISyntaxException ex) {
-                return new BookmarkMetadataResponse(urlStr, null);
+                return new ShortcutMetadataResponse(urlStr, null);
             }
         } catch (URISyntaxException e) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid URL", "The provided URL is invalid");
@@ -100,7 +102,10 @@ public class BookmarkMetadataService {
             InetAddress addr = InetAddress.getByName(host);
             if (addr.isSiteLocalAddress() || addr.isLoopbackAddress() || addr.isLinkLocalAddress()
                     || addr.isAnyLocalAddress() || addr.isMulticastAddress()) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid URL", "Private or reserved addresses are not allowed");
+                throw new ApiException(
+                        HttpStatus.BAD_REQUEST,
+                        "Invalid URL",
+                        "Private or reserved addresses are not allowed");
             }
         } catch (java.net.UnknownHostException e) {
             // Unknown host — let the HTTP client handle it (will fail gracefully)

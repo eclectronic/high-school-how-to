@@ -7,17 +7,17 @@ import { forkJoin } from 'rxjs';
 import { TaskApiService } from '../../../core/services/task-api.service';
 import { TimerApiService } from '../../../core/services/timer-api.service';
 import { NoteApiService } from '../../../core/services/note-api.service';
-import { BookmarkApiService } from '../../../core/services/bookmark-api.service';
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
+import { ShortcutApiService } from '../../../core/services/shortcut-api.service';
 import { SessionStore } from '../../../core/session/session.store';
-import { TaskItem, TaskList, Timer, Note, BookmarkList, Sticker } from '../../../core/models/task.models';
+import { TaskItem, TaskList, Timer, Note, Shortcut, Sticker } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { InlineTitleEditComponent } from '../../../shared/inline-title-edit/inline-title-edit.component';
 import { ColorPickerComponent } from '../../../shared/color-picker/color-picker.component';
 import { DueDatePopoverComponent } from '../../../shared/due-date-popover/due-date-popover.component';
 import { TimerCardComponent } from '../../../shared/timer-card/timer-card.component';
 import { NoteCardComponent } from '../../../shared/note-card/note-card.component';
-import { BookmarkCardComponent } from '../../../shared/bookmark-card/bookmark-card.component';
+import { ShortcutIconComponent } from '../../../shared/shortcut-icon/shortcut-icon.component';
 import { StickerComponent } from '../../../shared/sticker/sticker.component';
 import { EmojiPickerComponent } from '../../../shared/sticker/emoji-picker.component';
 import { StickerApiService } from '../../../core/services/sticker-api.service';
@@ -27,7 +27,7 @@ type LockerCard =
   | { type: 'TASK_LIST'; data: TaskList }
   | { type: 'TIMER'; data: Timer }
   | { type: 'NOTE'; data: Note }
-  | { type: 'BOOKMARK_LIST'; data: BookmarkList };
+  | { type: 'SHORTCUT'; data: Shortcut };
 
 interface LockerColor {
   id: string;
@@ -155,7 +155,7 @@ const LOCKER_ZONES = [
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule,
     ConfirmDialogComponent, InlineTitleEditComponent, ColorPickerComponent, DueDatePopoverComponent,
-    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, StickerComponent, EmojiPickerComponent],
+    TimerCardComponent, NoteCardComponent, ShortcutIconComponent, StickerComponent, EmojiPickerComponent],
   template: `
     <!-- ── Locker row animation overlay ── -->
     <div class="locker-overlay"
@@ -282,10 +282,10 @@ const LOCKER_ZONES = [
             📝
           </button>
           <button type="button" class="app-icon-btn"
-                  [disabled]="atBookmarkListLimit()"
-                  [title]="atBookmarkListLimit() ? 'Maximum of 10 bookmark lists reached' : 'Create a bookmark list'"
-                  (click)="createBookmarkList()" aria-label="Create new bookmark list">
-            🔗
+                  [disabled]="atShortcutLimit()"
+                  [title]="atShortcutLimit() ? 'Maximum of 50 shortcuts reached' : 'Add a shortcut'"
+                  (click)="openAddShortcutDialog(); $event.stopPropagation()" aria-label="Add a shortcut">
+            🚀
           </button>
           <button type="button" class="app-icon-btn"
                   *ngIf="studyReadyTimers().length > 0"
@@ -319,6 +319,74 @@ const LOCKER_ZONES = [
         ></app-emoji-picker>
         <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
       </header>
+
+      <!-- Add / Edit Shortcut dialog -->
+      <div *ngIf="shortcutDialogOpen"
+           class="shortcut-dialog-backdrop"
+           (click)="closeShortcutDialog()">
+        <div class="shortcut-dialog" (click)="$event.stopPropagation()">
+          <h3 class="shortcut-dialog__title">{{ editingShortcut ? 'Edit Shortcut' : 'Add Shortcut' }}</h3>
+
+          <label class="shortcut-dialog__label">URL</label>
+          <input class="shortcut-dialog__input"
+                 type="url"
+                 [(ngModel)]="shortcutUrlDraft"
+                 placeholder="https://example.com"
+                 (blur)="onShortcutUrlBlur()"
+                 (keydown.enter)="onShortcutUrlBlur()" />
+
+          <label class="shortcut-dialog__label">
+            Name
+            <span class="shortcut-dialog__hint">(auto-filled from page title)</span>
+          </label>
+          <input class="shortcut-dialog__input"
+                 type="text"
+                 [(ngModel)]="shortcutNameDraft"
+                 placeholder="Site name"
+                 maxlength="255" />
+
+          <label class="shortcut-dialog__label">Icon</label>
+          <div class="shortcut-dialog__icon-opts">
+            <label class="shortcut-dialog__radio">
+              <input type="radio" name="iconType" value="favicon"
+                     [(ngModel)]="shortcutIconType" />
+              Favicon (default)
+              <img *ngIf="shortcutFaviconPreview"
+                   class="shortcut-dialog__favicon-preview"
+                   [src]="shortcutFaviconPreview" alt="favicon preview" />
+            </label>
+            <label class="shortcut-dialog__radio">
+              <input type="radio" name="iconType" value="emoji"
+                     [(ngModel)]="shortcutIconType" />
+              Emoji
+              <input *ngIf="shortcutIconType === 'emoji'"
+                     class="shortcut-dialog__emoji-input"
+                     type="text"
+                     [(ngModel)]="shortcutEmojiDraft"
+                     placeholder="😀"
+                     maxlength="10" />
+            </label>
+          </div>
+
+          <div class="shortcut-dialog__actions">
+            <button type="button" class="ghost" (click)="closeShortcutDialog()">Cancel</button>
+            <button type="button"
+                    [disabled]="!shortcutUrlDraft.trim()"
+                    (click)="saveShortcut()">
+              {{ editingShortcut ? 'Save' : 'Add' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Confirm delete shortcut dialog -->
+      <app-confirm-dialog
+        *ngIf="confirmDeleteShortcut"
+        [itemName]="confirmDeleteShortcut.name"
+        [message]="'Delete ' + confirmDeleteShortcut.name + '? This can\\'t be undone.'"
+        (confirmed)="onConfirmDeleteShortcut()"
+        (cancelled)="confirmDeleteShortcut = null"
+      ></app-confirm-dialog>
 
       <!-- Confirm delete dialog (shown outside of grid to avoid z-index issues) -->
       <app-confirm-dialog
@@ -408,14 +476,14 @@ const LOCKER_ZONES = [
           (noteDeleted)="onNoteDeleted($event)"
         ></app-note-card>
 
-        <!-- Bookmark list card -->
-        <app-bookmark-card
-          *ngIf="card.type === 'BOOKMARK_LIST'"
+        <!-- Shortcut icon -->
+        <app-shortcut-icon
+          *ngIf="card.type === 'SHORTCUT'"
           cdkDrag
-          [list]="asBookmarkList(card)!"
-          (listUpdated)="onBookmarkListUpdated($event)"
-          (listDeleted)="onBookmarkListDeleted($event)"
-        ></app-bookmark-card>
+          [shortcut]="asShortcut(card)!"
+          (editRequested)="onShortcutEditRequested($event)"
+          (deleteRequested)="onShortcutDeleteRequested($event)"
+        ></app-shortcut-icon>
 
         <!-- Task list card -->
         <ng-container *ngIf="asTaskList(card) as list">
@@ -1634,6 +1702,130 @@ const LOCKER_ZONES = [
       }
       .study-new-task button:hover { opacity: 0.88; }
       .study-new-task button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      /* ══════════════════════════════════════════════════════════
+         SHORTCUT DIALOG
+         ══════════════════════════════════════════════════════════ */
+
+      .shortcut-dialog-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 300;
+        background: rgba(0, 0, 0, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .shortcut-dialog {
+        background: #fffef8;
+        border-radius: 16px;
+        padding: 1.5rem;
+        width: 100%;
+        max-width: 420px;
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .shortcut-dialog__title {
+        margin: 0 0 0.25rem;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #1c1c1e;
+      }
+
+      .shortcut-dialog__label {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #3f3f46;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .shortcut-dialog__hint {
+        font-weight: 400;
+        color: #71717a;
+        font-size: 0.75rem;
+      }
+
+      .shortcut-dialog__input {
+        width: 100%;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+        padding: 0.55rem 0.8rem;
+        font: inherit;
+        font-size: 0.9rem;
+        background: rgba(255, 255, 255, 0.8);
+        color: #1c1c1e;
+        box-sizing: border-box;
+      }
+      .shortcut-dialog__input:focus {
+        outline: none;
+        border-color: var(--lc-accent, #3d8ed4);
+        background: #fff;
+      }
+
+      .shortcut-dialog__icon-opts {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .shortcut-dialog__radio {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+      }
+
+      .shortcut-dialog__favicon-preview {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        object-fit: contain;
+      }
+
+      .shortcut-dialog__emoji-input {
+        width: 60px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        border-radius: 6px;
+        padding: 0.3rem 0.5rem;
+        font: inherit;
+        font-size: 1.1rem;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .shortcut-dialog__actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+      }
+
+      .shortcut-dialog__actions button {
+        border: 1px solid rgba(45, 26, 16, 0.2);
+        border-radius: 8px;
+        padding: 0.5rem 1.1rem;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.12s;
+        background: rgba(255, 255, 255, 0.8);
+        color: #2d1a10;
+      }
+      .shortcut-dialog__actions button:last-child {
+        background: var(--lc-accent, #3d8ed4);
+        color: #fff;
+        border-color: transparent;
+      }
+      .shortcut-dialog__actions button:hover { opacity: 0.85; }
+      .shortcut-dialog__actions button:disabled { opacity: 0.4; cursor: not-allowed; }
     `
   ]
 })
@@ -1659,7 +1851,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected readonly taskLists = signal<TaskList[]>([]);
   protected readonly timers = signal<Timer[]>([]);
   protected readonly notes = signal<Note[]>([]);
-  protected readonly bookmarkLists = signal<BookmarkList[]>([]);
+  protected readonly shortcuts = signal<Shortcut[]>([]);
   protected readonly stickers = signal<Sticker[]>([]);
   protected stickerPickerOpen = false;
   protected taskDrafts: Record<string, string> = {};
@@ -1681,10 +1873,20 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected dueDatePopoverListId: string | null = null;
   protected fontPickerOpen = false;
 
+  // Shortcut dialog state
+  protected shortcutDialogOpen = false;
+  protected editingShortcut: Shortcut | null = null;
+  protected shortcutUrlDraft = '';
+  protected shortcutNameDraft = '';
+  protected shortcutFaviconPreview: string | null = null;
+  protected shortcutIconType: 'favicon' | 'emoji' = 'favicon';
+  protected shortcutEmojiDraft = '';
+  protected confirmDeleteShortcut: Shortcut | null = null;
+
   protected readonly atListLimit = computed(() => this.taskLists().length >= 20);
   protected readonly atTimerLimit = computed(() => this.timers().length >= 10);
   protected readonly atNoteLimit = computed(() => this.notes().length >= 20);
-  protected readonly atBookmarkListLimit = computed(() => this.bookmarkLists().length >= 10);
+  protected readonly atShortcutLimit = computed(() => this.shortcuts().length >= 50);
   protected readonly atStickerLimit = computed(() => this.stickers().length >= 30);
 
   protected readonly studySession = signal<{ timerId: string; listId: string } | null>(null);
@@ -1698,24 +1900,24 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.timers().filter(t => t.linkedTaskListId && this.taskLists().some(l => l.id === t.linkedTaskListId))
   );
 
-  private readonly cardOrder = signal<Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'BOOKMARK_LIST'; id: string }>>([]);
+  private readonly cardOrder = signal<Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT'; id: string }>>([]);
 
   protected readonly orderedCards = computed((): LockerCard[] => {
     const lists = this.taskLists();
     const timers = this.timers();
     const notes = this.notes();
-    const bookmarkLists = this.bookmarkLists();
+    const shortcuts = this.shortcuts();
     const order = this.cardOrder();
     const listMap = new Map(lists.map(l => [l.id, l]));
     const timerMap = new Map(timers.map(t => [t.id, t]));
     const noteMap = new Map(notes.map(n => [n.id, n]));
-    const bookmarkMap = new Map(bookmarkLists.map(b => [b.id, b]));
+    const shortcutMap = new Map(shortcuts.map(s => [s.id, s]));
     if (order.length === 0) {
       return [
         ...lists.map(l => ({ type: 'TASK_LIST' as const, data: l })),
         ...timers.map(t => ({ type: 'TIMER' as const, data: t })),
         ...notes.map(n => ({ type: 'NOTE' as const, data: n })),
-        ...bookmarkLists.map(b => ({ type: 'BOOKMARK_LIST' as const, data: b })),
+        ...shortcuts.map(s => ({ type: 'SHORTCUT' as const, data: s })),
       ];
     }
     const result: LockerCard[] = [];
@@ -1729,16 +1931,16 @@ export class LockerComponent implements AfterViewInit, OnInit {
       } else if (type === 'NOTE') {
         const note = noteMap.get(id);
         if (note) result.push({ type: 'NOTE', data: note });
-      } else if (type === 'BOOKMARK_LIST') {
-        const bl = bookmarkMap.get(id);
-        if (bl) result.push({ type: 'BOOKMARK_LIST', data: bl });
+      } else if (type === 'SHORTCUT') {
+        const shortcut = shortcutMap.get(id);
+        if (shortcut) result.push({ type: 'SHORTCUT', data: shortcut });
       }
     });
     // Append newly created cards not yet in saved order
     lists.forEach(l => { if (!order.find(o => o.type === 'TASK_LIST' && o.id === l.id)) result.push({ type: 'TASK_LIST', data: l }); });
     timers.forEach(t => { if (!order.find(o => o.type === 'TIMER' && o.id === t.id)) result.push({ type: 'TIMER', data: t }); });
     notes.forEach(n => { if (!order.find(o => o.type === 'NOTE' && o.id === n.id)) result.push({ type: 'NOTE', data: n }); });
-    bookmarkLists.forEach(b => { if (!order.find(o => o.type === 'BOOKMARK_LIST' && o.id === b.id)) result.push({ type: 'BOOKMARK_LIST', data: b }); });
+    shortcuts.forEach(s => { if (!order.find(o => o.type === 'SHORTCUT' && o.id === s.id)) result.push({ type: 'SHORTCUT', data: s }); });
     return result;
   });
 
@@ -1750,7 +1952,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
     private readonly taskApi: TaskApiService,
     private readonly timerApi: TimerApiService,
     private readonly noteApi: NoteApiService,
-    private readonly bookmarkApi: BookmarkApiService,
+    private readonly shortcutApi: ShortcutApiService,
     private readonly stickerApi: StickerApiService,
     private readonly lockerLayoutApi: LockerLayoutApiService,
   ) {
@@ -1835,14 +2037,14 @@ export class LockerComponent implements AfterViewInit, OnInit {
       this.taskApi.getTaskLists(),
       this.timerApi.getTimers(),
       this.noteApi.getNotes(),
-      this.bookmarkApi.getBookmarkLists(),
+      this.shortcutApi.getShortcuts(),
       this.stickerApi.getStickers(),
     ]).subscribe({
-      next: ([lists, timers, notes, bookmarkLists, stickers]) => {
+      next: ([lists, timers, notes, shortcuts, stickers]) => {
         this.taskLists.set(lists);
         this.timers.set(timers);
         this.notes.set(notes);
-        this.bookmarkLists.set(bookmarkLists);
+        this.shortcuts.set(shortcuts);
         this.stickers.set(stickers);
       },
       error: () => { this.errorMessage = 'Could not load your locker. Please log in again.'; },
@@ -2031,13 +2233,13 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected reorderCards(event: CdkDragDrop<any[]>): void {
     const cards = [...this.orderedCards()];
     moveItemInArray(cards, event.previousIndex, event.currentIndex);
-    const newOrder = cards.map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }));
+    const newOrder = cards.map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT', id: c.data.id }));
     this.cardOrder.set(newOrder);
     this.saveLockerLayout(newOrder);
   }
 
-  private saveLockerLayout(order?: Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST'; id: string }>): void {
-    const cards = order ?? this.orderedCards().map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }));
+  private saveLockerLayout(order?: Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT'; id: string }>): void {
+    const cards = order ?? this.orderedCards().map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT', id: c.data.id }));
     const items = cards.map(({ type, id }, index) => ({
       cardType: type,
       cardId: id,
@@ -2180,8 +2382,8 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected asNote(card: LockerCard): Note | null {
     return card.type === 'NOTE' ? (card.data as Note) : null;
   }
-  protected asBookmarkList(card: LockerCard): BookmarkList | null {
-    return card.type === 'BOOKMARK_LIST' ? (card.data as BookmarkList) : null;
+  protected asShortcut(card: LockerCard): Shortcut | null {
+    return card.type === 'SHORTCUT' ? (card.data as Shortcut) : null;
   }
 
   // --- Timer launch from task list ---
@@ -2212,7 +2414,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   private insertTimerAfterList(timerId: string, listId: string): void {
     const current = this.orderedCards()
-      .map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }))
+      .map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT', id: c.data.id }))
       .filter(o => !(o.type === 'TIMER' && o.id === timerId));
     const listIdx = current.findIndex(o => o.type === 'TASK_LIST' && o.id === listId);
     if (listIdx !== -1) {
@@ -2300,30 +2502,99 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.saveLockerLayout();
   }
 
-  // --- Bookmark List CRUD ---
-  protected createBookmarkList(): void {
-    if (this.atBookmarkListLimit()) return;
-    const existingTitles = this.bookmarkLists().map(l => l.title);
-    const title = nextAutoName(existingTitles, 'Bookmarks');
-    const color = this.nextAvailableColor();
-    this.bookmarkApi.createBookmarkList({ title, color }).subscribe({
-      next: list => {
-        this.bookmarkLists.update(current => [...current, list]);
-        this.errorMessage = '';
-        this.saveLockerLayout();
+  // --- Shortcut CRUD ---
+  protected openAddShortcutDialog(): void {
+    if (this.atShortcutLimit()) return;
+    this.editingShortcut = null;
+    this.shortcutUrlDraft = '';
+    this.shortcutNameDraft = '';
+    this.shortcutFaviconPreview = null;
+    this.shortcutIconType = 'favicon';
+    this.shortcutEmojiDraft = '';
+    this.shortcutDialogOpen = true;
+  }
+
+  protected closeShortcutDialog(): void {
+    this.shortcutDialogOpen = false;
+    this.editingShortcut = null;
+  }
+
+  protected onShortcutUrlBlur(): void {
+    const url = this.shortcutUrlDraft.trim();
+    if (!url) return;
+    this.shortcutApi.getMetadata(url).subscribe({
+      next: meta => {
+        if (!this.shortcutNameDraft.trim()) {
+          this.shortcutNameDraft = meta.title;
+        }
+        if (meta.faviconUrl) {
+          this.shortcutFaviconPreview = meta.faviconUrl;
+        }
       },
-      error: () => { this.errorMessage = 'Unable to create a bookmark list right now. Please try again.'; },
+      error: () => {},
     });
   }
 
-  protected onBookmarkListUpdated(updated: BookmarkList): void {
-    this.bookmarkLists.update(current => current.map(l => l.id === updated.id ? updated : l));
+  protected saveShortcut(): void {
+    const url = this.shortcutUrlDraft.trim();
+    if (!url) return;
+    const name = this.shortcutNameDraft.trim() || undefined;
+    const emoji = this.shortcutIconType === 'emoji' ? this.shortcutEmojiDraft.trim() || undefined : undefined;
+    const faviconUrl = this.shortcutIconType === 'favicon' ? this.shortcutFaviconPreview || undefined : undefined;
+
+    if (this.editingShortcut) {
+      const shortcutName = name || this.editingShortcut.name;
+      this.shortcutApi.updateShortcut(this.editingShortcut.id, {
+        url,
+        name: shortcutName,
+        faviconUrl: faviconUrl ?? null,
+        emoji: emoji ?? null,
+      }).subscribe({
+        next: updated => {
+          this.shortcuts.update(current => current.map(s => s.id === updated.id ? updated : s));
+          this.closeShortcutDialog();
+        },
+        error: () => { this.errorMessage = 'Unable to update shortcut. Please try again.'; },
+      });
+    } else {
+      this.shortcutApi.createShortcut({ url, name, faviconUrl, emoji }).subscribe({
+        next: created => {
+          this.shortcuts.update(current => [...current, created]);
+          this.errorMessage = '';
+          this.saveLockerLayout();
+          this.closeShortcutDialog();
+        },
+        error: () => { this.errorMessage = 'Unable to add shortcut. Please try again.'; },
+      });
+    }
   }
 
-  protected onBookmarkListDeleted(listId: string): void {
-    this.bookmarkLists.update(current => current.filter(l => l.id !== listId));
-    this.cardOrder.update(order => order.filter(o => !(o.type === 'BOOKMARK_LIST' && o.id === listId)));
-    this.saveLockerLayout();
+  protected onShortcutEditRequested(shortcut: Shortcut): void {
+    this.editingShortcut = shortcut;
+    this.shortcutUrlDraft = shortcut.url;
+    this.shortcutNameDraft = shortcut.name;
+    this.shortcutFaviconPreview = shortcut.faviconUrl ?? null;
+    this.shortcutIconType = shortcut.emoji ? 'emoji' : 'favicon';
+    this.shortcutEmojiDraft = shortcut.emoji ?? '';
+    this.shortcutDialogOpen = true;
+  }
+
+  protected onShortcutDeleteRequested(shortcut: Shortcut): void {
+    this.confirmDeleteShortcut = shortcut;
+  }
+
+  protected onConfirmDeleteShortcut(): void {
+    const shortcut = this.confirmDeleteShortcut;
+    if (!shortcut) return;
+    this.confirmDeleteShortcut = null;
+    this.shortcutApi.deleteShortcut(shortcut.id).subscribe({
+      next: () => {
+        this.shortcuts.update(current => current.filter(s => s.id !== shortcut.id));
+        this.cardOrder.update(order => order.filter(o => !(o.type === 'SHORTCUT' && o.id === shortcut.id)));
+        this.saveLockerLayout();
+      },
+      error: () => { this.errorMessage = 'Unable to delete shortcut. Please try again.'; },
+    });
   }
 
   protected onTimerTaskCheckChange(event: { taskId: string; listId: string; completed: boolean }): void {
@@ -2402,7 +2673,6 @@ export class LockerComponent implements AfterViewInit, OnInit {
       ...this.taskLists().map(l => l.color),
       ...this.timers().map(t => t.color),
       ...this.notes().map(n => n.color),
-      ...this.bookmarkLists().map(l => l.color),
     ]);
     return this.colorPalette.find(color => !used.has(color)) ?? this.colorPalette[0];
   }

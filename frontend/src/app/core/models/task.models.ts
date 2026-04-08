@@ -14,7 +14,7 @@ export interface TaskList {
 }
 
 export interface LockerLayoutItem {
-  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST'
+  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT'
   cardId: string;
   sortOrder: number;
 }
@@ -55,6 +55,15 @@ export interface BookmarkList {
   color: string;
   textColor?: string | null;
   bookmarks: Bookmark[];
+}
+
+export interface Shortcut {
+  id: string;
+  url: string;
+  name: string;
+  faviconUrl?: string | null;
+  emoji?: string | null;
+  iconUrl?: string | null;
 }
 
 export interface Sticker {
