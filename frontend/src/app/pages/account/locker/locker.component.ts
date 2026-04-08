@@ -18,16 +18,17 @@ import { DueDatePopoverComponent } from '../../../shared/due-date-popover/due-da
 import { TimerCardComponent } from '../../../shared/timer-card/timer-card.component';
 import { NoteCardComponent } from '../../../shared/note-card/note-card.component';
 import { BookmarkCardComponent } from '../../../shared/bookmark-card/bookmark-card.component';
-import { StickerComponent } from '../../../shared/sticker/sticker.component';
 import { EmojiPickerComponent } from '../../../shared/sticker/emoji-picker.component';
-import { StickerApiService } from '../../../core/services/sticker-api.service';
+import { StickerIconComponent } from '../../../shared/sticker-icon/sticker-icon.component';
+import { StickerApiService, CreateStickerRequest } from '../../../core/services/sticker-api.service';
 import { DEFAULT_PALETTE, autoContrastColor, isGradient, firstHexFromGradient } from '../../../shared/color-picker/color-utils';
 
 type LockerCard =
   | { type: 'TASK_LIST'; data: TaskList }
   | { type: 'TIMER'; data: Timer }
   | { type: 'NOTE'; data: Note }
-  | { type: 'BOOKMARK_LIST'; data: BookmarkList };
+  | { type: 'BOOKMARK_LIST'; data: BookmarkList }
+  | { type: 'STICKER'; data: Sticker };
 
 interface LockerColor {
   id: string;
@@ -155,7 +156,8 @@ const LOCKER_ZONES = [
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule,
     ConfirmDialogComponent, InlineTitleEditComponent, ColorPickerComponent, DueDatePopoverComponent,
-    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, StickerComponent, EmojiPickerComponent],
+    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, EmojiPickerComponent,
+    StickerIconComponent],
   template: `
     <!-- ── Locker row animation overlay ── -->
     <div class="locker-overlay"
@@ -295,9 +297,9 @@ const LOCKER_ZONES = [
           </button>
           <button type="button" class="app-icon-btn"
                   [disabled]="atStickerLimit()"
-                  [title]="atStickerLimit() ? 'Maximum of 30 stickers reached' : 'Add a sticker'"
-                  (click)="toggleStickerPicker(); $event.stopPropagation()" aria-label="Add sticker">
-            🌈
+                  [title]="atStickerLimit() ? 'Maximum of 50 stickers reached' : 'Add a sticker'"
+                  (click)="openStickerDialog(); $event.stopPropagation()" aria-label="Add sticker">
+            🏷️
           </button>
           <button type="button" class="app-icon-btn app-icon-btn--font"
                   [title]="'Locker font: ' + lockerFont().name"
@@ -311,12 +313,49 @@ const LOCKER_ZONES = [
                   [style.fontFamily]="f.family"
                   (click)="setLockerFont(f)">{{ f.name }}</button>
         </div>
-        <app-emoji-picker
-          *ngIf="stickerPickerOpen"
-          class="sticker-picker-panel"
-          (emojiSelected)="onEmojiSelected($event)"
-          (click)="$event.stopPropagation()"
-        ></app-emoji-picker>
+        <!-- Add Sticker dialog -->
+        <div *ngIf="stickerDialogOpen" class="sticker-dialog" (click)="$event.stopPropagation()">
+          <h3 class="sticker-dialog__title">{{ stickerEditId ? 'Edit Sticker' : 'Add Sticker' }}</h3>
+          <div class="sticker-dialog__tabs">
+            <button type="button" class="sticker-dialog__tab"
+                    [class.sticker-dialog__tab--active]="stickerDialogTab === 'emoji'"
+                    (click)="stickerDialogTab = 'emoji'">Emoji</button>
+            <button type="button" class="sticker-dialog__tab"
+                    [class.sticker-dialog__tab--active]="stickerDialogTab === 'url'"
+                    (click)="stickerDialogTab = 'url'">Image URL</button>
+          </div>
+          @if (stickerDialogTab === 'emoji') {
+            <app-emoji-picker
+              (emojiSelected)="onStickerDialogEmojiSelected($event)"
+            ></app-emoji-picker>
+            <div class="sticker-dialog__selected-emoji" *ngIf="stickerDialogEmoji">
+              Selected: <span>{{ stickerDialogEmoji }}</span>
+            </div>
+          } @else {
+            <div class="sticker-dialog__field">
+              <label class="sticker-dialog__label">Image URL</label>
+              <input type="text" class="sticker-dialog__input"
+                     [(ngModel)]="stickerDialogIconUrl"
+                     placeholder="/media/icons/my-icon.png" />
+            </div>
+          }
+          <div class="sticker-dialog__field">
+            <label class="sticker-dialog__label">Label (optional)</label>
+            <input type="text" class="sticker-dialog__input"
+                   [(ngModel)]="stickerDialogLabel"
+                   maxlength="255"
+                   placeholder="My favorite sticker" />
+          </div>
+          <div class="sticker-dialog__actions">
+            <button type="button" class="sticker-dialog__btn sticker-dialog__btn--cancel"
+                    (click)="closeStickerDialog()">Cancel</button>
+            <button type="button" class="sticker-dialog__btn sticker-dialog__btn--submit"
+                    [disabled]="!canSubmitStickerDialog()"
+                    (click)="submitStickerDialog()">
+              {{ stickerEditId ? 'Save' : 'Add' }}
+            </button>
+          </div>
+        </div>
         <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
       </header>
 
@@ -416,6 +455,16 @@ const LOCKER_ZONES = [
           (listUpdated)="onBookmarkListUpdated($event)"
           (listDeleted)="onBookmarkListDeleted($event)"
         ></app-bookmark-card>
+
+        <!-- Sticker card -->
+        <app-sticker-icon
+          *ngIf="card.type === 'STICKER'"
+          cdkDrag
+          class="sticker-grid-card"
+          [sticker]="asSticker(card)!"
+          (edit)="openEditStickerDialog(asSticker(card)!)"
+          (delete)="onStickerDeleted(asSticker(card)!.id)"
+        ></app-sticker-icon>
 
         <!-- Task list card -->
         <ng-container *ngIf="asTaskList(card) as list">
@@ -549,17 +598,6 @@ const LOCKER_ZONES = [
         </ng-container>
 
         </ng-container>
-      </div>
-
-      <!-- Sticker overlay layer -->
-      <div class="sticker-layer" *ngIf="stickers().length > 0">
-        <app-sticker
-          *ngFor="let sticker of stickers(); trackBy: trackByStickerId"
-          [sticker]="sticker"
-          (positionChanged)="onStickerPositionChanged(sticker.id, $event.x, $event.y)"
-          (sizeChanged)="onStickerSizeChanged(sticker.id, $event)"
-          (deleted)="onStickerDeleted(sticker.id)"
-        ></app-sticker>
       </div>
 
       <!-- Empty state -->
@@ -1385,28 +1423,123 @@ const LOCKER_ZONES = [
         border-color: transparent;
       }
 
-      .sticker-picker-panel {
+      /* ── Sticker dialog panel ── */
+      .sticker-dialog {
         position: absolute;
         top: 100%;
         right: 0;
         z-index: 100;
         margin-top: 0.25rem;
+        background: #fffef8;
+        border: 1px solid rgba(0,0,0,0.12);
+        border-radius: 12px;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+        padding: 1rem;
+        min-width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
       }
 
-      .sticker-layer {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        z-index: 1;
-
-        app-sticker { pointer-events: all; }
+      .sticker-dialog__title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 800;
+        color: #1c1c1e;
       }
 
-      /* When a sticker is hovered or showing its confirm prompt, raise the whole
-         layer above the tool-card grid (z-index:2) so controls are never obscured. */
-      .sticker-layer:has(.sticker:hover),
-      .sticker-layer:has(.sticker--confirming) {
-        z-index: 3;
+      .sticker-dialog__tabs {
+        display: flex;
+        gap: 0.35rem;
+      }
+
+      .sticker-dialog__tab {
+        padding: 0.35rem 0.75rem;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 20px;
+        background: transparent;
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: #3f3f46;
+        transition: background 0.1s, border-color 0.1s;
+      }
+
+      .sticker-dialog__tab--active {
+        background: var(--lc-accent, #3d8ed4);
+        border-color: var(--lc-accent, #3d8ed4);
+        color: #fff;
+      }
+
+      .sticker-dialog__selected-emoji {
+        font-size: 0.85rem;
+        color: #52525b;
+      }
+
+      .sticker-dialog__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .sticker-dialog__label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #52525b;
+      }
+
+      .sticker-dialog__input {
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        color: #1c1c1e;
+        background: rgba(255,255,255,0.85);
+      }
+
+      .sticker-dialog__input:focus {
+        outline: none;
+        border-color: var(--lc-accent, #3d8ed4);
+        background: #fff;
+      }
+
+      .sticker-dialog__actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+      }
+
+      .sticker-dialog__btn {
+        padding: 0.45rem 1rem;
+        border-radius: 8px;
+        border: none;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.12s;
+      }
+
+      .sticker-dialog__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      .sticker-dialog__btn--cancel {
+        background: rgba(0,0,0,0.08);
+        color: #3f3f46;
+      }
+
+      .sticker-dialog__btn--submit {
+        background: var(--lc-accent, #3d8ed4);
+        color: #fff;
+      }
+
+      /* ── Sticker grid card ── */
+      .sticker-grid-card {
+        background: rgba(255,255,255,0.65);
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255,255,255,0.5);
       }
 
       /* ── Floating color picker panel ── */
@@ -1661,7 +1794,12 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected readonly notes = signal<Note[]>([]);
   protected readonly bookmarkLists = signal<BookmarkList[]>([]);
   protected readonly stickers = signal<Sticker[]>([]);
-  protected stickerPickerOpen = false;
+  protected stickerDialogOpen = false;
+  protected stickerEditId: string | null = null;
+  protected stickerDialogTab: 'emoji' | 'url' = 'emoji';
+  protected stickerDialogEmoji = '';
+  protected stickerDialogIconUrl = '';
+  protected stickerDialogLabel = '';
   protected taskDrafts: Record<string, string> = {};
   protected errorMessage = '';
   protected editDrafts: Record<string, string> = {};
@@ -1685,7 +1823,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected readonly atTimerLimit = computed(() => this.timers().length >= 10);
   protected readonly atNoteLimit = computed(() => this.notes().length >= 20);
   protected readonly atBookmarkListLimit = computed(() => this.bookmarkLists().length >= 10);
-  protected readonly atStickerLimit = computed(() => this.stickers().length >= 30);
+  protected readonly atStickerLimit = computed(() => this.stickers().length >= 50);
 
   protected readonly studySession = signal<{ timerId: string; listId: string } | null>(null);
   protected readonly studySessionTimer = computed(() =>
@@ -1698,24 +1836,27 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.timers().filter(t => t.linkedTaskListId && this.taskLists().some(l => l.id === t.linkedTaskListId))
   );
 
-  private readonly cardOrder = signal<Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'BOOKMARK_LIST'; id: string }>>([]);
+  private readonly cardOrder = signal<Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'STICKER'; id: string }>>([]);
 
   protected readonly orderedCards = computed((): LockerCard[] => {
     const lists = this.taskLists();
     const timers = this.timers();
     const notes = this.notes();
     const bookmarkLists = this.bookmarkLists();
+    const stickers = this.stickers();
     const order = this.cardOrder();
     const listMap = new Map(lists.map(l => [l.id, l]));
     const timerMap = new Map(timers.map(t => [t.id, t]));
     const noteMap = new Map(notes.map(n => [n.id, n]));
     const bookmarkMap = new Map(bookmarkLists.map(b => [b.id, b]));
+    const stickerMap = new Map(stickers.map(s => [s.id, s]));
     if (order.length === 0) {
       return [
         ...lists.map(l => ({ type: 'TASK_LIST' as const, data: l })),
         ...timers.map(t => ({ type: 'TIMER' as const, data: t })),
         ...notes.map(n => ({ type: 'NOTE' as const, data: n })),
         ...bookmarkLists.map(b => ({ type: 'BOOKMARK_LIST' as const, data: b })),
+        ...stickers.map(s => ({ type: 'STICKER' as const, data: s })),
       ];
     }
     const result: LockerCard[] = [];
@@ -1732,6 +1873,9 @@ export class LockerComponent implements AfterViewInit, OnInit {
       } else if (type === 'BOOKMARK_LIST') {
         const bl = bookmarkMap.get(id);
         if (bl) result.push({ type: 'BOOKMARK_LIST', data: bl });
+      } else if (type === 'STICKER') {
+        const sticker = stickerMap.get(id);
+        if (sticker) result.push({ type: 'STICKER', data: sticker });
       }
     });
     // Append newly created cards not yet in saved order
@@ -1739,6 +1883,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
     timers.forEach(t => { if (!order.find(o => o.type === 'TIMER' && o.id === t.id)) result.push({ type: 'TIMER', data: t }); });
     notes.forEach(n => { if (!order.find(o => o.type === 'NOTE' && o.id === n.id)) result.push({ type: 'NOTE', data: n }); });
     bookmarkLists.forEach(b => { if (!order.find(o => o.type === 'BOOKMARK_LIST' && o.id === b.id)) result.push({ type: 'BOOKMARK_LIST', data: b }); });
+    stickers.forEach(s => { if (!order.find(o => o.type === 'STICKER' && o.id === s.id)) result.push({ type: 'STICKER', data: s }); });
     return result;
   });
 
@@ -2031,13 +2176,13 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected reorderCards(event: CdkDragDrop<any[]>): void {
     const cards = [...this.orderedCards()];
     moveItemInArray(cards, event.previousIndex, event.currentIndex);
-    const newOrder = cards.map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }));
+    const newOrder = cards.map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'STICKER', id: c.data.id }));
     this.cardOrder.set(newOrder);
     this.saveLockerLayout(newOrder);
   }
 
-  private saveLockerLayout(order?: Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST'; id: string }>): void {
-    const cards = order ?? this.orderedCards().map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }));
+  private saveLockerLayout(order?: Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'STICKER'; id: string }>): void {
+    const cards = order ?? this.orderedCards().map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'STICKER', id: c.data.id }));
     const items = cards.map(({ type, id }, index) => ({
       cardType: type,
       cardId: id,
@@ -2183,6 +2328,9 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected asBookmarkList(card: LockerCard): BookmarkList | null {
     return card.type === 'BOOKMARK_LIST' ? (card.data as BookmarkList) : null;
   }
+  protected asSticker(card: LockerCard): Sticker | null {
+    return card.type === 'STICKER' ? (card.data as Sticker) : null;
+  }
 
   // --- Timer launch from task list ---
   protected hasLinkedTimer(list: TaskList): boolean {
@@ -2212,7 +2360,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   private insertTimerAfterList(timerId: string, listId: string): void {
     const current = this.orderedCards()
-      .map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }))
+      .map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'STICKER', id: c.data.id }))
       .filter(o => !(o.type === 'TIMER' && o.id === timerId));
     const listIdx = current.findIndex(o => o.type === 'TASK_LIST' && o.id === listId);
     if (listIdx !== -1) {
@@ -2359,42 +2507,75 @@ export class LockerComponent implements AfterViewInit, OnInit {
   }
 
   // --- Sticker CRUD ---
-  protected toggleStickerPicker(): void {
-    this.stickerPickerOpen = !this.stickerPickerOpen;
-  }
-
-  protected onEmojiSelected(emoji: string): void {
-    this.stickerPickerOpen = false;
+  protected openStickerDialog(): void {
     if (this.atStickerLimit()) return;
-    // Place near center of visible locker area
-    const x = 120 + Math.round(Math.random() * 200);
-    const y = 80 + Math.round(Math.random() * 120);
-    this.stickerApi.createSticker({ emoji, positionX: x, positionY: y, size: 'medium' }).subscribe({
-      next: sticker => this.stickers.update(current => [...current, sticker]),
-      error: () => { this.errorMessage = 'Unable to add sticker. Please try again.'; },
-    });
+    this.stickerEditId = null;
+    this.stickerDialogTab = 'emoji';
+    this.stickerDialogEmoji = '';
+    this.stickerDialogIconUrl = '';
+    this.stickerDialogLabel = '';
+    this.stickerDialogOpen = true;
+    this.fontPickerOpen = false;
+    this.colorPickerListId = null;
   }
 
-  protected onStickerPositionChanged(id: string, x: number, y: number): void {
-    // Optimistic update
-    this.stickers.update(current => current.map(s => s.id === id ? { ...s, positionX: x, positionY: y } : s));
-    const sticker = this.stickers().find(s => s.id === id);
-    if (!sticker) return;
-    this.stickerApi.updateSticker(id, { positionX: x, positionY: y, size: sticker.size }).subscribe();
+  protected openEditStickerDialog(sticker: Sticker): void {
+    this.stickerEditId = sticker.id;
+    this.stickerDialogTab = sticker.emoji ? 'emoji' : 'url';
+    this.stickerDialogEmoji = sticker.emoji ?? '';
+    this.stickerDialogIconUrl = sticker.iconUrl ?? '';
+    this.stickerDialogLabel = sticker.label ?? '';
+    this.stickerDialogOpen = true;
+    this.fontPickerOpen = false;
+    this.colorPickerListId = null;
   }
 
-  protected onStickerSizeChanged(id: string, size: string): void {
-    this.stickers.update(current => current.map(s => s.id === id ? { ...s, size: size as any } : s));
-    const sticker = this.stickers().find(s => s.id === id);
-    if (!sticker) return;
-    this.stickerApi.updateSticker(id, { positionX: sticker.positionX, positionY: sticker.positionY, size: sticker.size }).subscribe();
+  protected closeStickerDialog(): void {
+    this.stickerDialogOpen = false;
+    this.stickerEditId = null;
+  }
+
+  protected onStickerDialogEmojiSelected(emoji: string): void {
+    this.stickerDialogEmoji = emoji;
+  }
+
+  protected canSubmitStickerDialog(): boolean {
+    if (this.stickerDialogTab === 'emoji') return !!this.stickerDialogEmoji;
+    return !!this.stickerDialogIconUrl.trim();
+  }
+
+  protected submitStickerDialog(): void {
+    if (!this.canSubmitStickerDialog()) return;
+    const emoji = this.stickerDialogTab === 'emoji' ? this.stickerDialogEmoji : null;
+    const iconUrl = this.stickerDialogTab === 'url' ? this.stickerDialogIconUrl.trim() : null;
+    const label = this.stickerDialogLabel.trim() || null;
+
+    if (this.stickerEditId) {
+      this.stickerApi.updateSticker(this.stickerEditId, { emoji, iconUrl, label }).subscribe({
+        next: updated => {
+          this.stickers.update(current => current.map(s => s.id === updated.id ? updated : s));
+          this.closeStickerDialog();
+        },
+        error: () => { this.errorMessage = 'Unable to update sticker. Please try again.'; },
+      });
+    } else {
+      this.stickerApi.createSticker({ emoji, iconUrl, label }).subscribe({
+        next: sticker => {
+          this.stickers.update(current => [...current, sticker]);
+          this.errorMessage = '';
+          this.saveLockerLayout();
+          this.closeStickerDialog();
+        },
+        error: () => { this.errorMessage = 'Unable to add sticker. Please try again.'; },
+      });
+    }
   }
 
   protected onStickerDeleted(id: string): void {
     this.stickers.update(current => current.filter(s => s.id !== id));
-    this.stickerApi.deleteSticker(id).subscribe({
-      error: () => this.stickers.update(current => current), // no recovery needed, already removed optimistically
-    });
+    this.cardOrder.update(order => order.filter(o => !(o.type === 'STICKER' && o.id === id)));
+    this.stickerApi.deleteSticker(id).subscribe();
+    this.saveLockerLayout();
   }
 
   private nextAvailableColor(): string {

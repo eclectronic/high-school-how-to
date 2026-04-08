@@ -37,3 +37,5 @@ databaseChangeLog:
       file: db/changelog/v3-phase6-0034.sql
   - include:
       file: db/changelog/v3-phase7-0035.sql
+  - include:
+      file: db/changelog/v4-stickers-0039.sql
