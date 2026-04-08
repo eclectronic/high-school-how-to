@@ -31,18 +31,9 @@ public class ImageUploadController {
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ImageUploadResponse upload(@RequestParam("file") MultipartFile file) {
         validate(file);
-
-        byte[] originalBytes;
-        try {
-            originalBytes = file.getBytes();
-        } catch (Exception ex) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Upload failed", "Could not read uploaded file");
-        }
-
+        byte[] originalBytes = readBytes(file);
         String contentType = file.getContentType();
-        String extension = extensionFor(contentType);
-        String filename = s3StorageService.generateFilename(extension);
-
+        String filename = s3StorageService.generateFilename(extensionFor(contentType));
         String imageUrl = s3StorageService.upload(originalBytes, filename, contentType, "images");
 
         // SVGs are not rasterizable by thumbnailator — skip thumbnail generation
@@ -53,6 +44,28 @@ public class ImageUploadController {
         }
 
         return new ImageUploadResponse(imageUrl, thumbnailUrl);
+    }
+
+    /**
+     * Uploads a badge icon image. Badge icons are small and do not require
+     * thumbnail generation. Stored under the {@code badges} subfolder.
+     */
+    @PostMapping(value = "/upload/badges", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ImageUploadResponse uploadBadgeIcon(@RequestParam("file") MultipartFile file) {
+        validate(file);
+        byte[] originalBytes = readBytes(file);
+        String contentType = file.getContentType();
+        String filename = s3StorageService.generateFilename(extensionFor(contentType));
+        String imageUrl = s3StorageService.upload(originalBytes, filename, contentType, "badges");
+        return new ImageUploadResponse(imageUrl, null);
+    }
+
+    private byte[] readBytes(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (Exception ex) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Upload failed", "Could not read uploaded file");
+        }
     }
 
     private void validate(MultipartFile file) {
