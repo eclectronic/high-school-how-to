@@ -16,5 +16,9 @@ public record UpdateTimerRequest(
         @Min(1) @Max(10) Integer sessionsBeforeLongBreak,
         String presetName,
         UUID linkedTaskListId,
-        boolean clearLinkedTaskList
+        boolean clearLinkedTaskList,
+        /** True when the client reports a focus session just completed. */
+        boolean focusSessionCompleted,
+        /** True when the client reports a full study session (all focus + breaks) completed. */
+        boolean studySessionCompleted
 ) {}

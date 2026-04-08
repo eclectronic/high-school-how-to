@@ -5,12 +5,16 @@ import { Router, RouterModule } from '@angular/router';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { forkJoin } from 'rxjs';
 import { TaskApiService } from '../../../core/services/task-api.service';
-import { TimerApiService } from '../../../core/services/timer-api.service';
+import { TimerApiService, UpdateTimerResponse } from '../../../core/services/timer-api.service';
 import { NoteApiService } from '../../../core/services/note-api.service';
 import { BookmarkApiService } from '../../../core/services/bookmark-api.service';
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
+import { BadgeApiService } from '../../../core/services/badge-api.service';
+import { BadgeCelebrationService } from '../../../shared/badge-celebration/badge-celebration.service';
+import { BadgeCelebrationComponent } from '../../../shared/badge-celebration/badge-celebration.component';
+import { BadgeShelfComponent } from '../../../shared/badge-shelf/badge-shelf.component';
 import { SessionStore } from '../../../core/session/session.store';
-import { TaskItem, TaskList, Timer, Note, BookmarkList, Sticker } from '../../../core/models/task.models';
+import { TaskItem, TaskList, Timer, Note, BookmarkList, Sticker, EarnedBadge } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { InlineTitleEditComponent } from '../../../shared/inline-title-edit/inline-title-edit.component';
 import { ColorPickerComponent } from '../../../shared/color-picker/color-picker.component';
@@ -155,7 +159,8 @@ const LOCKER_ZONES = [
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule,
     ConfirmDialogComponent, InlineTitleEditComponent, ColorPickerComponent, DueDatePopoverComponent,
-    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, StickerComponent, EmojiPickerComponent],
+    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, StickerComponent, EmojiPickerComponent,
+    BadgeShelfComponent, BadgeCelebrationComponent],
   template: `
     <!-- ── Locker row animation overlay ── -->
     <div class="locker-overlay"
@@ -319,6 +324,12 @@ const LOCKER_ZONES = [
         ></app-emoji-picker>
         <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
       </header>
+
+      <!-- Badge shelf -->
+      <app-badge-shelf [badges]="earnedBadges()"></app-badge-shelf>
+
+      <!-- Badge celebration modal -->
+      <app-badge-celebration></app-badge-celebration>
 
       <!-- Confirm delete dialog (shown outside of grid to avoid z-index issues) -->
       <app-confirm-dialog
@@ -1746,6 +1757,8 @@ export class LockerComponent implements AfterViewInit, OnInit {
   @ViewChildren('editInput') private editInputRefs!: QueryList<ElementRef<HTMLInputElement>>;
   private pendingFocusListId: string | null = null;
 
+  protected readonly earnedBadges = signal<EarnedBadge[]>([]);
+
   constructor(
     private readonly taskApi: TaskApiService,
     private readonly timerApi: TimerApiService,
@@ -1753,6 +1766,8 @@ export class LockerComponent implements AfterViewInit, OnInit {
     private readonly bookmarkApi: BookmarkApiService,
     private readonly stickerApi: StickerApiService,
     private readonly lockerLayoutApi: LockerLayoutApiService,
+    private readonly badgeApi: BadgeApiService,
+    private readonly badgeCelebration: BadgeCelebrationService,
   ) {
     effect(() => { this.loadCards(); });
   }
@@ -1837,13 +1852,15 @@ export class LockerComponent implements AfterViewInit, OnInit {
       this.noteApi.getNotes(),
       this.bookmarkApi.getBookmarkLists(),
       this.stickerApi.getStickers(),
+      this.badgeApi.getEarnedBadges(),
     ]).subscribe({
-      next: ([lists, timers, notes, bookmarkLists, stickers]) => {
+      next: ([lists, timers, notes, bookmarkLists, stickers, badges]) => {
         this.taskLists.set(lists);
         this.timers.set(timers);
         this.notes.set(notes);
         this.bookmarkLists.set(bookmarkLists);
         this.stickers.set(stickers);
+        this.earnedBadges.set(badges);
       },
       error: () => { this.errorMessage = 'Could not load your locker. Please log in again.'; },
     });
@@ -2071,6 +2088,10 @@ export class LockerComponent implements AfterViewInit, OnInit {
             : item
         )
       );
+      if (updated.earnedBadge) {
+        this.earnedBadges.update(current => [...current, updated.earnedBadge!]);
+        this.badgeCelebration.notify(updated.earnedBadge);
+      }
     });
   }
 
@@ -2248,9 +2269,13 @@ export class LockerComponent implements AfterViewInit, OnInit {
     });
   }
 
-  protected onTimerUpdated(updated: Timer): void {
+  protected onTimerUpdated(updated: UpdateTimerResponse): void {
     const prev = this.timers().find(t => t.id === updated.id);
     this.timers.update(current => current.map(t => t.id === updated.id ? updated : t));
+    if (updated.earnedBadge) {
+      this.earnedBadges.update(current => [...current, updated.earnedBadge!]);
+      this.badgeCelebration.notify(updated.earnedBadge);
+    }
     if (updated.linkedTaskListId && prev?.linkedTaskListId !== updated.linkedTaskListId) {
       this.insertTimerAfterList(updated.id, updated.linkedTaskListId);
       this.saveLockerLayout();
@@ -2285,6 +2310,10 @@ export class LockerComponent implements AfterViewInit, OnInit {
         this.notes.update(current => [...current, note]);
         this.errorMessage = '';
         this.saveLockerLayout();
+        if (note.earnedBadge) {
+          this.earnedBadges.update(current => [...current, note.earnedBadge!]);
+          this.badgeCelebration.notify(note.earnedBadge);
+        }
       },
       error: () => { this.errorMessage = 'Unable to create a note right now. Please try again.'; },
     });
@@ -2311,6 +2340,10 @@ export class LockerComponent implements AfterViewInit, OnInit {
         this.bookmarkLists.update(current => [...current, list]);
         this.errorMessage = '';
         this.saveLockerLayout();
+        if (list.earnedBadge) {
+          this.earnedBadges.update(current => [...current, list.earnedBadge!]);
+          this.badgeCelebration.notify(list.earnedBadge);
+        }
       },
       error: () => { this.errorMessage = 'Unable to create a bookmark list right now. Please try again.'; },
     });
@@ -2370,7 +2403,13 @@ export class LockerComponent implements AfterViewInit, OnInit {
     const x = 120 + Math.round(Math.random() * 200);
     const y = 80 + Math.round(Math.random() * 120);
     this.stickerApi.createSticker({ emoji, positionX: x, positionY: y, size: 'medium' }).subscribe({
-      next: sticker => this.stickers.update(current => [...current, sticker]),
+      next: sticker => {
+        this.stickers.update(current => [...current, sticker]);
+        if (sticker.earnedBadge) {
+          this.earnedBadges.update(current => [...current, sticker.earnedBadge!]);
+          this.badgeCelebration.notify(sticker.earnedBadge);
+        }
+      },
       error: () => { this.errorMessage = 'Unable to add sticker. Please try again.'; },
     });
   }

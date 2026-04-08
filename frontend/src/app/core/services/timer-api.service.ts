@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Timer } from '../models/task.models';
+import { Timer, EarnedBadge } from '../models/task.models';
 
 export interface CreateTimerRequest {
   title: string;
@@ -26,6 +26,14 @@ export interface UpdateTimerRequest {
   presetName?: string | null;
   linkedTaskListId?: string | null;
   clearLinkedTaskList?: boolean;
+  /** Set to true when the client reports a focus session just completed. */
+  focusSessionCompleted?: boolean;
+  /** Set to true when a full study session (all focus + breaks) completed. */
+  studySessionCompleted?: boolean;
+}
+
+export interface UpdateTimerResponse extends Timer {
+  earnedBadge?: EarnedBadge | null;
 }
 
 @Injectable({
@@ -42,8 +50,8 @@ export class TimerApiService {
     return this.http.post<Timer>('/api/timers', request);
   }
 
-  updateTimer(timerId: string, request: UpdateTimerRequest): Observable<Timer> {
-    return this.http.put<Timer>(`/api/timers/${timerId}`, request);
+  updateTimer(timerId: string, request: UpdateTimerRequest): Observable<UpdateTimerResponse> {
+    return this.http.put<UpdateTimerResponse>(`/api/timers/${timerId}`, request);
   }
 
   deleteTimer(timerId: string): Observable<void> {

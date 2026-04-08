@@ -26,6 +26,11 @@ export const adminRoutes: Routes = [
         loadComponent: () =>
           import('./tags/tag-manager.component').then((m) => m.TagManagerComponent),
       },
+      {
+        path: 'badges',
+        loadComponent: () =>
+          import('./badges/badge-manager.component').then((m) => m.BadgeManagerComponent),
+      },
     ],
   },
 ];

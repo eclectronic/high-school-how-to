@@ -37,3 +37,7 @@ databaseChangeLog:
       file: db/changelog/v3-phase6-0034.sql
   - include:
       file: db/changelog/v3-phase7-0035.sql
+  - include:
+      file: db/changelog/v4-tasklist-source-0041.sql
+  - include:
+      file: db/changelog/v4-badges-0042.sql

@@ -1,8 +1,11 @@
 package com.highschoolhowto.bookmark;
 
+import com.highschoolhowto.badge.BadgeService;
+import com.highschoolhowto.badge.BadgeTriggerType;
 import com.highschoolhowto.bookmark.dto.BookmarkListResponse;
 import com.highschoolhowto.bookmark.dto.BookmarkResponse;
 import com.highschoolhowto.bookmark.dto.CreateBookmarkListRequest;
+import com.highschoolhowto.bookmark.dto.CreateBookmarkListResponse;
 import com.highschoolhowto.bookmark.dto.CreateBookmarkRequest;
 import com.highschoolhowto.bookmark.dto.ReorderBookmarksRequest;
 import com.highschoolhowto.bookmark.dto.UpdateBookmarkListRequest;
@@ -26,14 +29,17 @@ public class BookmarkListService {
     private final BookmarkListRepository bookmarkListRepository;
     private final BookmarkRepository bookmarkRepository;
     private final UserRepository userRepository;
+    private final BadgeService badgeService;
 
     public BookmarkListService(
             BookmarkListRepository bookmarkListRepository,
             BookmarkRepository bookmarkRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            BadgeService badgeService) {
         this.bookmarkListRepository = bookmarkListRepository;
         this.bookmarkRepository = bookmarkRepository;
         this.userRepository = userRepository;
+        this.badgeService = badgeService;
     }
 
     @Transactional(readOnly = true)
@@ -44,7 +50,7 @@ public class BookmarkListService {
     }
 
     @Transactional
-    public BookmarkListResponse createList(UUID userId, CreateBookmarkListRequest request) {
+    public CreateBookmarkListResponse createList(UUID userId, CreateBookmarkListRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found", "User not found"));
         long count = bookmarkListRepository.countByUserId(userId);
@@ -63,7 +69,9 @@ public class BookmarkListService {
         if (StringUtils.hasText(request.textColor())) {
             list.setTextColor(request.textColor().trim());
         }
-        return toListResponse(bookmarkListRepository.save(list));
+        BookmarkList saved = bookmarkListRepository.save(list);
+        var earnedBadge = badgeService.checkFeatureBadge(user, BadgeTriggerType.FIRST_SHORTCUT);
+        return toCreateListResponse(saved, earnedBadge.orElse(null));
     }
 
     @Transactional
@@ -148,6 +156,20 @@ public class BookmarkListService {
                 list.getColor(),
                 list.getTextColor(),
                 bookmarkResponses);
+    }
+
+    private CreateBookmarkListResponse toCreateListResponse(
+            BookmarkList list, com.highschoolhowto.badge.dto.EarnedBadgeResponse earnedBadge) {
+        List<BookmarkResponse> bookmarkResponses = list.getBookmarks().stream()
+                .map(this::toBookmarkResponse)
+                .toList();
+        return new CreateBookmarkListResponse(
+                list.getId(),
+                list.getTitle(),
+                list.getColor(),
+                list.getTextColor(),
+                bookmarkResponses,
+                earnedBadge);
     }
 
     private BookmarkResponse toBookmarkResponse(Bookmark bm) {

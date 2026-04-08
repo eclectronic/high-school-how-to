@@ -66,3 +66,28 @@ export interface Sticker {
   positionY: number;
   size: string; // 'small' | 'medium' | 'large'
 }
+
+export type BadgeTriggerType =
+  | 'CHECKLIST_COMPLETE'
+  | 'FIRST_TODO_LIST'
+  | 'FIRST_SHORTCUT'
+  | 'FIRST_TIMER'
+  | 'FIRST_NOTE'
+  | 'FIRST_STICKER'
+  | 'FIRST_STUDY_SESSION';
+
+export interface Badge {
+  id: number;
+  name: string;
+  description: string | null;
+  emoji: string | null;
+  iconUrl: string | null;
+  triggerType: BadgeTriggerType;
+  triggerParam: string | null;
+}
+
+export interface EarnedBadge {
+  id: number;
+  badge: Badge;
+  earnedAt: string; // ISO 8601
+}

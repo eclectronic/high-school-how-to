@@ -1,8 +1,22 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { TimerCardComponent, TIMER_PRESETS } from './timer-card.component';
-import { TimerApiService } from '../../core/services/timer-api.service';
+import { TimerApiService, UpdateTimerResponse } from '../../core/services/timer-api.service';
 import { Timer } from '../../core/models/task.models';
+
+function makeUpdateTimerResponse(overrides: Partial<Timer> = {}): UpdateTimerResponse {
+  return {
+    id: 'timer-1',
+    title: 'Timer',
+    color: '#fffef8',
+    focusDuration: 25,
+    shortBreakDuration: 5,
+    longBreakDuration: 15,
+    sessionsBeforeLongBreak: 4,
+    earnedBadge: null,
+    ...overrides,
+  };
+}
 
 function makeTimer(overrides: Partial<Timer> = {}): Timer {
   return {
@@ -28,6 +42,8 @@ describe('TimerCardComponent', () => {
     timerApi = jasmine.createSpyObj<TimerApiService>('TimerApiService', [
       'getTimers', 'createTimer', 'updateTimer', 'deleteTimer',
     ]);
+    // Default return value for updateTimer — individual tests can override.
+    timerApi.updateTimer.and.returnValue(of(makeUpdateTimerResponse()));
 
     await TestBed.configureTestingModule({
       imports: [TimerCardComponent],

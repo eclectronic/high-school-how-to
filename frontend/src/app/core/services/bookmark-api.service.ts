@@ -1,7 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Bookmark, BookmarkList } from '../models/task.models';
+import { Bookmark, BookmarkList, EarnedBadge } from '../models/task.models';
+
+export interface CreateBookmarkListResponse extends BookmarkList {
+  earnedBadge?: EarnedBadge | null;
+}
 
 export interface CreateBookmarkListRequest {
   title: string;
@@ -40,8 +44,8 @@ export class BookmarkApiService {
     return this.http.get<BookmarkList[]>('/api/bookmarklists');
   }
 
-  createBookmarkList(request: CreateBookmarkListRequest): Observable<BookmarkList> {
-    return this.http.post<BookmarkList>('/api/bookmarklists', request);
+  createBookmarkList(request: CreateBookmarkListRequest): Observable<CreateBookmarkListResponse> {
+    return this.http.post<CreateBookmarkListResponse>('/api/bookmarklists', request);
   }
 
   updateBookmarkList(listId: string, request: UpdateBookmarkListRequest): Observable<BookmarkList> {

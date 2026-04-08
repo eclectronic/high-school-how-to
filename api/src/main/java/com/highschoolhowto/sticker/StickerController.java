@@ -2,6 +2,7 @@ package com.highschoolhowto.sticker;
 
 import com.highschoolhowto.security.UserPrincipal;
 import com.highschoolhowto.sticker.dto.CreateStickerRequest;
+import com.highschoolhowto.sticker.dto.CreateStickerResponse;
 import com.highschoolhowto.sticker.dto.StickerResponse;
 import com.highschoolhowto.sticker.dto.UpdateStickerRequest;
 import jakarta.validation.Valid;
@@ -37,7 +38,7 @@ public class StickerController {
     }
 
     @PostMapping
-    public ResponseEntity<StickerResponse> create(
+    public ResponseEntity<CreateStickerResponse> create(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateStickerRequest request) {
         UUID userId = principal.getUser().getId();

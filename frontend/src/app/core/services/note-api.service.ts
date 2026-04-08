@@ -1,7 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Note } from '../models/task.models';
+import { Note, EarnedBadge } from '../models/task.models';
+
+export interface CreateNoteResponse extends Note {
+  earnedBadge?: EarnedBadge | null;
+}
 
 export interface CreateNoteRequest {
   title: string;
@@ -29,8 +33,8 @@ export class NoteApiService {
     return this.http.get<Note[]>('/api/notes');
   }
 
-  createNote(request: CreateNoteRequest): Observable<Note> {
-    return this.http.post<Note>('/api/notes', request);
+  createNote(request: CreateNoteRequest): Observable<CreateNoteResponse> {
+    return this.http.post<CreateNoteResponse>('/api/notes', request);
   }
 
   updateNote(noteId: string, request: UpdateNoteRequest): Observable<Note> {

@@ -4,7 +4,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Timer, TaskList } from '../../core/models/task.models';
-import { TimerApiService, UpdateTimerRequest } from '../../core/services/timer-api.service';
+import { TimerApiService, UpdateTimerRequest, UpdateTimerResponse } from '../../core/services/timer-api.service';
 import { autoContrastColor, isHexColor, firstHexFromGradient, isGradient } from '../color-picker/color-utils';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
@@ -481,7 +481,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
 export class TimerCardComponent implements OnDestroy {
   @Input({ required: true }) timer!: Timer;
   readonly taskLists = input<TaskList[]>([]);
-  @Output() timerUpdated = new EventEmitter<Timer>();
+  @Output() timerUpdated = new EventEmitter<UpdateTimerResponse>();
   @Output() timerDeleted = new EventEmitter<string>();
   @Output() taskCheckChange = new EventEmitter<{ taskId: string; listId: string; completed: boolean }>();
   @Output() studySessionRequested = new EventEmitter<void>();
@@ -615,16 +615,20 @@ export class TimerCardComponent implements OnDestroy {
     const p = this.phase();
     if (p === 'focus') {
       this.completedSessions++;
+      this.reportSessionEvent({ focusSessionCompleted: true });
       this.startBreak();
     } else if (p === 'short-break') {
       this.startFocus();
     } else if (p === 'long-break') {
+      this.reportSessionEvent({ studySessionCompleted: true });
       this.phase.set('done');
     } else if (p === 'paused') {
       if (this.pausedPhase === 'focus') {
         this.completedSessions++;
+        this.reportSessionEvent({ focusSessionCompleted: true });
         this.startBreak();
       } else if (this.pausedPhase === 'long-break') {
+        this.reportSessionEvent({ studySessionCompleted: true });
         this.phase.set('done');
       } else {
         this.startFocus();
@@ -760,6 +764,7 @@ export class TimerCardComponent implements OnDestroy {
     if (p === 'focus') {
       this.sendNotification('Focus session complete!', 'Time for a break.');
       this.completedSessions++;
+      this.reportSessionEvent({ focusSessionCompleted: true });
       this.phase.set('idle');
       this.startBreak();
     } else if (p === 'short-break') {
@@ -767,8 +772,22 @@ export class TimerCardComponent implements OnDestroy {
       this.phase.set('idle');
     } else if (p === 'long-break') {
       this.sendNotification('Cycle complete!', 'Great work — take a rest.');
+      this.reportSessionEvent({ studySessionCompleted: true });
       this.phase.set('done');
     }
+  }
+
+  private reportSessionEvent(flags: { focusSessionCompleted?: boolean; studySessionCompleted?: boolean }): void {
+    const req: UpdateTimerRequest = {
+      title: this.timer.title,
+      color: this.timer.color,
+      linkedTaskListId: this.timer.linkedTaskListId ?? null,
+      clearLinkedTaskList: false,
+      ...flags,
+    };
+    this.timerApi.updateTimer(this.timer.id, req).subscribe(updated => {
+      this.timerUpdated.emit(updated);
+    });
   }
 
   private startTick(): void {

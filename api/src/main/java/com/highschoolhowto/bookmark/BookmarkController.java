@@ -4,6 +4,7 @@ import com.highschoolhowto.bookmark.dto.BookmarkListResponse;
 import com.highschoolhowto.bookmark.dto.BookmarkMetadataResponse;
 import com.highschoolhowto.bookmark.dto.BookmarkResponse;
 import com.highschoolhowto.bookmark.dto.CreateBookmarkListRequest;
+import com.highschoolhowto.bookmark.dto.CreateBookmarkListResponse;
 import com.highschoolhowto.bookmark.dto.CreateBookmarkRequest;
 import com.highschoolhowto.bookmark.dto.ReorderBookmarksRequest;
 import com.highschoolhowto.bookmark.dto.UpdateBookmarkListRequest;
@@ -42,7 +43,7 @@ public class BookmarkController {
     }
 
     @PostMapping("/api/bookmarklists")
-    public ResponseEntity<BookmarkListResponse> createList(
+    public ResponseEntity<CreateBookmarkListResponse> createList(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateBookmarkListRequest request) {
         return ResponseEntity.ok(bookmarkListService.createList(principal.getUser().getId(), request));
