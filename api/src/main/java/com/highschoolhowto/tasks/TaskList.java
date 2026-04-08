@@ -40,6 +40,9 @@ public class TaskList {
     @Column(name = "text_color", length = 255)
     private String textColor;
 
+    @Column(name = "source_content_card_id")
+    private Long sourceContentCardId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -107,5 +110,13 @@ public class TaskList {
 
     public Set<TaskItem> getTasks() {
         return tasks;
+    }
+
+    public Long getSourceContentCardId() {
+        return sourceContentCardId;
+    }
+
+    public void setSourceContentCardId(Long sourceContentCardId) {
+        this.sourceContentCardId = sourceContentCardId;
     }
 }

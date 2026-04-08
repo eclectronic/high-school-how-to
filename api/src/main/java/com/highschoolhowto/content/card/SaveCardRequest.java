@@ -1,5 +1,6 @@
 package com.highschoolhowto.content.card;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -22,4 +23,5 @@ public record SaveCardRequest(
         @Pattern(regexp = "^#[0-9a-fA-F]{3,8}$|^$", message = "textColor must be a valid hex color") String textColor,
         boolean simpleLayout,
         @NotNull CardStatus status,
-        @NotEmpty(message = "At least one tag is required") List<Long> tagIds) {}
+        @NotEmpty(message = "At least one tag is required") List<Long> tagIds,
+        @Valid List<ContentCardTaskRequest> templateTasks) {}

@@ -1,4 +1,4 @@
-export type CardType = 'VIDEO' | 'INFOGRAPHIC' | 'ARTICLE';
+export type CardType = 'VIDEO' | 'INFOGRAPHIC' | 'ARTICLE' | 'TODO_LIST';
 export type CardStatus = 'DRAFT' | 'PUBLISHED';
 
 export interface Tag {
@@ -25,6 +25,7 @@ export interface ContentCard {
   simpleLayout: boolean;
   status: CardStatus;
   tags: Tag[];
+  templateTasks: ContentCardTask[];
   createdAt: string;
   updatedAt: string;
 }
@@ -56,6 +57,7 @@ export interface SaveCardRequest {
   simpleLayout: boolean;
   status: CardStatus;
   tagIds: number[];
+  templateTasks: Array<{ description: string }> | null;
 }
 
 export interface SectionResponse {
@@ -66,6 +68,17 @@ export interface SectionResponse {
 
 export interface HomeLayoutResponse {
   sections: SectionResponse[];
+}
+
+export interface ContentCardTask {
+  id: number;
+  description: string;
+  sortOrder: number;
+}
+
+export interface LockerStatusResponse {
+  added: boolean;
+  taskListId: string | null;
 }
 
 export interface ImageUploadResponse {
