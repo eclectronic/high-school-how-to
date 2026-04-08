@@ -42,7 +42,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
           </button>
           <!-- Color picker -->
           <button type="button" class="icon-btn" (click)="toggleColorPicker()" title="Note color" aria-label="Change note color">
-            <span aria-hidden="true">🎨</span>
+            <span aria-hidden="true">🌈</span>
           </button>
           <!-- Delete -->
           <button type="button" class="icon-btn danger" (click)="requestDelete()" title="Delete note" aria-label="Delete note">

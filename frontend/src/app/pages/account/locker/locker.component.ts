@@ -267,42 +267,49 @@ const LOCKER_ZONES = [
                   [disabled]="atListLimit()"
                   [title]="atListLimit() ? 'Maximum of 20 lists reached' : 'Create a to-do list'"
                   (click)="createList()" aria-label="Create new to-do list">
-            📋
+            <span class="app-icon-btn__icon">📋</span>
+            <span class="app-icon-btn__label">Add list</span>
           </button>
           <button type="button" class="app-icon-btn"
                   [disabled]="atTimerLimit()"
                   [title]="atTimerLimit() ? 'Maximum of 10 timers reached' : 'Create a Pomodoro timer'"
                   (click)="createTimer()" aria-label="Create new timer">
-            ⏱
+            <span class="app-icon-btn__icon">⏱</span>
+            <span class="app-icon-btn__label">Add timer</span>
           </button>
           <button type="button" class="app-icon-btn"
                   [disabled]="atNoteLimit()"
                   [title]="atNoteLimit() ? 'Maximum of 20 notes reached' : 'Create a sticky note'"
                   (click)="createNote()" aria-label="Create new sticky note">
-            📝
+            <span class="app-icon-btn__icon">📝</span>
+            <span class="app-icon-btn__label">Add note</span>
           </button>
           <button type="button" class="app-icon-btn"
                   [disabled]="atBookmarkListLimit()"
                   [title]="atBookmarkListLimit() ? 'Maximum of 10 bookmark lists reached' : 'Create a bookmark list'"
                   (click)="createBookmarkList()" aria-label="Create new bookmark list">
-            🔗
+            <span class="app-icon-btn__icon">🚀</span>
+            <span class="app-icon-btn__label">Shortcuts</span>
           </button>
           <button type="button" class="app-icon-btn"
                   *ngIf="studyReadyTimers().length > 0"
                   title="Enter Study Session"
                   (click)="enterStudySessionFromBar()" aria-label="Enter Study Session">
-            📚
+            <span class="app-icon-btn__icon">📚</span>
+            <span class="app-icon-btn__label">Study</span>
           </button>
           <button type="button" class="app-icon-btn"
                   [disabled]="atStickerLimit()"
                   [title]="atStickerLimit() ? 'Maximum of 30 stickers reached' : 'Add a sticker'"
                   (click)="toggleStickerPicker(); $event.stopPropagation()" aria-label="Add sticker">
-            🌈
+            <span class="app-icon-btn__icon">🏷️</span>
+            <span class="app-icon-btn__label">Stickers</span>
           </button>
           <button type="button" class="app-icon-btn app-icon-btn--font"
                   [title]="'Locker font: ' + lockerFont().name"
                   (click)="toggleFontPicker(); $event.stopPropagation()" aria-label="Change locker font">
-            Aa
+            <span class="app-icon-btn__icon">Aa</span>
+            <span class="app-icon-btn__label">Font</span>
           </button>
         </div>
         <div class="font-picker-panel" *ngIf="fontPickerOpen" (click)="$event.stopPropagation()">
@@ -451,7 +458,7 @@ const LOCKER_ZONES = [
                 aria-label="List color settings"
                 (click)="toggleColorPicker(list, $event)"
               >
-                <span aria-hidden="true">🎨</span>
+                <span aria-hidden="true">🌈</span>
               </button>
             </div>
             <div
@@ -1335,24 +1342,46 @@ const LOCKER_ZONES = [
       }
 
       .app-icon-btn {
-        width: 3rem;
-        height: 3rem;
         display: inline-flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
-        font-size: 1.5rem;
-        line-height: 1;
-        padding: 0;
+        gap: 0.15rem;
+        width: 3.5rem;
+        min-height: 3.5rem;
+        border-radius: 10px;
+        padding: 0.35rem 0.25rem 0.3rem;
         background: rgba(255,255,255,0.85);
         border: 2px solid rgba(0,0,0,0.12);
         cursor: pointer;
         transition: transform 0.12s, opacity 0.12s;
         box-shadow: 0 2px 6px rgba(0,0,0,0.12);
       }
-      .app-icon-btn:hover:not(:disabled) { transform: scale(1.1); }
+      .app-icon-btn:hover:not(:disabled) { transform: scale(1.05); }
       .app-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-      .app-icon-btn--font { font-family: var(--font-display, inherit); font-size: 1.1rem; font-weight: 800; }
+      .app-icon-btn--font { font-family: var(--font-display, inherit); }
+
+      .app-icon-btn__icon {
+        font-size: 1.4rem;
+        line-height: 1;
+        display: block;
+      }
+      .app-icon-btn--font .app-icon-btn__icon {
+        font-size: 1.1rem;
+        font-weight: 800;
+      }
+
+      .app-icon-btn__label {
+        font-size: 0.6rem;
+        font-family: var(--font-body, sans-serif);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #2d1a10;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .app-icon-btn:disabled .app-icon-btn__label { opacity: 0.5; }
 
       /* ── Font picker panel ── */
       .font-picker-panel {
@@ -2404,6 +2433,6 @@ export class LockerComponent implements AfterViewInit, OnInit {
       ...this.notes().map(n => n.color),
       ...this.bookmarkLists().map(l => l.color),
     ]);
-    return this.colorPalette.find(color => !used.has(color)) ?? this.colorPalette[0];
+    return this.colorPalette.find((color: string) => !used.has(color)) ?? this.colorPalette[0];
   }
 }
