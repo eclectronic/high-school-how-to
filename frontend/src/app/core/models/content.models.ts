@@ -1,5 +1,29 @@
-export type CardType = 'VIDEO' | 'INFOGRAPHIC' | 'ARTICLE';
+export type CardType = 'VIDEO' | 'INFOGRAPHIC' | 'ARTICLE' | 'TODO_LIST';
 export type CardStatus = 'DRAFT' | 'PUBLISHED';
+
+export interface ContentCardLinkResponse {
+  id: number;
+  targetCardId: number;
+  targetSlug: string;
+  targetTitle: string;
+  targetCardType: CardType;
+  linkText: string;
+  sortOrder: number;
+}
+
+export interface ContentCardLinkRequest {
+  targetCardId: number;
+  linkText: string | null;
+  sortOrder: number;
+}
+
+export interface ContentCardSummary {
+  id: number;
+  title: string;
+  slug: string;
+  cardType: CardType;
+  status: CardStatus;
+}
 
 export interface Tag {
   id: number;
@@ -25,6 +49,7 @@ export interface ContentCard {
   simpleLayout: boolean;
   status: CardStatus;
   tags: Tag[];
+  links: ContentCardLinkResponse[];
   createdAt: string;
   updatedAt: string;
 }
@@ -56,6 +81,7 @@ export interface SaveCardRequest {
   simpleLayout: boolean;
   status: CardStatus;
   tagIds: number[];
+  links: ContentCardLinkRequest[];
 }
 
 export interface SectionResponse {
@@ -71,4 +97,19 @@ export interface HomeLayoutResponse {
 export interface ImageUploadResponse {
   url: string;
   thumbnailUrl: string | null;
+}
+
+export function cardTypeIcon(cardType: CardType): string {
+  switch (cardType) {
+    case 'ARTICLE':
+      return '📄';
+    case 'VIDEO':
+      return '🎬';
+    case 'INFOGRAPHIC':
+      return '🖼';
+    case 'TODO_LIST':
+      return '☑';
+    default:
+      return '📄';
+  }
 }

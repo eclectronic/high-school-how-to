@@ -196,6 +196,61 @@
         </div>
       }
 
+      <!-- Related Content links -->
+      <div class="admin-card editor-section">
+        <h2>Related Content <small>(max 10 links)</small></h2>
+
+        @if (links.length > 0) {
+          <div class="links-list">
+            @for (link of links; track link.targetCardId; let i = $index) {
+              <div class="link-item">
+                <div class="link-item__header">
+                  <span class="link-item__icon">{{ cardTypeIcon(link.targetCardType) }}</span>
+                  <span class="link-item__title">{{ link.targetTitle }}</span>
+                  <div class="link-item__actions">
+                    <button type="button" class="btn btn--secondary btn--sm" (click)="moveLinkUp(i)" [disabled]="i === 0" title="Move up">↑</button>
+                    <button type="button" class="btn btn--secondary btn--sm" (click)="moveLinkDown(i)" [disabled]="i === links.length - 1" title="Move down">↓</button>
+                    <button type="button" class="btn btn--danger btn--sm" (click)="removeLink(i)" title="Remove">🗑</button>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label>Link text</label>
+                  <input
+                    [(ngModel)]="link.linkText"
+                    [placeholder]="link.targetTitle"
+                    [name]="'linkText' + i"
+                  />
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (links.length < 10) {
+          <div class="link-search">
+            <div class="link-search__input-wrap">
+              <input
+                [(ngModel)]="linkSearchQuery"
+                (input)="onLinkSearchInput()"
+                (blur)="hideLinkDropdown()"
+                placeholder="Search content to link..."
+                class="link-search__input"
+              />
+              @if (showLinkDropdown() && linkSearchResults().length > 0) {
+                <div class="link-search__dropdown">
+                  @for (result of linkSearchResults(); track result.id) {
+                    <button type="button" class="link-search__result" (click)="addLink(result)">
+                      {{ cardTypeIcon(result.cardType) }} {{ result.title }}
+                      <span class="link-search__status">{{ result.status }}</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
       <!-- Actions -->
       <div class="editor-actions">
         <a class="btn btn--secondary" routerLink="/admin/content">Cancel</a>

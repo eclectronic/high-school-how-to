@@ -22,10 +22,17 @@ public record ContentCardResponse(
         boolean simpleLayout,
         CardStatus status,
         List<TagResponse> tags,
+        List<ContentCardLinkResponse> links,
         Instant createdAt,
         Instant updatedAt) {
 
+    /** Builds a public response — only published target links are included. */
     public static ContentCardResponse from(ContentCard card) {
+        List<ContentCardLinkResponse> publishedLinks =
+                card.getLinks().stream()
+                        .filter(l -> l.getTargetCard().getStatus() == CardStatus.PUBLISHED)
+                        .map(ContentCardLinkResponse::from)
+                        .toList();
         return new ContentCardResponse(
                 card.getId(),
                 card.getSlug(),
@@ -43,7 +50,9 @@ public record ContentCardResponse(
                 card.getStatus(),
                 card.getTags().stream()
                         .sorted(Comparator.comparing(Tag::getName))
-                        .map(TagResponse::from).toList(),
+                        .map(TagResponse::from)
+                        .toList(),
+                publishedLinks,
                 card.getCreatedAt(),
                 card.getUpdatedAt());
     }

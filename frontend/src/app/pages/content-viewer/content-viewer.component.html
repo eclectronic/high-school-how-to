@@ -99,6 +99,23 @@
             }
           </article>
         }
+
+        <!-- Related content links ───────────────────── -->
+        @if (card.links.length > 0) {
+          <div class="viewer-related">
+            <h2 class="viewer-related__heading">Related</h2>
+            <ul class="viewer-related__list">
+              @for (link of card.links; track link.id) {
+                <li class="viewer-related__item">
+                  <span class="viewer-related__icon">{{ cardTypeIcon(link.targetCardType) }}</span>
+                  <a [routerLink]="['/content', link.targetSlug]" class="viewer-related__link">
+                    {{ link.linkText }}
+                  </a>
+                </li>
+              }
+            </ul>
+          </div>
+        }
       </div>
 
       <div class="viewer-arrow-col">

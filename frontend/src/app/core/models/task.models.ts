@@ -14,7 +14,7 @@ export interface TaskList {
 }
 
 export interface LockerLayoutItem {
-  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST'
+  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT'
   cardId: string;
   sortOrder: number;
 }
@@ -32,6 +32,8 @@ export interface Timer {
   linkedTaskListId?: string | null;
 }
 
+export type NoteType = 'REGULAR' | 'QUOTE';
+
 export interface Note {
   id: string;
   title: string;
@@ -39,6 +41,32 @@ export interface Note {
   color: string;
   textColor?: string | null;
   fontSize?: string | null; // 'small' | 'medium' | 'large'
+  noteType?: NoteType;
+}
+
+export interface Quote {
+  id: number;
+  quoteText: string;
+  attribution?: string | null;
+}
+
+export interface Shortcut {
+  id: string;
+  url: string;
+  name: string;
+  faviconUrl?: string | null;
+  emoji?: string | null;
+  iconUrl?: string | null;
+}
+
+export interface Sticker {
+  id: string;
+  type: string; // 'EMOJI' | 'IMAGE'
+  emoji: string | null;
+  imageUrl: string | null;
+  positionX: number;
+  positionY: number;
+  size: string; // 'small' | 'medium' | 'large'
 }
 
 export interface Bookmark {
@@ -57,12 +85,3 @@ export interface BookmarkList {
   bookmarks: Bookmark[];
 }
 
-export interface Sticker {
-  id: string;
-  type: string; // 'EMOJI' | 'IMAGE'
-  emoji: string | null;
-  imageUrl: string | null;
-  positionX: number;
-  positionY: number;
-  size: string; // 'small' | 'medium' | 'large'
-}
