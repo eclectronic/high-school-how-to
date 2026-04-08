@@ -397,6 +397,7 @@ const LOCKER_ZONES = [
           (timerDeleted)="onTimerDeleted($event)"
           (taskCheckChange)="onTimerTaskCheckChange($event)"
           (studySessionRequested)="enterStudySession(card.data.id)"
+          (scrollToLinkedListRequested)="scrollToLinkedList(card.data)"
         ></app-timer-card>
 
         <!-- Note card -->
@@ -421,6 +422,7 @@ const LOCKER_ZONES = [
         <ng-container *ngIf="asTaskList(card) as list">
         <article
           class="list-card"
+          [attr.id]="'task-list-' + list.id"
           [style.background]="list.color || '#fffef8'"
           [style.color]="cardTextColor(list)"
           [class.list-card--elevated]="dueDatePopoverListId === list.id || colorPickerListId === list.id"
@@ -1152,6 +1154,12 @@ const LOCKER_ZONES = [
         100% { box-shadow: 0 0 0 0 rgba(255,165,0,0); }
       }
       .timer-flash { animation: timer-flash 0.9s ease-out forwards; }
+      @keyframes list-flash {
+        0%   { box-shadow: 0 0 0 3px rgba(99,102,241,0.8); }
+        60%  { box-shadow: 0 0 0 6px rgba(99,102,241,0.3); }
+        100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+      }
+      .list-flash { animation: list-flash 0.9s ease-out forwards; }
       .list-actions {
         display: flex;
         gap: 0.3rem;
@@ -2223,13 +2231,22 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.cardOrder.set(current);
   }
 
-  private scrollToTimer(timerId: string): void {
-    const el = document.getElementById('timer-' + timerId);
+  private scrollToElement(elementId: string, flashClass: string): void {
+    const el = document.getElementById(elementId);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      el.classList.add('timer-flash');
-      setTimeout(() => el.classList.remove('timer-flash'), 900);
+      el.classList.add(flashClass);
+      setTimeout(() => el.classList.remove(flashClass), 900);
     }
+  }
+
+  private scrollToTimer(timerId: string): void {
+    this.scrollToElement('timer-' + timerId, 'timer-flash');
+  }
+
+  protected scrollToLinkedList(timer: Timer): void {
+    if (!timer.linkedTaskListId) return;
+    this.scrollToElement('task-list-' + timer.linkedTaskListId, 'list-flash');
   }
 
   // --- Timer CRUD ---

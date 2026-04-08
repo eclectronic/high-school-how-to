@@ -49,6 +49,8 @@ export const TIMER_PRESETS: TimerPreset[] = [
         </ng-template>
 
         <div class="timer-card__actions">
+          <button type="button" class="icon-btn" *ngIf="linkedList()" title="Go to linked list"
+                  (click)="scrollToLinkedListRequested.emit(); $event.stopPropagation()">📋</button>
           <button type="button" class="icon-btn" *ngIf="linkedList()" title="Enter Study Session"
                   (click)="studySessionRequested.emit(); $event.stopPropagation()">📚</button>
           <button type="button" class="icon-btn" title="Color" (click)="toggleColorPicker($event)">🎨</button>
@@ -136,26 +138,6 @@ export const TIMER_PRESETS: TimerPreset[] = [
           <button type="button" class="ctrl-btn" (click)="skipPhase()" [disabled]="phase() === 'idle'">⏭ Skip</button>
         </ng-container>
         <button type="button" class="ctrl-btn" (click)="reset()" [disabled]="phase() === 'idle' && completedSessions === 0">↩ Reset</button>
-      </div>
-
-      <!-- Linked list tasks (shown when running and linked) -->
-      <div class="linked-list" *ngIf="linkedList() && phase() !== 'idle' && !settingsOpen && !colorPickerOpen">
-        <div *ngIf="allLinkedTasksDone(); else taskList" class="tasks-done-banner">
-          <span class="tasks-done-banner__icon">🎉</span>
-          <span class="tasks-done-banner__text">All tasks complete!</span>
-        </div>
-        <ng-template #taskList>
-          <div class="linked-list__title">{{ linkedList()!.title }}</div>
-          <ul class="linked-list__tasks">
-            <li *ngFor="let task of incompleteLinkedTasks()"
-                class="linked-task"
-                [class.linked-task--done]="task.completed">
-              <input type="checkbox" [checked]="task.completed"
-                     (change)="taskCheckChange.emit({ taskId: task.id, listId: linkedList()!.id, completed: !task.completed })" />
-              <span>{{ task.description }}</span>
-            </li>
-          </ul>
-        </ng-template>
       </div>
 
       <!-- Confirm delete -->
@@ -421,58 +403,6 @@ export const TIMER_PRESETS: TimerPreset[] = [
     .btn--cancel { background: rgba(0,0,0,0.1); color: inherit; }
     .btn--save { background: rgba(0,0,0,0.2); color: inherit; }
 
-    /* Linked list */
-    .linked-list {
-      border-top: 1px solid rgba(0,0,0,0.1);
-      padding-top: 0.5rem;
-    }
-
-    .tasks-done-banner {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.5rem 0;
-    }
-    .tasks-done-banner__icon {
-      font-size: 1.6rem;
-      animation: ring-pulse 1.6s ease-in-out infinite;
-    }
-    .tasks-done-banner__text {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: #f59e0b;
-      letter-spacing: 0.03em;
-    }
-
-    .linked-list__title {
-      font-size: 0.75rem;
-      font-weight: 700;
-      opacity: 0.7;
-      margin-bottom: 0.3rem;
-    }
-
-    .linked-list__tasks {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.2rem;
-      max-height: 120px;
-      overflow-y: auto;
-    }
-
-    .linked-task {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.78rem;
-      opacity: 0.9;
-      &--done { opacity: 0.5; text-decoration: line-through; }
-      &--empty { font-style: italic; opacity: 0.6; font-size: 0.75rem; }
-    }
-
     .color-picker-panel {
       margin: -0.25rem 0;
     }
@@ -485,6 +415,7 @@ export class TimerCardComponent implements OnDestroy {
   @Output() timerDeleted = new EventEmitter<string>();
   @Output() taskCheckChange = new EventEmitter<{ taskId: string; listId: string; completed: boolean }>();
   @Output() studySessionRequested = new EventEmitter<void>();
+  @Output() scrollToLinkedListRequested = new EventEmitter<void>();
 
   readonly presets = TIMER_PRESETS;
   readonly circumference = 2 * Math.PI * 52; // r=52
@@ -553,12 +484,6 @@ export class TimerCardComponent implements OnDestroy {
   protected linkedList = computed(() => {
     if (!this.timer.linkedTaskListId) return null;
     return this.taskLists().find(l => l.id === this.timer.linkedTaskListId) ?? null;
-  });
-
-  protected incompleteLinkedTasks = computed(() => {
-    const list = this.linkedList();
-    if (!list) return [];
-    return list.tasks.filter(t => !t.completed).slice(0, 10);
   });
 
   protected allLinkedTasksDone = computed(() => {
