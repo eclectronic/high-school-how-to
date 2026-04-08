@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { LockerComponent, nextAutoName, LOCKER_FONTS, LockerFont } from './locker.component';
 import { TaskApiService } from '../../../core/services/task-api.service';
@@ -109,6 +111,8 @@ describe('LockerComponent', () => {
     await TestBed.configureTestingModule({
       imports: [LockerComponent, RouterTestingModule],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: TaskApiService, useValue: taskApi },
         { provide: TimerApiService, useValue: timerApi },
         { provide: NoteApiService, useValue: noteApi },

@@ -1,5 +1,6 @@
 package com.highschoolhowto.note.dto;
 
+import com.highschoolhowto.note.NoteType;
 import java.util.UUID;
 
 public record NoteResponse(
@@ -8,5 +9,6 @@ public record NoteResponse(
         String content,
         String color,
         String textColor,
-        String fontSize
+        String fontSize,
+        NoteType noteType
 ) {}

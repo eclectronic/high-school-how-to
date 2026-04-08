@@ -10,7 +10,7 @@ import { NoteApiService } from '../../../core/services/note-api.service';
 import { BookmarkApiService } from '../../../core/services/bookmark-api.service';
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
 import { SessionStore } from '../../../core/session/session.store';
-import { TaskItem, TaskList, Timer, Note, BookmarkList, Sticker } from '../../../core/models/task.models';
+import { TaskItem, TaskList, Timer, Note, BookmarkList, Sticker, NoteType } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { InlineTitleEditComponent } from '../../../shared/inline-title-edit/inline-title-edit.component';
 import { ColorPickerComponent } from '../../../shared/color-picker/color-picker.component';
@@ -275,12 +275,25 @@ const LOCKER_ZONES = [
                   (click)="createTimer()" aria-label="Create new timer">
             ⏱
           </button>
-          <button type="button" class="app-icon-btn"
-                  [disabled]="atNoteLimit()"
-                  [title]="atNoteLimit() ? 'Maximum of 20 notes reached' : 'Create a sticky note'"
-                  (click)="createNote()" aria-label="Create new sticky note">
-            📝
-          </button>
+          <div style="position:relative;display:inline-block">
+            <button type="button" class="app-icon-btn"
+                    [disabled]="atNoteLimit()"
+                    [title]="atNoteLimit() ? 'Maximum of 20 notes reached' : 'Create a note'"
+                    (click)="toggleNoteMenu(); $event.stopPropagation()" aria-label="Create new note">
+              📝
+            </button>
+            <div *ngIf="noteMenuOpen" class="note-submenu" (click)="$event.stopPropagation()">
+              <button type="button" class="note-submenu__item" (click)="createNote('REGULAR')">
+                📝 Blank Note
+              </button>
+              <button type="button" class="note-submenu__item"
+                      [disabled]="hasQuoteNote()"
+                      [title]="hasQuoteNote() ? 'You already have a Quote of the Day note.' : 'Create a Quote of the Day note'"
+                      (click)="createNote('QUOTE')">
+                💬 Quote of the Day
+              </button>
+            </div>
+          </div>
           <button type="button" class="app-icon-btn"
                   [disabled]="atBookmarkListLimit()"
                   [title]="atBookmarkListLimit() ? 'Maximum of 10 bookmark lists reached' : 'Create a bookmark list'"
@@ -1393,6 +1406,38 @@ const LOCKER_ZONES = [
         margin-top: 0.25rem;
       }
 
+      /* ── Note submenu ── */
+      .note-submenu {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        margin-top: 0.25rem;
+        background: rgba(255,255,255,0.97);
+        backdrop-filter: blur(12px);
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.1);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        min-width: 11rem;
+        overflow: hidden;
+      }
+      .note-submenu__item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.55rem 0.9rem;
+        background: none;
+        border: none;
+        font: inherit;
+        font-size: 0.88rem;
+        cursor: pointer;
+        color: #1c1c1e;
+        transition: background 0.1s;
+      }
+      .note-submenu__item:hover:not(:disabled) { background: rgba(0,0,0,0.06); }
+      .note-submenu__item:disabled { opacity: 0.4; cursor: not-allowed; }
+
       .sticker-layer {
         position: absolute;
         inset: 0;
@@ -1681,11 +1726,14 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected dueDatePopoverListId: string | null = null;
   protected fontPickerOpen = false;
 
+  protected noteMenuOpen = false;
+
   protected readonly atListLimit = computed(() => this.taskLists().length >= 20);
   protected readonly atTimerLimit = computed(() => this.timers().length >= 10);
   protected readonly atNoteLimit = computed(() => this.notes().length >= 20);
   protected readonly atBookmarkListLimit = computed(() => this.bookmarkLists().length >= 10);
   protected readonly atStickerLimit = computed(() => this.stickers().length >= 30);
+  protected readonly hasQuoteNote = computed(() => this.notes().some(n => n.noteType === 'QUOTE'));
 
   protected readonly studySession = signal<{ timerId: string; listId: string } | null>(null);
   protected readonly studySessionTimer = computed(() =>
@@ -1854,6 +1902,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.fontPickerOpen = false;
     this.dueDatePopoverTaskId = null;
     this.dueDatePopoverListId = null;
+    this.noteMenuOpen = false;
   }
 
   protected createList(): void {
@@ -2275,12 +2324,20 @@ export class LockerComponent implements AfterViewInit, OnInit {
   }
 
   // --- Note CRUD ---
-  protected createNote(): void {
+  protected toggleNoteMenu(): void {
     if (this.atNoteLimit()) return;
+    this.noteMenuOpen = !this.noteMenuOpen;
+  }
+
+  protected createNote(noteType: NoteType = 'REGULAR'): void {
+    this.noteMenuOpen = false;
+    if (this.atNoteLimit()) return;
+    if (noteType === 'QUOTE' && this.hasQuoteNote()) return;
     const existingTitles = this.notes().map(n => n.title);
-    const title = nextAutoName(existingTitles, 'Note');
+    const baseName = noteType === 'QUOTE' ? 'Quote of the Day' : 'Note';
+    const title = nextAutoName(existingTitles, baseName);
     const color = this.nextAvailableColor();
-    this.noteApi.createNote({ title, color }).subscribe({
+    this.noteApi.createNote({ title, color, noteType }).subscribe({
       next: note => {
         this.notes.update(current => [...current, note]);
         this.errorMessage = '';
