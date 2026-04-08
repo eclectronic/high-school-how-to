@@ -82,6 +82,21 @@ const LOCKER_COLORS: LockerColor[] = [
 
 const LOCKER_COLOR_KEY = 'hsht_lockerColorId';
 const LOCKER_FONT_KEY = 'hsht_lockerFontId';
+const LOCKER_FONT_SIZE_KEY = 'hsht_lockerFontSize';
+
+export type LockerFontSizeId = 'small' | 'medium' | 'large';
+
+export interface LockerFontSize {
+  id: LockerFontSizeId;
+  label: string;
+  value: string;
+}
+
+export const LOCKER_FONT_SIZES: LockerFontSize[] = [
+  { id: 'small', label: 'Small', value: '0.8rem' },
+  { id: 'medium', label: 'Medium', value: '0.875rem' },
+  { id: 'large', label: 'Large', value: '1rem' },
+];
 
 export interface LockerFont {
   id: string;
@@ -226,7 +241,8 @@ const LOCKER_ZONES = [
       class="dashboard"
       [ngStyle]="{
         '--lc-accent': lockerColor().doorSolid,
-        '--lc-shelf-text': lockerColor().shelfText
+        '--lc-shelf-text': lockerColor().shelfText,
+        '--locker-body-font-size': lockerFontSize().value
       }"
       (click)="closeConfig()"
     >
@@ -310,6 +326,14 @@ const LOCKER_ZONES = [
                   [class.font-option--active]="lockerFont().id === f.id"
                   [style.fontFamily]="f.family"
                   (click)="setLockerFont(f)">{{ f.name }}</button>
+          <div class="font-size-row">
+            <span class="font-size-label">Size</span>
+            <div class="font-size-stops">
+              <button *ngFor="let s of LOCKER_FONT_SIZES" type="button" class="font-size-stop"
+                      [class.font-size-stop--active]="lockerFontSize().id === s.id"
+                      (click)="setLockerFontSize(s)">{{ s.label }}</button>
+            </div>
+          </div>
         </div>
         <app-emoji-picker
           *ngIf="stickerPickerOpen"
@@ -1253,7 +1277,6 @@ const LOCKER_ZONES = [
         text-align: left;
         padding: 0.3rem 0.4rem;
         font: inherit;
-        font-size: 0.875rem;
         color: #2d1a10;
         cursor: text;
       }
@@ -1271,7 +1294,6 @@ const LOCKER_ZONES = [
         background: rgba(255,255,255,0.75);
         color: #2d1a10;
         font: inherit;
-        font-size: 0.875rem;
       }
       .new-task input::placeholder { color: rgba(45,26,16,0.35); }
       .new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
@@ -1383,6 +1405,50 @@ const LOCKER_ZONES = [
         background: var(--lc-accent, #3d8ed4);
         color: #fff;
         border-color: transparent;
+      }
+
+      /* ── Font size row (inside font picker panel) ── */
+      .font-size-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding-top: 0.4rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        margin-top: 0.15rem;
+      }
+      .font-size-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #52525b;
+        white-space: nowrap;
+      }
+      .font-size-stops {
+        display: flex;
+        gap: 0.3rem;
+      }
+      .font-size-stop {
+        padding: 0.3rem 0.65rem;
+        border-radius: 6px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        background: rgba(255, 255, 255, 0.7);
+        cursor: pointer;
+        font-size: 0.82rem;
+        transition: background 0.12s;
+      }
+      .font-size-stop:hover { background: rgba(0, 0, 0, 0.06); }
+      .font-size-stop--active {
+        background: var(--lc-accent, #3d8ed4);
+        color: #fff;
+        border-color: transparent;
+      }
+
+      /* ── Widget body font size variable ── */
+      .task-text,
+      .new-task input,
+      .study-task__text,
+      .study-new-task input {
+        font-size: var(--locker-body-font-size, 0.875rem);
       }
 
       .sticker-picker-panel {
@@ -1594,7 +1660,6 @@ const LOCKER_ZONES = [
       .study-task input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
 
       .study-task__text {
-        font-size: 0.875rem;
         line-height: 1.4;
       }
       .study-task__text--done {
@@ -1616,7 +1681,6 @@ const LOCKER_ZONES = [
         background: rgba(255,255,255,0.75);
         color: inherit;
         font: inherit;
-        font-size: 0.875rem;
       }
       .study-new-task input::placeholder { color: rgba(45,26,16,0.35); }
       .study-new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
@@ -1645,8 +1709,10 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   protected readonly LOCKER_COLORS = LOCKER_COLORS;
   protected readonly LOCKER_FONTS = LOCKER_FONTS;
+  protected readonly LOCKER_FONT_SIZES = LOCKER_FONT_SIZES;
   protected lockerColor = signal<LockerColor>(this.loadLockerColor());
   protected lockerFont = signal<LockerFont>(this.loadLockerFont());
+  protected lockerFontSize = signal<LockerFontSize>(this.loadLockerFontSize());
 
   // Animation phases
   protected lockerDone = signal(false);
@@ -1811,6 +1877,16 @@ export class LockerComponent implements AfterViewInit, OnInit {
   private loadLockerFont(): LockerFont {
     const saved = localStorage.getItem(LOCKER_FONT_KEY);
     return LOCKER_FONTS.find(f => f.id === saved) ?? LOCKER_FONTS[0];
+  }
+
+  protected setLockerFontSize(size: LockerFontSize): void {
+    this.lockerFontSize.set(size);
+    localStorage.setItem(LOCKER_FONT_SIZE_KEY, size.id);
+  }
+
+  private loadLockerFontSize(): LockerFontSize {
+    const saved = localStorage.getItem(LOCKER_FONT_SIZE_KEY);
+    return LOCKER_FONT_SIZES.find(s => s.id === saved) ?? LOCKER_FONT_SIZES.find(s => s.id === 'medium')!;
   }
 
   private loadGoogleFont(font: LockerFont): void {
