@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { LockerLayoutItem } from '../models/task.models';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class LockerLayoutApiService {
   private readonly http = inject(HttpClient);

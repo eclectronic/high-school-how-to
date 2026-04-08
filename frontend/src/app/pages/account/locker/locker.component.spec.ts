@@ -104,6 +104,7 @@ describe('LockerComponent', () => {
     noteApi.getNotes.and.returnValue(of([]));
     bookmarkApi.getBookmarkLists.and.returnValue(of([]));
     stickerApi.getStickers.and.returnValue(of([]));
+    lockerLayoutApi.getLayout.and.returnValue(of([]));
     lockerLayoutApi.saveLayout.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({

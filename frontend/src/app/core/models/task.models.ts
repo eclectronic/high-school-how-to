@@ -16,7 +16,10 @@ export interface TaskList {
 export interface LockerLayoutItem {
   cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST'
   cardId: string;
-  sortOrder: number;
+  col: number;
+  colSpan: number;
+  order: number;
+  minimized: boolean;
 }
 
 export interface Timer {
