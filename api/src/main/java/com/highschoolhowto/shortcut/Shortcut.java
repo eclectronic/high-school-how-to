@@ -1,7 +1,6 @@
-package com.highschoolhowto.bookmark;
+package com.highschoolhowto.shortcut;
 
 import com.highschoolhowto.user.User;
-import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -10,40 +9,38 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "bookmark_lists")
-public class BookmarkList {
+@Table(name = "shortcuts")
+public class Shortcut {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 150)
-    private String title;
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String url;
 
     @Column(nullable = false, length = 255)
-    private String color = "#fffef8";
+    private String name;
 
-    @Column(name = "text_color", length = 255)
-    private String textColor;
+    @Column(name = "favicon_url", length = 512)
+    private String faviconUrl;
 
-    @OneToMany(mappedBy = "bookmarkList", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @OrderBy("sortOrder ASC")
-    private List<Bookmark> bookmarks = new ArrayList<>();
+    @Column(length = 10)
+    private String emoji;
+
+    @Column(name = "icon_url", length = 2000)
+    private String iconUrl;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -68,17 +65,20 @@ public class BookmarkList {
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    public String getUrl() { return url; }
+    public void setUrl(String url) { this.url = url; }
 
-    public String getColor() { return color; }
-    public void setColor(String color) { this.color = color; }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getTextColor() { return textColor; }
-    public void setTextColor(String textColor) { this.textColor = textColor; }
+    public String getFaviconUrl() { return faviconUrl; }
+    public void setFaviconUrl(String faviconUrl) { this.faviconUrl = faviconUrl; }
 
-    public List<Bookmark> getBookmarks() { return bookmarks; }
-    public void setBookmarks(List<Bookmark> bookmarks) { this.bookmarks = bookmarks; }
+    public String getEmoji() { return emoji; }
+    public void setEmoji(String emoji) { this.emoji = emoji; }
+
+    public String getIconUrl() { return iconUrl; }
+    public void setIconUrl(String iconUrl) { this.iconUrl = iconUrl; }
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

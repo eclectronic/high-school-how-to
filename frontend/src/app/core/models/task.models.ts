@@ -79,6 +79,15 @@ export interface BookmarkList {
   bookmarks: Bookmark[];
 }
 
+export interface Shortcut {
+  id: string;
+  url: string;
+  name: string;
+  faviconUrl?: string | null;
+  emoji?: string | null;
+  iconUrl?: string | null;
+}
+
 export interface Sticker {
   id: string;
   emoji: string | null;

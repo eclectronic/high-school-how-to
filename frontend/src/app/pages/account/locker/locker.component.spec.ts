@@ -12,11 +12,11 @@ import {
 import { TaskApiService } from '../../../core/services/task-api.service';
 import { TimerApiService } from '../../../core/services/timer-api.service';
 import { NoteApiService } from '../../../core/services/note-api.service';
-import { BookmarkApiService } from '../../../core/services/bookmark-api.service';
+import { ShortcutApiService } from '../../../core/services/shortcut-api.service';
 import { StickerApiService } from '../../../core/services/sticker-api.service';
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
 import { BadgeApiService } from '../../../core/services/badge-api.service';
-import { TaskList, TaskItem, Timer, Note, BookmarkList, Sticker } from '../../../core/models/task.models';
+import { TaskList, TaskItem, Timer, Note, Shortcut, Sticker } from '../../../core/models/task.models';
 import { RouterTestingModule } from '@angular/router/testing';
 
 const MOCK_FONT_KEY = 'hsht_lockerFontId';
@@ -40,6 +40,14 @@ function makeTimer(overrides: Partial<Timer> = {}): Timer {
 
 function makeNote(overrides: Partial<Note> = {}): Note {
   return { id: 'note-1', title: 'Note', color: '#fef3c7', content: null, textColor: null, fontSize: null, ...overrides };
+}
+
+function makeShortcut(overrides: Partial<Shortcut> = {}): Shortcut {
+  return { id: 'sc-1', url: 'https://example.com', name: 'Example', ...overrides };
+}
+
+function makeSticker(overrides: Partial<Sticker> = {}): Sticker {
+  return { id: 'sticker-1', emoji: '⭐', iconUrl: null, label: null, createdAt: '', updatedAt: '', ...overrides };
 }
 
 describe('nextAutoName (pure function)', () => {
@@ -66,21 +74,13 @@ describe('nextAutoName (pure function)', () => {
   });
 });
 
-function makeBookmarkList(overrides: Partial<BookmarkList> = {}): BookmarkList {
-  return { id: 'blist-1', title: 'Bookmarks', color: '#fef3c7', textColor: null, bookmarks: [], ...overrides };
-}
-
-function makeSticker(overrides: Partial<Sticker> = {}): Sticker {
-  return { id: 'sticker-1', emoji: '⭐', iconUrl: null, label: null, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z', ...overrides };
-}
-
 describe('LockerComponent', () => {
   let fixture: ComponentFixture<LockerComponent>;
   let component: LockerComponent;
   let taskApi: jasmine.SpyObj<TaskApiService>;
   let timerApi: jasmine.SpyObj<TimerApiService>;
   let noteApi: jasmine.SpyObj<NoteApiService>;
-  let bookmarkApi: jasmine.SpyObj<BookmarkApiService>;
+  let shortcutApi: jasmine.SpyObj<ShortcutApiService>;
   let stickerApi: jasmine.SpyObj<StickerApiService>;
   let lockerLayoutApi: jasmine.SpyObj<LockerLayoutApiService>;
   let badgeApi: jasmine.SpyObj<BadgeApiService>;
@@ -100,9 +100,9 @@ describe('LockerComponent', () => {
     noteApi = jasmine.createSpyObj<NoteApiService>('NoteApiService', [
       'getNotes', 'createNote', 'updateNote', 'deleteNote',
     ]);
-    bookmarkApi = jasmine.createSpyObj<BookmarkApiService>('BookmarkApiService', [
-      'getBookmarkLists', 'createBookmarkList', 'updateBookmarkList', 'deleteBookmarkList',
-      'addBookmark', 'updateBookmark', 'deleteBookmark', 'reorderBookmarks', 'getMetadata',
+    shortcutApi = jasmine.createSpyObj<ShortcutApiService>('ShortcutApiService', [
+      'getShortcuts', 'createShortcut', 'updateShortcut', 'deleteShortcut',
+      'getMetadata', 'importShortcuts', 'exportShortcuts',
     ]);
     stickerApi = jasmine.createSpyObj<StickerApiService>('StickerApiService', [
       'getStickers', 'createSticker', 'updateSticker', 'deleteSticker',
@@ -117,7 +117,7 @@ describe('LockerComponent', () => {
     taskApi.getTaskLists.and.returnValue(of([]));
     timerApi.getTimers.and.returnValue(of([]));
     noteApi.getNotes.and.returnValue(of([]));
-    bookmarkApi.getBookmarkLists.and.returnValue(of([]));
+    shortcutApi.getShortcuts.and.returnValue(of([]));
     stickerApi.getStickers.and.returnValue(of([]));
     lockerLayoutApi.getLayout.and.returnValue(of([]));
     lockerLayoutApi.saveLayout.and.returnValue(of([]));
@@ -131,7 +131,7 @@ describe('LockerComponent', () => {
         { provide: TaskApiService, useValue: taskApi },
         { provide: TimerApiService, useValue: timerApi },
         { provide: NoteApiService, useValue: noteApi },
-        { provide: BookmarkApiService, useValue: bookmarkApi },
+        { provide: ShortcutApiService, useValue: shortcutApi },
         { provide: StickerApiService, useValue: stickerApi },
         { provide: LockerLayoutApiService, useValue: lockerLayoutApi },
         { provide: BadgeApiService, useValue: badgeApi },
@@ -144,11 +144,11 @@ describe('LockerComponent', () => {
     localStorage.removeItem(MOCK_FONT_SIZE_KEY);
   });
 
-  const render = (lists: TaskList[] = [], timers: Timer[] = [], notes: Note[] = [], bookmarkLists: BookmarkList[] = []) => {
+  const render = (lists: TaskList[] = [], timers: Timer[] = [], notes: Note[] = [], shortcuts: Shortcut[] = []) => {
     taskApi.getTaskLists.and.returnValue(of(lists));
     timerApi.getTimers.and.returnValue(of(timers));
     noteApi.getNotes.and.returnValue(of(notes));
-    bookmarkApi.getBookmarkLists.and.returnValue(of(bookmarkLists));
+    shortcutApi.getShortcuts.and.returnValue(of(shortcuts));
     fixture = TestBed.createComponent(LockerComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -548,61 +548,73 @@ describe('LockerComponent', () => {
     expect(ready[0].id).toBe('timer-1');
   });
 
-  // ── Bookmark List creation ────────────────────────────────────────────────
+  // ── Shortcuts ─────────────────────────────────────────────────────────────
 
-  it('createBookmarkList creates first list with title "Bookmarks"', () => {
-    bookmarkApi.createBookmarkList.and.returnValue(of(makeBookmarkList({ id: 'new', title: 'Bookmarks' })));
-    render();
-
-    component['createBookmarkList']();
-
-    expect(bookmarkApi.createBookmarkList).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Bookmarks' }));
+  it('atShortcutLimit is true at 50 shortcuts', () => {
+    const shortcuts = Array.from({ length: 50 }, (_, i) =>
+      makeShortcut({ id: `sc${i}`, url: `https://site${i}.com`, name: `Site ${i}` }));
+    render([], [], [], shortcuts);
+    expect(component['atShortcutLimit']()).toBeTrue();
   });
 
-  it('createBookmarkList auto-names second list "Bookmarks #2"', () => {
-    bookmarkApi.createBookmarkList.and.returnValue(of(makeBookmarkList({ id: 'new', title: 'Bookmarks #2' })));
-    render([], [], [], [makeBookmarkList({ title: 'Bookmarks' })]);
-
-    component['createBookmarkList']();
-
-    expect(bookmarkApi.createBookmarkList).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Bookmarks #2' }));
+  it('atShortcutLimit is false below 50 shortcuts', () => {
+    const shortcuts = Array.from({ length: 49 }, (_, i) =>
+      makeShortcut({ id: `sc${i}`, url: `https://site${i}.com`, name: `Site ${i}` }));
+    render([], [], [], shortcuts);
+    expect(component['atShortcutLimit']()).toBeFalse();
   });
 
-  it('atBookmarkListLimit is true at 10 lists', () => {
-    const lists = Array.from({ length: 10 }, (_, i) => makeBookmarkList({ id: `bl${i}`, title: `Bookmarks ${i}` }));
-    render([], [], [], lists);
-    expect(component['atBookmarkListLimit']()).toBeTrue();
-  });
-
-  it('createBookmarkList does nothing when at limit', () => {
-    const lists = Array.from({ length: 10 }, (_, i) => makeBookmarkList({ id: `bl${i}`, title: `Bookmarks ${i}` }));
-    render([], [], [], lists);
-
-    component['createBookmarkList']();
-
-    expect(bookmarkApi.createBookmarkList).not.toHaveBeenCalled();
-  });
-
-  it('onBookmarkListUpdated replaces list in signal', () => {
-    render([], [], [], [makeBookmarkList()]);
-
-    component['onBookmarkListUpdated'](makeBookmarkList({ title: 'Updated' }));
-
-    expect(component['bookmarkLists']().find(l => l.id === 'blist-1')?.title).toBe('Updated');
-  });
-
-  it('onBookmarkListDeleted removes list from signal', () => {
-    render([], [], [], [makeBookmarkList()]);
-
-    component['onBookmarkListDeleted']('blist-1');
-
-    expect(component['bookmarkLists']().length).toBe(0);
-  });
-
-  it('orderedCards includes bookmark lists', () => {
-    render([], [], [], [makeBookmarkList()]);
+  it('orderedCards includes shortcuts', () => {
+    render([], [], [], [makeShortcut()]);
     const cards = component['orderedCards']();
-    expect(cards.some(c => c.type === 'BOOKMARK_LIST')).toBeTrue();
+    expect(cards.some(c => c.type === 'SHORTCUT')).toBeTrue();
+  });
+
+  it('onConfirmDeleteShortcut removes shortcut from signal and calls API', () => {
+    const shortcut = makeShortcut();
+    shortcutApi.deleteShortcut.and.returnValue(of(undefined));
+    render([], [], [], [shortcut]);
+    component['confirmDeleteShortcut'] = shortcut;
+
+    component['onConfirmDeleteShortcut']();
+
+    expect(shortcutApi.deleteShortcut).toHaveBeenCalledWith(shortcut.id);
+    expect(component['shortcuts']().length).toBe(0);
+    expect(component['confirmDeleteShortcut']).toBeNull();
+  });
+
+  it('openAddShortcutDialog opens dialog and resets state', () => {
+    render([]);
+    component['shortcutUrlDraft'] = 'https://old.com';
+    component['shortcutNameDraft'] = 'Old name';
+
+    component['openAddShortcutDialog']();
+
+    expect(component['shortcutDialogOpen']).toBeTrue();
+    expect(component['shortcutUrlDraft']).toBe('');
+    expect(component['shortcutNameDraft']).toBe('');
+    expect(component['editingShortcut']).toBeNull();
+  });
+
+  it('closeShortcutDialog hides dialog', () => {
+    render([]);
+    component['shortcutDialogOpen'] = true;
+
+    component['closeShortcutDialog']();
+
+    expect(component['shortcutDialogOpen']).toBeFalse();
+  });
+
+  it('onShortcutEditRequested pre-fills dialog', () => {
+    const shortcut = makeShortcut({ name: 'Test', emoji: '🎓' });
+    render([], [], [], [shortcut]);
+
+    component['onShortcutEditRequested'](shortcut);
+
+    expect(component['shortcutDialogOpen']).toBeTrue();
+    expect(component['editingShortcut']).toBe(shortcut);
+    expect(component['shortcutUrlDraft']).toBe(shortcut.url);
+    expect(component['shortcutIconType']).toBe('emoji');
   });
 
   // ── Stickers ──────────────────────────────────────────────────────────────
