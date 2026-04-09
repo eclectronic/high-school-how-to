@@ -3,6 +3,8 @@ package com.highschoolhowto.note;
 import com.highschoolhowto.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -42,6 +44,10 @@ public class Note {
     @Column(name = "font_size", length = 32)
     private String fontSize;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "note_type", nullable = false, length = 20)
+    private NoteType noteType = NoteType.REGULAR;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -79,6 +85,9 @@ public class Note {
 
     public String getFontSize() { return fontSize; }
     public void setFontSize(String fontSize) { this.fontSize = fontSize; }
+
+    public NoteType getNoteType() { return noteType; }
+    public void setNoteType(NoteType noteType) { this.noteType = noteType; }
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

@@ -1,6 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
-import { LockerComponent, nextAutoName, LOCKER_FONTS, LockerFont } from './locker.component';
+import {
+  LockerComponent,
+  nextAutoName,
+  LOCKER_FONTS,
+  LockerFont,
+  LOCKER_FONT_SIZES,
+} from './locker.component';
 import { TaskApiService } from '../../../core/services/task-api.service';
 import { TimerApiService } from '../../../core/services/timer-api.service';
 import { NoteApiService } from '../../../core/services/note-api.service';
@@ -11,6 +19,7 @@ import { TaskList, TaskItem, Timer, Note, BookmarkList, Sticker } from '../../..
 import { RouterTestingModule } from '@angular/router/testing';
 
 const MOCK_FONT_KEY = 'hsht_lockerFontId';
+const MOCK_FONT_SIZE_KEY = 'hsht_lockerFontSize';
 
 function makeList(overrides: Partial<TaskList> = {}): TaskList {
   return { id: 'list-1', title: 'To-dos', tasks: [], color: '#fef3c7', textColor: null, ...overrides };
@@ -76,6 +85,7 @@ describe('LockerComponent', () => {
 
   beforeEach(async () => {
     localStorage.removeItem(MOCK_FONT_KEY);
+    localStorage.removeItem(MOCK_FONT_SIZE_KEY);
 
     taskApi = jasmine.createSpyObj<TaskApiService>('TaskApiService', [
       'getTaskLists', 'createList', 'deleteList', 'addTask',
@@ -109,6 +119,8 @@ describe('LockerComponent', () => {
     await TestBed.configureTestingModule({
       imports: [LockerComponent, RouterTestingModule],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: TaskApiService, useValue: taskApi },
         { provide: TimerApiService, useValue: timerApi },
         { provide: NoteApiService, useValue: noteApi },
@@ -121,6 +133,7 @@ describe('LockerComponent', () => {
 
   afterEach(() => {
     localStorage.removeItem(MOCK_FONT_KEY);
+    localStorage.removeItem(MOCK_FONT_SIZE_KEY);
   });
 
   const render = (lists: TaskList[] = [], timers: Timer[] = [], notes: Note[] = [], bookmarkLists: BookmarkList[] = []) => {
@@ -643,5 +656,51 @@ describe('LockerComponent', () => {
     component['submitStickerDialog']();
 
     expect(stickerApi.updateSticker).toHaveBeenCalledWith('sticker-1', jasmine.objectContaining({ emoji: '🎉' }));
+  });
+
+  // ── Font size ─────────────────────────────────────────────────────────────
+
+  it('lockerFontSize defaults to medium when no localStorage value', () => {
+    render();
+    expect(component['lockerFontSize']().id).toBe('medium');
+  });
+
+  it('setLockerFontSize small sets CSS variable to 0.8rem', () => {
+    render();
+    const small = LOCKER_FONT_SIZES.find(s => s.id === 'small')!;
+
+    component['setLockerFontSize'](small);
+    fixture.detectChanges();
+
+    const dashboard = fixture.nativeElement.querySelector('.dashboard');
+    expect(dashboard?.style.getPropertyValue('--locker-body-font-size')).toBe('0.8rem');
+  });
+
+  it('setLockerFontSize large sets CSS variable to 1rem', () => {
+    render();
+    const large = LOCKER_FONT_SIZES.find(s => s.id === 'large')!;
+
+    component['setLockerFontSize'](large);
+    fixture.detectChanges();
+
+    const dashboard = fixture.nativeElement.querySelector('.dashboard');
+    expect(dashboard?.style.getPropertyValue('--locker-body-font-size')).toBe('1rem');
+  });
+
+  it('setLockerFontSize persists selection to localStorage', () => {
+    render();
+    const large = LOCKER_FONT_SIZES.find(s => s.id === 'large')!;
+
+    component['setLockerFontSize'](large);
+
+    expect(localStorage.getItem(MOCK_FONT_SIZE_KEY)).toBe('large');
+  });
+
+  it('page reload restores saved font size from localStorage', () => {
+    localStorage.setItem(MOCK_FONT_SIZE_KEY, 'small');
+    render();
+
+    expect(component['lockerFontSize']().id).toBe('small');
+    expect(component['lockerFontSize']().value).toBe('0.8rem');
   });
 });
