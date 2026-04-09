@@ -54,9 +54,7 @@ export function firstHexFromGradient(gradient: string): string | null {
   return match ? match[0] : null;
 }
 
-const LS_PALETTE_KEY = 'hsht_customPalette';
-const LS_HISTORY_KEY = 'hsht_colorHistory';
-
+/** Default color palette used for auto-assigning card colors. */
 export const DEFAULT_PALETTE: string[] = [
   '#fffef8', '#fef3c7', '#fde68a', '#fcd34d',
   '#fef2f2', '#fecdd3', '#fda4af', '#fbcfe8',
@@ -64,22 +62,7 @@ export const DEFAULT_PALETTE: string[] = [
   '#dcfce7', '#bbf7d0', '#a7f3d0', '#e0f2fe',
 ];
 
-export function loadCustomPalette(): string[] {
-  try {
-    const stored = localStorage.getItem(LS_PALETTE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored) as string[];
-      if (Array.isArray(parsed) && parsed.length === 16) return parsed;
-    }
-  } catch { /* ignore */ }
-  return [...DEFAULT_PALETTE];
-}
-
-export function saveCustomPalette(palette: string[]): void {
-  try {
-    localStorage.setItem(LS_PALETTE_KEY, JSON.stringify(palette));
-  } catch { /* ignore */ }
-}
+const LS_HISTORY_KEY = 'hsht_colorHistory';
 
 export function loadColorHistory(): string[] {
   try {

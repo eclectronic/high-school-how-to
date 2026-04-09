@@ -38,7 +38,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
 
         <div class="bookmark-card__actions">
           <button type="button" class="icon-btn" (click)="toggleColorPicker()" title="Card color" aria-label="Change card color">
-            <span aria-hidden="true">🎨</span>
+            <span aria-hidden="true">🌈</span>
           </button>
           <button type="button" class="icon-btn danger" (click)="requestDeleteList()" title="Delete bookmark list" aria-label="Delete bookmark list">
             <span aria-hidden="true">🗑</span>
@@ -299,7 +299,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
     }
 
     .bookmark-title {
-      font-size: 0.875rem;
+      font-size: var(--locker-body-font-size, 0.875rem);
       font-weight: 600;
       text-decoration: none;
       white-space: nowrap;

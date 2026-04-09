@@ -24,7 +24,7 @@ import { BookmarkApiService } from '../../../core/services/bookmark-api.service'
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
 import { LockerGridEngineService } from '../../../core/services/locker-grid-engine.service';
 import { SessionStore } from '../../../core/session/session.store';
-import { TaskItem, TaskList, Timer, Note, BookmarkList, Sticker } from '../../../core/models/task.models';
+import { TaskItem, TaskList, Timer, Note, BookmarkList, Sticker, NoteType } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { InlineTitleEditComponent } from '../../../shared/inline-title-edit/inline-title-edit.component';
 import { ColorPickerComponent } from '../../../shared/color-picker/color-picker.component';
@@ -32,16 +32,17 @@ import { DueDatePopoverComponent } from '../../../shared/due-date-popover/due-da
 import { TimerCardComponent } from '../../../shared/timer-card/timer-card.component';
 import { NoteCardComponent } from '../../../shared/note-card/note-card.component';
 import { BookmarkCardComponent } from '../../../shared/bookmark-card/bookmark-card.component';
-import { StickerComponent } from '../../../shared/sticker/sticker.component';
 import { EmojiPickerComponent } from '../../../shared/sticker/emoji-picker.component';
-import { StickerApiService } from '../../../core/services/sticker-api.service';
+import { StickerIconComponent } from '../../../shared/sticker-icon/sticker-icon.component';
+import { StickerApiService, CreateStickerRequest } from '../../../core/services/sticker-api.service';
 import { DEFAULT_PALETTE, autoContrastColor, isGradient, firstHexFromGradient } from '../../../shared/color-picker/color-utils';
 
 type LockerCard =
   | { type: 'TASK_LIST'; data: TaskList }
   | { type: 'TIMER'; data: Timer }
   | { type: 'NOTE'; data: Note }
-  | { type: 'BOOKMARK_LIST'; data: BookmarkList };
+  | { type: 'BOOKMARK_LIST'; data: BookmarkList }
+  | { type: 'STICKER'; data: Sticker };
 
 interface CardLayout {
   col: number;
@@ -108,6 +109,21 @@ const LOCKER_COLORS: LockerColor[] = [
 
 const LOCKER_COLOR_KEY = 'hsht_lockerColorId';
 const LOCKER_FONT_KEY = 'hsht_lockerFontId';
+const LOCKER_FONT_SIZE_KEY = 'hsht_lockerFontSize';
+
+export type LockerFontSizeId = 'small' | 'medium' | 'large';
+
+export interface LockerFontSize {
+  id: LockerFontSizeId;
+  label: string;
+  value: string;
+}
+
+export const LOCKER_FONT_SIZES: LockerFontSize[] = [
+  { id: 'small', label: 'Small', value: '0.8rem' },
+  { id: 'medium', label: 'Medium', value: '0.875rem' },
+  { id: 'large', label: 'Large', value: '1rem' },
+];
 
 export interface LockerFont {
   id: string;
@@ -181,7 +197,8 @@ const LOCKER_ZONES = [
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule,
     ConfirmDialogComponent, InlineTitleEditComponent, ColorPickerComponent, DueDatePopoverComponent,
-    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, StickerComponent, EmojiPickerComponent],
+    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, EmojiPickerComponent,
+    StickerIconComponent],
   template: `
     <!-- ── Locker row animation overlay ── -->
     <div class="locker-overlay"
@@ -252,7 +269,8 @@ const LOCKER_ZONES = [
       class="dashboard"
       [ngStyle]="{
         '--lc-accent': lockerColor().doorSolid,
-        '--lc-shelf-text': lockerColor().shelfText
+        '--lc-shelf-text': lockerColor().shelfText,
+        '--locker-body-font-size': lockerFontSize().value
       }"
       (click)="closeConfig()"
     >
@@ -293,42 +311,61 @@ const LOCKER_ZONES = [
                   [disabled]="atListLimit()"
                   [title]="atListLimit() ? 'Maximum of 20 lists reached' : 'Create a to-do list'"
                   (click)="createList()" aria-label="Create new to-do list">
-            📋
+            <span class="app-icon-btn__icon">📋</span>
+            <span class="app-icon-btn__label">Add list</span>
           </button>
           <button type="button" class="app-icon-btn"
                   [disabled]="atTimerLimit()"
                   [title]="atTimerLimit() ? 'Maximum of 10 timers reached' : 'Create a Pomodoro timer'"
                   (click)="createTimer()" aria-label="Create new timer">
-            ⏱
+            <span class="app-icon-btn__icon">⏱</span>
+            <span class="app-icon-btn__label">Add timer</span>
           </button>
-          <button type="button" class="app-icon-btn"
-                  [disabled]="atNoteLimit()"
-                  [title]="atNoteLimit() ? 'Maximum of 20 notes reached' : 'Create a sticky note'"
-                  (click)="createNote()" aria-label="Create new sticky note">
-            📝
-          </button>
+          <div style="position:relative;display:inline-block">
+            <button type="button" class="app-icon-btn"
+                    [disabled]="atNoteLimit()"
+                    [title]="atNoteLimit() ? 'Maximum of 20 notes reached' : 'Create a note'"
+                    (click)="toggleNoteMenu(); $event.stopPropagation()" aria-label="Create new note">
+              📝
+            </button>
+            <div *ngIf="noteMenuOpen" class="note-submenu" (click)="$event.stopPropagation()">
+              <button type="button" class="note-submenu__item" (click)="createNote('REGULAR')">
+                📝 Blank Note
+              </button>
+              <button type="button" class="note-submenu__item"
+                      [disabled]="hasQuoteNote()"
+                      [title]="hasQuoteNote() ? 'You already have a Quote of the Day note.' : 'Create a Quote of the Day note'"
+                      (click)="createNote('QUOTE')">
+                💬 Quote of the Day
+              </button>
+            </div>
+          </div>
           <button type="button" class="app-icon-btn"
                   [disabled]="atBookmarkListLimit()"
                   [title]="atBookmarkListLimit() ? 'Maximum of 10 bookmark lists reached' : 'Create a bookmark list'"
                   (click)="createBookmarkList()" aria-label="Create new bookmark list">
-            🔗
+            <span class="app-icon-btn__icon">🚀</span>
+            <span class="app-icon-btn__label">Shortcuts</span>
           </button>
           <button type="button" class="app-icon-btn"
                   *ngIf="studyReadyTimers().length > 0"
                   title="Enter Study Session"
                   (click)="enterStudySessionFromBar()" aria-label="Enter Study Session">
-            📚
+            <span class="app-icon-btn__icon">📚</span>
+            <span class="app-icon-btn__label">Study</span>
           </button>
           <button type="button" class="app-icon-btn"
                   [disabled]="atStickerLimit()"
-                  [title]="atStickerLimit() ? 'Maximum of 30 stickers reached' : 'Add a sticker'"
-                  (click)="toggleStickerPicker(); $event.stopPropagation()" aria-label="Add sticker">
-            🌈
+                  [title]="atStickerLimit() ? 'Maximum of 50 stickers reached' : 'Add a sticker'"
+                  (click)="openStickerDialog(); $event.stopPropagation()" aria-label="Add sticker">
+            <span class="app-icon-btn__icon">🏷️</span>
+            <span class="app-icon-btn__label">Stickers</span>
           </button>
           <button type="button" class="app-icon-btn app-icon-btn--font"
                   [title]="'Locker font: ' + lockerFont().name"
                   (click)="toggleFontPicker(); $event.stopPropagation()" aria-label="Change locker font">
-            Aa
+            <span class="app-icon-btn__icon">Aa</span>
+            <span class="app-icon-btn__label">Font</span>
           </button>
         </div>
         <div class="font-picker-panel" *ngIf="fontPickerOpen" (click)="$event.stopPropagation()">
@@ -336,13 +373,58 @@ const LOCKER_ZONES = [
                   [class.font-option--active]="lockerFont().id === f.id"
                   [style.fontFamily]="f.family"
                   (click)="setLockerFont(f)">{{ f.name }}</button>
+          <div class="font-size-row">
+            <span class="font-size-label">Size</span>
+            <div class="font-size-stops">
+              <button *ngFor="let s of LOCKER_FONT_SIZES" type="button" class="font-size-stop"
+                      [class.font-size-stop--active]="lockerFontSize().id === s.id"
+                      (click)="setLockerFontSize(s)">{{ s.label }}</button>
+            </div>
+          </div>
         </div>
-        <app-emoji-picker
-          *ngIf="stickerPickerOpen"
-          class="sticker-picker-panel"
-          (emojiSelected)="onEmojiSelected($event)"
-          (click)="$event.stopPropagation()"
-        ></app-emoji-picker>
+        <!-- Add Sticker dialog -->
+        <div *ngIf="stickerDialogOpen" class="sticker-dialog" (click)="$event.stopPropagation()">
+          <h3 class="sticker-dialog__title">{{ stickerEditId ? 'Edit Sticker' : 'Add Sticker' }}</h3>
+          <div class="sticker-dialog__tabs">
+            <button type="button" class="sticker-dialog__tab"
+                    [class.sticker-dialog__tab--active]="stickerDialogTab === 'emoji'"
+                    (click)="stickerDialogTab = 'emoji'">Emoji</button>
+            <button type="button" class="sticker-dialog__tab"
+                    [class.sticker-dialog__tab--active]="stickerDialogTab === 'url'"
+                    (click)="stickerDialogTab = 'url'">Image URL</button>
+          </div>
+          @if (stickerDialogTab === 'emoji') {
+            <app-emoji-picker
+              (emojiSelected)="onStickerDialogEmojiSelected($event)"
+            ></app-emoji-picker>
+            <div class="sticker-dialog__selected-emoji" *ngIf="stickerDialogEmoji">
+              Selected: <span>{{ stickerDialogEmoji }}</span>
+            </div>
+          } @else {
+            <div class="sticker-dialog__field">
+              <label class="sticker-dialog__label">Image URL</label>
+              <input type="text" class="sticker-dialog__input"
+                     [(ngModel)]="stickerDialogIconUrl"
+                     placeholder="/media/icons/my-icon.png" />
+            </div>
+          }
+          <div class="sticker-dialog__field">
+            <label class="sticker-dialog__label">Label (optional)</label>
+            <input type="text" class="sticker-dialog__input"
+                   [(ngModel)]="stickerDialogLabel"
+                   maxlength="255"
+                   placeholder="My favorite sticker" />
+          </div>
+          <div class="sticker-dialog__actions">
+            <button type="button" class="sticker-dialog__btn sticker-dialog__btn--cancel"
+                    (click)="closeStickerDialog()">Cancel</button>
+            <button type="button" class="sticker-dialog__btn sticker-dialog__btn--submit"
+                    [disabled]="!canSubmitStickerDialog()"
+                    (click)="submitStickerDialog()">
+              {{ stickerEditId ? 'Save' : 'Add' }}
+            </button>
+          </div>
+        </div>
         <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
       </header>
 
@@ -467,6 +549,14 @@ const LOCKER_ZONES = [
             (listUpdated)="onBookmarkListUpdated($event)"
             (listDeleted)="onBookmarkListDeleted($event)"
           ></app-bookmark-card>
+
+          <!-- Sticker card -->
+          <app-sticker-icon
+            *ngIf="card.type === 'STICKER'"
+            [sticker]="asSticker(card)!"
+            (edit)="openEditStickerDialog(asSticker(card)!)"
+            (delete)="onStickerDeleted(asSticker(card)!.id)"
+          ></app-sticker-icon>
 
           <!-- Task list card -->
           <ng-container *ngIf="asTaskList(card) as list">
@@ -604,17 +694,6 @@ const LOCKER_ZONES = [
                (mousedown)="onResizeStart($event, card)"
                title="Drag to resize"></div>
         </div>
-      </div>
-
-      <!-- Sticker overlay layer -->
-      <div class="sticker-layer" *ngIf="stickers().length > 0">
-        <app-sticker
-          *ngFor="let sticker of stickers(); trackBy: trackByStickerId"
-          [sticker]="sticker"
-          (positionChanged)="onStickerPositionChanged(sticker.id, $event.x, $event.y)"
-          (sizeChanged)="onStickerSizeChanged(sticker.id, $event)"
-          (deleted)="onStickerDeleted(sticker.id)"
-        ></app-sticker>
       </div>
 
       <!-- Empty state -->
@@ -1295,6 +1374,12 @@ const LOCKER_ZONES = [
         100% { box-shadow: 0 0 0 0 rgba(255,165,0,0); }
       }
       .timer-flash { animation: timer-flash 0.9s ease-out forwards; }
+      @keyframes list-flash {
+        0%   { box-shadow: 0 0 0 3px rgba(99,102,241,0.8); }
+        60%  { box-shadow: 0 0 0 6px rgba(99,102,241,0.3); }
+        100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+      }
+      .list-flash { animation: list-flash 0.9s ease-out forwards; }
       .list-actions {
         display: flex;
         gap: 0.3rem;
@@ -1396,7 +1481,6 @@ const LOCKER_ZONES = [
         text-align: left;
         padding: 0.3rem 0.4rem;
         font: inherit;
-        font-size: 0.875rem;
         color: #2d1a10;
         cursor: text;
       }
@@ -1414,7 +1498,6 @@ const LOCKER_ZONES = [
         background: rgba(255,255,255,0.75);
         color: #2d1a10;
         font: inherit;
-        font-size: 0.875rem;
       }
       .new-task input::placeholder { color: rgba(45,26,16,0.35); }
       .new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
@@ -1478,24 +1561,46 @@ const LOCKER_ZONES = [
       }
 
       .app-icon-btn {
-        width: 3rem;
-        height: 3rem;
         display: inline-flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
-        font-size: 1.5rem;
-        line-height: 1;
-        padding: 0;
+        gap: 0.15rem;
+        width: 3.5rem;
+        min-height: 3.5rem;
+        border-radius: 10px;
+        padding: 0.35rem 0.25rem 0.3rem;
         background: rgba(255,255,255,0.85);
         border: 2px solid rgba(0,0,0,0.12);
         cursor: pointer;
         transition: transform 0.12s, opacity 0.12s;
         box-shadow: 0 2px 6px rgba(0,0,0,0.12);
       }
-      .app-icon-btn:hover:not(:disabled) { transform: scale(1.1); }
+      .app-icon-btn:hover:not(:disabled) { transform: scale(1.05); }
       .app-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-      .app-icon-btn--font { font-family: var(--font-display, inherit); font-size: 1.1rem; font-weight: 800; }
+      .app-icon-btn--font { font-family: var(--font-display, inherit); }
+
+      .app-icon-btn__icon {
+        font-size: 1.4rem;
+        line-height: 1;
+        display: block;
+      }
+      .app-icon-btn--font .app-icon-btn__icon {
+        font-size: 1.1rem;
+        font-weight: 800;
+      }
+
+      .app-icon-btn__label {
+        font-size: 0.6rem;
+        font-family: var(--font-body, sans-serif);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #2d1a10;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .app-icon-btn:disabled .app-icon-btn__label { opacity: 0.5; }
 
       /* ── Font picker panel ── */
       .font-picker-panel {
@@ -1528,13 +1633,106 @@ const LOCKER_ZONES = [
         border-color: transparent;
       }
 
-      .sticker-picker-panel {
+      /* ── Font size row (inside font picker panel) ── */
+      .font-size-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding-top: 0.4rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        margin-top: 0.15rem;
+      }
+      .font-size-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #52525b;
+        white-space: nowrap;
+      }
+      .font-size-stops {
+        display: flex;
+        gap: 0.3rem;
+      }
+      .font-size-stop {
+        padding: 0.3rem 0.65rem;
+        border-radius: 6px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        background: rgba(255, 255, 255, 0.7);
+        cursor: pointer;
+        font-size: 0.82rem;
+        transition: background 0.12s;
+      }
+      .font-size-stop:hover { background: rgba(0, 0, 0, 0.06); }
+      .font-size-stop--active {
+        background: var(--lc-accent, #3d8ed4);
+        color: #fff;
+        border-color: transparent;
+      }
+
+      /* ── Widget body font size variable ── */
+      .task-text,
+      .new-task input,
+      .study-task__text,
+      .study-new-task input {
+        font-size: var(--locker-body-font-size, 0.875rem);
+      }
+
+      /* ── Sticker dialog panel ── */
+      .sticker-dialog {
         position: absolute;
         top: 100%;
         right: 0;
         z-index: 100;
         margin-top: 0.25rem;
+        background: #fffef8;
+        border: 1px solid rgba(0,0,0,0.12);
+        border-radius: 12px;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+        padding: 1rem;
+        min-width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
       }
+
+      .sticker-dialog__title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 800;
+        color: #1c1c1e;
+      }
+
+      /* ── Note submenu ── */
+      .note-submenu {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        margin-top: 0.25rem;
+        background: rgba(255,255,255,0.97);
+        backdrop-filter: blur(12px);
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.1);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        min-width: 11rem;
+        overflow: hidden;
+      }
+      .note-submenu__item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.55rem 0.9rem;
+        background: none;
+        border: none;
+        font: inherit;
+        font-size: 0.88rem;
+        cursor: pointer;
+        color: #1c1c1e;
+        transition: background 0.1s;
+      }
+      .note-submenu__item:hover:not(:disabled) { background: rgba(0,0,0,0.06); }
+      .note-submenu__item:disabled { opacity: 0.4; cursor: not-allowed; }
 
       .sticker-layer {
         position: absolute;
@@ -1545,11 +1743,98 @@ const LOCKER_ZONES = [
         app-sticker { pointer-events: all; }
       }
 
-      /* When a sticker is hovered or showing its confirm prompt, raise the whole
-         layer above the tool-card grid (z-index:2) so controls are never obscured. */
-      .sticker-layer:has(.sticker:hover),
-      .sticker-layer:has(.sticker--confirming) {
-        z-index: 3;
+      .sticker-dialog__tabs {
+        display: flex;
+        gap: 0.35rem;
+      }
+
+      .sticker-dialog__tab {
+        padding: 0.35rem 0.75rem;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 20px;
+        background: transparent;
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: #3f3f46;
+        transition: background 0.1s, border-color 0.1s;
+      }
+
+      .sticker-dialog__tab--active {
+        background: var(--lc-accent, #3d8ed4);
+        border-color: var(--lc-accent, #3d8ed4);
+        color: #fff;
+      }
+
+      .sticker-dialog__selected-emoji {
+        font-size: 0.85rem;
+        color: #52525b;
+      }
+
+      .sticker-dialog__field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .sticker-dialog__label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #52525b;
+      }
+
+      .sticker-dialog__input {
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        font: inherit;
+        font-size: 0.9rem;
+        color: #1c1c1e;
+        background: rgba(255,255,255,0.85);
+      }
+
+      .sticker-dialog__input:focus {
+        outline: none;
+        border-color: var(--lc-accent, #3d8ed4);
+        background: #fff;
+      }
+
+      .sticker-dialog__actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+      }
+
+      .sticker-dialog__btn {
+        padding: 0.45rem 1rem;
+        border-radius: 8px;
+        border: none;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.12s;
+      }
+
+      .sticker-dialog__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      .sticker-dialog__btn--cancel {
+        background: rgba(0,0,0,0.08);
+        color: #3f3f46;
+      }
+
+      .sticker-dialog__btn--submit {
+        background: var(--lc-accent, #3d8ed4);
+        color: #fff;
+      }
+
+      /* ── Sticker grid card ── */
+      .sticker-grid-card {
+        background: rgba(255,255,255,0.65);
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255,255,255,0.5);
       }
 
       /* ── Floating color picker panel ── */
@@ -1719,7 +2004,6 @@ const LOCKER_ZONES = [
       .study-task input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
 
       .study-task__text {
-        font-size: 0.875rem;
         line-height: 1.4;
       }
       .study-task__text--done {
@@ -1741,7 +2025,6 @@ const LOCKER_ZONES = [
         background: rgba(255,255,255,0.75);
         color: inherit;
         font: inherit;
-        font-size: 0.875rem;
       }
       .study-new-task input::placeholder { color: rgba(45,26,16,0.35); }
       .study-new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
@@ -1771,8 +2054,10 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   protected readonly LOCKER_COLORS = LOCKER_COLORS;
   protected readonly LOCKER_FONTS = LOCKER_FONTS;
+  protected readonly LOCKER_FONT_SIZES = LOCKER_FONT_SIZES;
   protected lockerColor = signal<LockerColor>(this.loadLockerColor());
   protected lockerFont = signal<LockerFont>(this.loadLockerFont());
+  protected lockerFontSize = signal<LockerFontSize>(this.loadLockerFontSize());
 
   // Animation phases
   protected lockerDone = signal(false);
@@ -1787,7 +2072,12 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected readonly notes = signal<Note[]>([]);
   protected readonly bookmarkLists = signal<BookmarkList[]>([]);
   protected readonly stickers = signal<Sticker[]>([]);
-  protected stickerPickerOpen = false;
+  protected stickerDialogOpen = false;
+  protected stickerEditId: string | null = null;
+  protected stickerDialogTab: 'emoji' | 'url' = 'emoji';
+  protected stickerDialogEmoji = '';
+  protected stickerDialogIconUrl = '';
+  protected stickerDialogLabel = '';
   protected taskDrafts: Record<string, string> = {};
   protected errorMessage = '';
   protected editDrafts: Record<string, string> = {};
@@ -1807,11 +2097,14 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected dueDatePopoverListId: string | null = null;
   protected fontPickerOpen = false;
 
+  protected noteMenuOpen = false;
+
   protected readonly atListLimit = computed(() => this.taskLists().length >= 20);
   protected readonly atTimerLimit = computed(() => this.timers().length >= 10);
   protected readonly atNoteLimit = computed(() => this.notes().length >= 20);
   protected readonly atBookmarkListLimit = computed(() => this.bookmarkLists().length >= 10);
-  protected readonly atStickerLimit = computed(() => this.stickers().length >= 30);
+  protected readonly atStickerLimit = computed(() => this.stickers().length >= 50);
+  protected readonly hasQuoteNote = computed(() => this.notes().some(n => n.noteType === 'QUOTE'));
 
   protected readonly studySession = signal<{ timerId: string; listId: string } | null>(null);
   protected readonly studySessionTimer = computed(() =>
@@ -1824,7 +2117,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.timers().filter(t => t.linkedTaskListId && this.taskLists().some(l => l.id === t.linkedTaskListId))
   );
 
-  private readonly cardOrder = signal<Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST'; id: string }>>([]);
+  private readonly cardOrder = signal<Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'STICKER'; id: string }>>([]);
 
   // ── Pinnable layout state ──
   /** Per-card placement: col (1-based), colSpan, order, minimized. */
@@ -1856,17 +2149,20 @@ export class LockerComponent implements AfterViewInit, OnInit {
     const timers = this.timers();
     const notes = this.notes();
     const bookmarkLists = this.bookmarkLists();
+    const stickers = this.stickers();
     const order = this.cardOrder();
     const listMap = new Map(lists.map(l => [l.id, l]));
     const timerMap = new Map(timers.map(t => [t.id, t]));
     const noteMap = new Map(notes.map(n => [n.id, n]));
     const bookmarkMap = new Map(bookmarkLists.map(b => [b.id, b]));
+    const stickerMap = new Map(stickers.map(s => [s.id, s]));
     if (order.length === 0) {
       return [
         ...lists.map(l => ({ type: 'TASK_LIST' as const, data: l })),
         ...timers.map(t => ({ type: 'TIMER' as const, data: t })),
         ...notes.map(n => ({ type: 'NOTE' as const, data: n })),
         ...bookmarkLists.map(b => ({ type: 'BOOKMARK_LIST' as const, data: b })),
+        ...stickers.map(s => ({ type: 'STICKER' as const, data: s })),
       ];
     }
     const result: LockerCard[] = [];
@@ -1883,6 +2179,9 @@ export class LockerComponent implements AfterViewInit, OnInit {
       } else if (type === 'BOOKMARK_LIST') {
         const bl = bookmarkMap.get(id);
         if (bl) result.push({ type: 'BOOKMARK_LIST', data: bl });
+      } else if (type === 'STICKER') {
+        const sticker = stickerMap.get(id);
+        if (sticker) result.push({ type: 'STICKER', data: sticker });
       }
     });
     // Append newly created cards not yet in saved order
@@ -1890,6 +2189,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
     timers.forEach(t => { if (!order.find(o => o.type === 'TIMER' && o.id === t.id)) result.push({ type: 'TIMER', data: t }); });
     notes.forEach(n => { if (!order.find(o => o.type === 'NOTE' && o.id === n.id)) result.push({ type: 'NOTE', data: n }); });
     bookmarkLists.forEach(b => { if (!order.find(o => o.type === 'BOOKMARK_LIST' && o.id === b.id)) result.push({ type: 'BOOKMARK_LIST', data: b }); });
+    stickers.forEach(s => { if (!order.find(o => o.type === 'STICKER' && o.id === s.id)) result.push({ type: 'STICKER', data: s }); });
     return result;
   });
 
@@ -1976,6 +2276,16 @@ export class LockerComponent implements AfterViewInit, OnInit {
     return LOCKER_FONTS.find(f => f.id === saved) ?? LOCKER_FONTS[0];
   }
 
+  protected setLockerFontSize(size: LockerFontSize): void {
+    this.lockerFontSize.set(size);
+    localStorage.setItem(LOCKER_FONT_SIZE_KEY, size.id);
+  }
+
+  private loadLockerFontSize(): LockerFontSize {
+    const saved = localStorage.getItem(LOCKER_FONT_SIZE_KEY);
+    return LOCKER_FONT_SIZES.find(s => s.id === saved) ?? LOCKER_FONT_SIZES.find(s => s.id === 'medium')!;
+  }
+
   private loadGoogleFont(font: LockerFont): void {
     const name = font.name.replace(/ /g, '+');
     const id = `gfont-${font.id}`;
@@ -2035,6 +2345,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.fontPickerOpen = false;
     this.dueDatePopoverTaskId = null;
     this.dueDatePopoverListId = null;
+    this.noteMenuOpen = false;
   }
 
   protected createList(): void {
@@ -2561,6 +2872,9 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected asBookmarkList(card: LockerCard): BookmarkList | null {
     return card.type === 'BOOKMARK_LIST' ? (card.data as BookmarkList) : null;
   }
+  protected asSticker(card: LockerCard): Sticker | null {
+    return card.type === 'STICKER' ? (card.data as Sticker) : null;
+  }
 
   // --- Timer launch from task list ---
   protected hasLinkedTimer(list: TaskList): boolean {
@@ -2591,7 +2905,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   private insertTimerAfterList(timerId: string, listId: string): void {
     const current = this.orderedCards()
-      .map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }))
+      .map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'STICKER', id: c.data.id }))
       .filter(o => !(o.type === 'TIMER' && o.id === timerId));
     const listIdx = current.findIndex(o => o.type === 'TASK_LIST' && o.id === listId);
     if (listIdx !== -1) {
@@ -2602,13 +2916,22 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.cardOrder.set(current);
   }
 
-  private scrollToTimer(timerId: string): void {
-    const el = document.getElementById('timer-' + timerId);
+  private scrollToElement(elementId: string, flashClass: string): void {
+    const el = document.getElementById(elementId);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      el.classList.add('timer-flash');
-      setTimeout(() => el.classList.remove('timer-flash'), 900);
+      el.classList.add(flashClass);
+      setTimeout(() => el.classList.remove(flashClass), 900);
     }
+  }
+
+  private scrollToTimer(timerId: string): void {
+    this.scrollToElement('timer-' + timerId, 'timer-flash');
+  }
+
+  protected scrollToLinkedList(timer: Timer): void {
+    if (!timer.linkedTaskListId) return;
+    this.scrollToElement('task-list-' + timer.linkedTaskListId, 'list-flash');
   }
 
   // --- Timer CRUD ---
@@ -2655,12 +2978,20 @@ export class LockerComponent implements AfterViewInit, OnInit {
   }
 
   // --- Note CRUD ---
-  protected createNote(): void {
+  protected toggleNoteMenu(): void {
     if (this.atNoteLimit()) return;
+    this.noteMenuOpen = !this.noteMenuOpen;
+  }
+
+  protected createNote(noteType: NoteType = 'REGULAR'): void {
+    this.noteMenuOpen = false;
+    if (this.atNoteLimit()) return;
+    if (noteType === 'QUOTE' && this.hasQuoteNote()) return;
     const existingTitles = this.notes().map(n => n.title);
-    const title = nextAutoName(existingTitles, 'Note');
+    const baseName = noteType === 'QUOTE' ? 'Quote of the Day' : 'Note';
+    const title = nextAutoName(existingTitles, baseName);
     const color = this.nextAvailableColor();
-    this.noteApi.createNote({ title, color }).subscribe({
+    this.noteApi.createNote({ title, color, noteType }).subscribe({
       next: note => {
         this.notes.update(current => [...current, note]);
         this.errorMessage = '';
@@ -2741,42 +3072,75 @@ export class LockerComponent implements AfterViewInit, OnInit {
   }
 
   // --- Sticker CRUD ---
-  protected toggleStickerPicker(): void {
-    this.stickerPickerOpen = !this.stickerPickerOpen;
-  }
-
-  protected onEmojiSelected(emoji: string): void {
-    this.stickerPickerOpen = false;
+  protected openStickerDialog(): void {
     if (this.atStickerLimit()) return;
-    // Place near center of visible locker area
-    const x = 120 + Math.round(Math.random() * 200);
-    const y = 80 + Math.round(Math.random() * 120);
-    this.stickerApi.createSticker({ emoji, positionX: x, positionY: y, size: 'medium' }).subscribe({
-      next: sticker => this.stickers.update(current => [...current, sticker]),
-      error: () => { this.errorMessage = 'Unable to add sticker. Please try again.'; },
-    });
+    this.stickerEditId = null;
+    this.stickerDialogTab = 'emoji';
+    this.stickerDialogEmoji = '';
+    this.stickerDialogIconUrl = '';
+    this.stickerDialogLabel = '';
+    this.stickerDialogOpen = true;
+    this.fontPickerOpen = false;
+    this.colorPickerListId = null;
   }
 
-  protected onStickerPositionChanged(id: string, x: number, y: number): void {
-    // Optimistic update
-    this.stickers.update(current => current.map(s => s.id === id ? { ...s, positionX: x, positionY: y } : s));
-    const sticker = this.stickers().find(s => s.id === id);
-    if (!sticker) return;
-    this.stickerApi.updateSticker(id, { positionX: x, positionY: y, size: sticker.size }).subscribe();
+  protected openEditStickerDialog(sticker: Sticker): void {
+    this.stickerEditId = sticker.id;
+    this.stickerDialogTab = sticker.emoji ? 'emoji' : 'url';
+    this.stickerDialogEmoji = sticker.emoji ?? '';
+    this.stickerDialogIconUrl = sticker.iconUrl ?? '';
+    this.stickerDialogLabel = sticker.label ?? '';
+    this.stickerDialogOpen = true;
+    this.fontPickerOpen = false;
+    this.colorPickerListId = null;
   }
 
-  protected onStickerSizeChanged(id: string, size: string): void {
-    this.stickers.update(current => current.map(s => s.id === id ? { ...s, size: size as any } : s));
-    const sticker = this.stickers().find(s => s.id === id);
-    if (!sticker) return;
-    this.stickerApi.updateSticker(id, { positionX: sticker.positionX, positionY: sticker.positionY, size: sticker.size }).subscribe();
+  protected closeStickerDialog(): void {
+    this.stickerDialogOpen = false;
+    this.stickerEditId = null;
+  }
+
+  protected onStickerDialogEmojiSelected(emoji: string): void {
+    this.stickerDialogEmoji = emoji;
+  }
+
+  protected canSubmitStickerDialog(): boolean {
+    if (this.stickerDialogTab === 'emoji') return !!this.stickerDialogEmoji;
+    return !!this.stickerDialogIconUrl.trim();
+  }
+
+  protected submitStickerDialog(): void {
+    if (!this.canSubmitStickerDialog()) return;
+    const emoji = this.stickerDialogTab === 'emoji' ? this.stickerDialogEmoji : null;
+    const iconUrl = this.stickerDialogTab === 'url' ? this.stickerDialogIconUrl.trim() : null;
+    const label = this.stickerDialogLabel.trim() || null;
+
+    if (this.stickerEditId) {
+      this.stickerApi.updateSticker(this.stickerEditId, { emoji, iconUrl, label }).subscribe({
+        next: updated => {
+          this.stickers.update(current => current.map(s => s.id === updated.id ? updated : s));
+          this.closeStickerDialog();
+        },
+        error: () => { this.errorMessage = 'Unable to update sticker. Please try again.'; },
+      });
+    } else {
+      this.stickerApi.createSticker({ emoji, iconUrl, label }).subscribe({
+        next: sticker => {
+          this.stickers.update(current => [...current, sticker]);
+          this.errorMessage = '';
+          this.saveLockerLayout();
+          this.closeStickerDialog();
+        },
+        error: () => { this.errorMessage = 'Unable to add sticker. Please try again.'; },
+      });
+    }
   }
 
   protected onStickerDeleted(id: string): void {
     this.stickers.update(current => current.filter(s => s.id !== id));
-    this.stickerApi.deleteSticker(id).subscribe({
-      error: () => this.stickers.update(current => current), // no recovery needed, already removed optimistically
-    });
+    this.cardOrder.update(order => order.filter(o => !(o.type === 'STICKER' && o.id === id)));
+    this.stickerApi.deleteSticker(id).subscribe();
+    this.saveLockerLayout();
   }
 
   private nextAvailableColor(): string {
@@ -2786,6 +3150,6 @@ export class LockerComponent implements AfterViewInit, OnInit {
       ...this.notes().map(n => n.color),
       ...this.bookmarkLists().map(l => l.color),
     ]);
-    return this.colorPalette.find(color => !used.has(color)) ?? this.colorPalette[0];
+    return this.colorPalette.find((color: string) => !used.has(color)) ?? this.colorPalette[0];
   }
 }

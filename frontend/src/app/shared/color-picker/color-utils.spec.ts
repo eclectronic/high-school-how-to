@@ -1,7 +1,6 @@
 import {
   autoContrastColor, relativeLuminance, contrastRatio, isHexColor, isGradient,
-  firstHexFromGradient, addToColorHistory, loadCustomPalette, saveCustomPalette,
-  DEFAULT_PALETTE
+  firstHexFromGradient, addToColorHistory,
 } from './color-utils';
 
 describe('color-utils', () => {
@@ -98,24 +97,4 @@ describe('color-utils', () => {
     });
   });
 
-  describe('loadCustomPalette / saveCustomPalette', () => {
-    beforeEach(() => {
-      localStorage.removeItem('hsht_customPalette');
-    });
-
-    it('returns defaults when nothing stored', () => {
-      expect(loadCustomPalette()).toEqual(DEFAULT_PALETTE);
-    });
-
-    it('returns stored palette after save', () => {
-      const custom = [...DEFAULT_PALETTE];
-      custom[0] = '#123456';
-      saveCustomPalette(custom);
-      expect(loadCustomPalette()[0]).toBe('#123456');
-    });
-
-    afterEach(() => {
-      localStorage.removeItem('hsht_customPalette');
-    });
-  });
 });
