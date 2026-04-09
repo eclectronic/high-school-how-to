@@ -22,6 +22,7 @@ public record ContentCardResponse(
         boolean simpleLayout,
         CardStatus status,
         List<TagResponse> tags,
+        List<ContentCardTaskResponse> templateTasks,
         Instant createdAt,
         Instant updatedAt) {
 
@@ -44,6 +45,7 @@ public record ContentCardResponse(
                 card.getTags().stream()
                         .sorted(Comparator.comparing(Tag::getName))
                         .map(TagResponse::from).toList(),
+                card.getTemplateTasks().stream().map(ContentCardTaskResponse::from).toList(),
                 card.getCreatedAt(),
                 card.getUpdatedAt());
     }

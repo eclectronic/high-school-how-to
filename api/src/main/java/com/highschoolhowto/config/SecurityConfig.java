@@ -59,6 +59,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(publicEndpoints.toArray(new String[0])).permitAll()
                         .requestMatchers("/api/tags", "/api/tags/**").permitAll()
+                        .requestMatchers("/api/content/cards/*/add-to-locker").authenticated()
+                        .requestMatchers("/api/content/cards/*/locker-status").authenticated()
                         .requestMatchers("/api/content/cards", "/api/content/cards/**").permitAll()
                         .requestMatchers("/api/pages/home/layout").permitAll()
                         .requestMatchers("/api/quotes/today").permitAll()
