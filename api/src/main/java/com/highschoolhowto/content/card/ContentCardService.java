@@ -12,7 +12,11 @@ import com.highschoolhowto.user.User;
 import com.highschoolhowto.user.UserRepository;
 import com.highschoolhowto.web.ApiException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ContentCardService {
 
+    static final int MAX_LINKS_PER_CARD = 10;
     static final int MAX_TEMPLATE_TASKS = 50;
 
     private final ContentCardRepository cardRepository;
@@ -43,6 +48,13 @@ public class ContentCardService {
         this.taskListRepository = taskListRepository;
         this.taskItemRepository = taskItemRepository;
         this.userRepository = userRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ContentCardSummary> searchCards(String query, Long excludeId) {
+        return cardRepository.searchByTitle(query, excludeId).stream()
+                .map(ContentCardSummary::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -198,7 +210,67 @@ public class ContentCardService {
             card.setThumbnailUrl(deriveYoutubeThumbnail(card.getMediaUrl()));
         }
 
+        applyLinks(card, request.links());
         validateAndApplyTemplateTasks(card, request);
+    }
+
+    private void applyLinks(ContentCard card, List<ContentCardLinkRequest> linkRequests) {
+        List<ContentCardLinkRequest> requests =
+                (linkRequests == null) ? List.of() : linkRequests;
+
+        if (requests.size() > MAX_LINKS_PER_CARD) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "Too many links",
+                    "A card may have at most " + MAX_LINKS_PER_CARD + " links");
+        }
+
+        // Self-link check (card.id may be null for new cards — checked after save)
+        if (card.getId() != null) {
+            boolean hasSelfLink =
+                    requests.stream().anyMatch(r -> card.getId().equals(r.targetCardId()));
+            if (hasSelfLink) {
+                throw new ApiException(
+                        HttpStatus.BAD_REQUEST, "Self-link not allowed", "A card cannot link to itself");
+            }
+        }
+
+        // Duplicate target check
+        Set<Long> seen = new HashSet<>();
+        for (ContentCardLinkRequest req : requests) {
+            if (!seen.add(req.targetCardId())) {
+                throw new ApiException(
+                        HttpStatus.BAD_REQUEST,
+                        "Duplicate link",
+                        "Target card " + req.targetCardId() + " appears more than once");
+            }
+        }
+
+        // Resolve target cards
+        List<Long> targetIds = requests.stream().map(ContentCardLinkRequest::targetCardId).toList();
+        List<ContentCard> targets = cardRepository.findAllById(targetIds);
+        if (targets.size() != targetIds.size()) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST, "Invalid link target", "One or more target card IDs not found");
+        }
+
+        Map<Long, ContentCard> targetMap = new HashMap<>();
+        for (ContentCard t : targets) {
+            targetMap.put(t.getId(), t);
+        }
+
+        // Replace all links (orphanRemoval handles deletion)
+        card.getLinks().clear();
+        List<ContentCardLink> newLinks = new ArrayList<>();
+        for (ContentCardLinkRequest req : requests) {
+            ContentCardLink link = new ContentCardLink();
+            link.setSourceCard(card);
+            link.setTargetCard(targetMap.get(req.targetCardId()));
+            link.setLinkText(req.linkText());
+            link.setSortOrder(req.sortOrder());
+            newLinks.add(link);
+        }
+        card.getLinks().addAll(newLinks);
     }
 
     private void validateAndApplyTemplateTasks(ContentCard card, SaveCardRequest request) {

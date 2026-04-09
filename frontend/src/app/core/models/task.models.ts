@@ -15,9 +15,12 @@ export interface TaskList {
 }
 
 export interface LockerLayoutItem {
-  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST'
+  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT'
   cardId: string;
-  sortOrder: number;
+  col: number;
+  colSpan: number;
+  order: number;
+  minimized: boolean;
 }
 
 export interface Timer {
@@ -49,6 +52,15 @@ export interface Quote {
   id: number;
   quoteText: string;
   attribution?: string | null;
+}
+
+export interface Shortcut {
+  id: string;
+  url: string;
+  name: string;
+  faviconUrl?: string | null;
+  emoji?: string | null;
+  iconUrl?: string | null;
 }
 
 export interface Bookmark {
