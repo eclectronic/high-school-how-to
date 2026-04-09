@@ -69,10 +69,11 @@ class UserIconUploadIntegSpec extends BaseIntegrationSpec {
         def token = tokenFor(user)
         def expectedUrl = "/media/icons/${user.id}/test-uuid.png"
 
-        when(s3StorageService.keyPrefix(anyString())).thenReturn("media/icons/${user.id}/")
+        when(s3StorageService.keyPrefix(anyString())).thenReturn("media/icons/${user.id}/".toString())
         when(s3StorageService.countObjects(anyString())).thenReturn(0)
+        when(s3StorageService.generateFilename(anyString())).thenReturn("test-uuid.png")
         when(s3StorageService.upload(any(byte[].class), anyString(), anyString(), anyString()))
-                .thenReturn(expectedUrl)
+                .thenReturn(expectedUrl.toString())
 
         def file = new MockMultipartFile("file", "icon.png", "image/png", TINY_PNG)
 
