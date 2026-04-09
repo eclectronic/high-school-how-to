@@ -149,7 +149,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
       background: transparent;
       color: inherit;
       font: inherit;
-      font-size: 0.9rem;
+      font-size: var(--locker-body-font-size, 0.9rem);
       line-height: 1.55;
       width: 100%;
       box-sizing: border-box;
