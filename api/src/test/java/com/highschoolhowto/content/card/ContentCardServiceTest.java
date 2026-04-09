@@ -233,7 +233,7 @@ class ContentCardServiceTest {
         SaveCardRequest request = new SaveCardRequest(
                 "Checklist", "checklist", null, CardType.TODO_LIST,
                 null, null, null, null, null, null, null, null,
-                false, CardStatus.DRAFT, List.of(1L), null);
+                false, CardStatus.DRAFT, List.of(1L), null, null);
 
         when(cardRepository.existsBySlug("checklist")).thenReturn(false);
         when(tagRepository.findAllById(List.of(1L))).thenReturn(List.of());
@@ -255,7 +255,7 @@ class ContentCardServiceTest {
         SaveCardRequest request = new SaveCardRequest(
                 "Checklist", "checklist", null, CardType.TODO_LIST,
                 null, null, null, null, null, null, null, null,
-                false, CardStatus.DRAFT, List.of(1L), tasks);
+                false, CardStatus.DRAFT, List.of(1L), null, tasks);
 
         when(cardRepository.existsBySlug("checklist")).thenReturn(false);
         when(tagRepository.findAllById(List.of(1L))).thenReturn(List.of());

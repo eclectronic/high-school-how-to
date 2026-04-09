@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import {
   ContentCard,
   ContentCardAdmin,
+  ContentCardSummary,
   HomeLayoutResponse,
   ImageUploadResponse,
   LockerStatusResponse,
@@ -88,6 +89,15 @@ export class ContentApiService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<ImageUploadResponse>('/api/admin/images/upload', formData);
+  }
+
+  // Admin — content search (for link picker typeahead)
+  searchCards(query: string, exclude?: number) {
+    const params: Record<string, string | number> = { q: query };
+    if (exclude !== undefined) {
+      params['exclude'] = exclude;
+    }
+    return this.http.get<ContentCardSummary[]>('/api/admin/content/search', { params });
   }
 
 }
