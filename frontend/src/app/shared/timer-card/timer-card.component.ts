@@ -271,14 +271,14 @@ export const TIMER_PRESETS: TimerPreset[] = [
     }
 
     .timer-display__phase {
-      font-size: 0.65rem;
+      font-size: var(--locker-body-font-size, 0.65rem);
       opacity: 0.7;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
     .timer-display__session {
-      font-size: 0.6rem;
+      font-size: var(--locker-body-font-size, 0.6rem);
       opacity: 0.6;
     }
 
