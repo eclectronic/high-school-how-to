@@ -69,10 +69,9 @@ export interface BookmarkList {
 
 export interface Sticker {
   id: string;
-  type: string; // 'EMOJI' | 'IMAGE'
   emoji: string | null;
-  imageUrl: string | null;
-  positionX: number;
-  positionY: number;
-  size: string; // 'small' | 'medium' | 'large'
+  iconUrl: string | null;
+  label: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
