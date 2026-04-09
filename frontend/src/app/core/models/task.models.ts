@@ -11,6 +11,7 @@ export interface TaskList {
   color: string;
   textColor?: string | null;
   tasks: TaskItem[];
+  sourceContentCardId?: number | null;
 }
 
 export interface LockerLayoutItem {

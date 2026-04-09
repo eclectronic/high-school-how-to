@@ -14,4 +14,7 @@ public interface TaskListRepository extends JpaRepository<TaskList, UUID> {
     Optional<TaskList> findByIdAndUserId(UUID id, UUID userId);
 
     long countByUserId(UUID userId);
+
+    Optional<TaskList> findFirstByUserIdAndSourceContentCardIdOrderByCreatedAtAsc(
+            UUID userId, Long sourceContentCardId);
 }

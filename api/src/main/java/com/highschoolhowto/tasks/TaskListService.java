@@ -37,7 +37,7 @@ public class TaskListService {
                 .toList();
     }
 
-    static final int MAX_LISTS_PER_USER = 20;
+    public static final int MAX_LISTS_PER_USER = 20;
     static final int MAX_TASKS_PER_LIST = 50;
 
     @Transactional
