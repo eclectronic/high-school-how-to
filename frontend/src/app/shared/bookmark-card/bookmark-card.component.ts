@@ -30,12 +30,14 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
       <!-- Body (hidden when minimized) -->
       <ng-container *ngIf="!minimized">
 
-      <!-- Body actions -->
-      <div class="bookmark-card__body-actions">
-        <button type="button" class="icon-btn" (click)="toggleColorPicker()" title="Card color" aria-label="Change card color">
-          <span aria-hidden="true">🎨</span>
-        </button>
-      </div>
+        <div class="bookmark-card__actions">
+          <button type="button" class="icon-btn" (click)="toggleColorPicker()" title="Card color" aria-label="Change card color">
+            <span aria-hidden="true">🌈</span>
+          </button>
+          <button type="button" class="icon-btn danger" (click)="requestDeleteList()" title="Delete bookmark list" aria-label="Delete bookmark list">
+            <span aria-hidden="true">🗑</span>
+          </button>
+        </div>
 
       <!-- Color picker -->
       <div class="color-picker-panel" *ngIf="colorPickerOpen" (click)="$event.stopPropagation()">

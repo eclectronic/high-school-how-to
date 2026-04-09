@@ -53,7 +53,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
                 (click)="scrollToLinkedListRequested.emit(); $event.stopPropagation()">📋</button>
         <button type="button" class="icon-btn" *ngIf="linkedList()" title="Enter Study Session"
                 (click)="studySessionRequested.emit(); $event.stopPropagation()">📚</button>
-        <button type="button" class="icon-btn" title="Color" (click)="toggleColorPicker($event)">🎨</button>
+        <button type="button" class="icon-btn" title="Color" (click)="toggleColorPicker($event)">🌈</button>
         <button type="button" class="icon-btn" title="Settings" (click)="toggleSettings($event)">⚙️</button>
       </div>
 
