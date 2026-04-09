@@ -10,6 +10,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
@@ -59,6 +60,30 @@ public class S3StorageService {
      */
     public String generateFilename(String extension) {
         return UUID.randomUUID() + "." + extension;
+    }
+
+    public String keyPrefix(String subfolder) {
+        return properties.getUploadPrefix() + subfolder;
+    }
+
+    /**
+     * Counts the number of objects under a given S3 prefix (i.e. folder).
+     *
+     * @param prefix the S3 key prefix to list (e.g. "media/icons/user-id/")
+     * @return count of objects under that prefix
+     */
+    public int countObjects(String prefix) {
+        try {
+            ListObjectsV2Request request = ListObjectsV2Request.builder()
+                    .bucket(properties.getBucket())
+                    .prefix(prefix)
+                    .maxKeys(101)
+                    .build();
+            return s3Client.listObjectsV2(request).keyCount();
+        } catch (Exception ex) {
+            log.error("Failed to list S3 objects under prefix {}: {}", prefix, ex.getMessage(), ex);
+            throw new StorageException("Failed to count objects in S3", ex);
+        }
     }
 
     /**
