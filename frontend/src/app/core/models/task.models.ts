@@ -86,3 +86,11 @@ export interface BookmarkList {
   bookmarks: Bookmark[];
 }
 
+export interface Sticker {
+  id: string;
+  emoji: string | null;
+  iconUrl: string | null;
+  label: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

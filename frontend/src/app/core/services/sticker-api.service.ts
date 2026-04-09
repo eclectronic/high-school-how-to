@@ -4,16 +4,15 @@ import { Observable } from 'rxjs';
 import { Sticker } from '../models/task.models';
 
 export interface CreateStickerRequest {
-  emoji: string;
-  positionX: number;
-  positionY: number;
-  size?: string;
+  emoji?: string | null;
+  iconUrl?: string | null;
+  label?: string | null;
 }
 
 export interface UpdateStickerRequest {
-  positionX: number;
-  positionY: number;
-  size?: string;
+  emoji?: string | null;
+  iconUrl?: string | null;
+  label?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
