@@ -32,7 +32,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
         <!-- Body actions -->
         <div class="note-card__body-actions">
           <!-- Font size toggle (regular notes only) -->
-          <button *ngIf="!isQuote()" type="button" class="icon-btn" (click)="cycleFontSize()" [title]="'Font size: ' + (note.fontSize || 'medium')"
+          <button *ngIf="!isQuote()" type="button" class="icon-btn" (click)="cycleFontSize()" [title]="'Font size: ' + (note.fontSize || 'medium')" aria-label="Font size">
             <span aria-hidden="true">{{ fontSizeIcon() }}</span>
           </button>
           <!-- Color picker -->
