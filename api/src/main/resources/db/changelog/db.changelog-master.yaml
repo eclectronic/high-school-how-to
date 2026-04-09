@@ -42,4 +42,6 @@ databaseChangeLog:
   - include:
       file: db/changelog/v4-stickers-0039.sql
   - include:
+      file: db/changelog/v4-pinnable-layout-0040.sql
+  - include:
       file: db/changelog/v4-quotes-0041.sql

@@ -25,8 +25,17 @@ public class LockerLayoutItem {
     @Column(name = "card_id", nullable = false)
     private UUID cardId;
 
-    @Column(name = "sort_order", nullable = false)
-    private int sortOrder;
+    @Column(name = "grid_col", nullable = false)
+    private int gridCol;
+
+    @Column(name = "col_span", nullable = false)
+    private int colSpan;
+
+    @Column(name = "item_order", nullable = false)
+    private int itemOrder;
+
+    @Column(name = "minimized", nullable = false)
+    private boolean minimized;
 
     public UUID getId() {
         return id;
@@ -56,11 +65,35 @@ public class LockerLayoutItem {
         this.cardId = cardId;
     }
 
-    public int getSortOrder() {
-        return sortOrder;
+    public int getGridCol() {
+        return gridCol;
     }
 
-    public void setSortOrder(int sortOrder) {
-        this.sortOrder = sortOrder;
+    public void setGridCol(int gridCol) {
+        this.gridCol = gridCol;
+    }
+
+    public int getColSpan() {
+        return colSpan;
+    }
+
+    public void setColSpan(int colSpan) {
+        this.colSpan = colSpan;
+    }
+
+    public int getItemOrder() {
+        return itemOrder;
+    }
+
+    public void setItemOrder(int itemOrder) {
+        this.itemOrder = itemOrder;
+    }
+
+    public boolean isMinimized() {
+        return minimized;
+    }
+
+    public void setMinimized(boolean minimized) {
+        this.minimized = minimized;
     }
 }
