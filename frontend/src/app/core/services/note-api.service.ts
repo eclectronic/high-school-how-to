@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Note } from '../models/task.models';
+import { Note, NoteType } from '../models/task.models';
 
 export interface CreateNoteRequest {
   title: string;
@@ -9,6 +9,7 @@ export interface CreateNoteRequest {
   color?: string;
   textColor?: string | null;
   fontSize?: string | null;
+  noteType?: NoteType;
 }
 
 export interface UpdateNoteRequest {

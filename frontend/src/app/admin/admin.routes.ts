@@ -26,6 +26,13 @@ export const adminRoutes: Routes = [
         loadComponent: () =>
           import('./tags/tag-manager.component').then((m) => m.TagManagerComponent),
       },
+      {
+        path: 'quotes',
+        loadComponent: () =>
+          import('./quote-library/quote-library.component').then(
+            (m) => m.QuoteLibraryComponent,
+          ),
+      },
     ],
   },
 ];
