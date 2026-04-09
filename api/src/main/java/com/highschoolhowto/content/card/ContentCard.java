@@ -1,6 +1,7 @@
 package com.highschoolhowto.content.card;
 
 import com.highschoolhowto.content.tag.Tag;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,6 +12,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -86,6 +89,10 @@ public class ContentCard {
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private List<Tag> tags = new ArrayList<>();
 
+    @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<ContentCardTask> templateTasks = new ArrayList<>();
+
     @PrePersist
     void onCreate() {
         Instant now = Instant.now();
@@ -147,4 +154,7 @@ public class ContentCard {
 
     public List<Tag> getTags() { return tags; }
     public void setTags(List<Tag> tags) { this.tags = tags; }
+
+    public List<ContentCardTask> getTemplateTasks() { return templateTasks; }
+    public void setTemplateTasks(List<ContentCardTask> templateTasks) { this.templateTasks = templateTasks; }
 }

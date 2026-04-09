@@ -99,6 +99,45 @@
             }
           </article>
         }
+
+        <!-- TODO_LIST ──────────────────────────────── -->
+        @if (card.cardType === 'TODO_LIST') {
+          <article class="viewer-article">
+            <header class="viewer-header">
+              <h1>{{ card.title }}</h1>
+              @if (card.description) {
+                <p class="viewer-desc">{{ card.description }}</p>
+              }
+            </header>
+            <hr class="viewer-divider" />
+            <ul class="todo-list-preview">
+              @for (task of card.templateTasks; track task.id) {
+                <li class="todo-list-preview__item">
+                  <span class="todo-list-preview__checkbox" aria-hidden="true">☐</span>
+                  {{ task.description }}
+                </li>
+              }
+            </ul>
+            <div class="todo-list-actions">
+              @if (lockerStatus()?.added) {
+                <a class="btn btn--primary" routerLink="/account/locker">
+                  View in My Locker
+                </a>
+              } @else {
+                <button
+                  class="btn btn--primary"
+                  [disabled]="lockerActionPending()"
+                  (click)="handleAddToLocker()">
+                  @if (lockerActionPending()) {
+                    Adding...
+                  } @else {
+                    ➕ Add to My Locker
+                  }
+                </button>
+              }
+            </div>
+          </article>
+        }
       </div>
 
       <div class="viewer-arrow-col">
