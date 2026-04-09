@@ -1,5 +1,6 @@
 package com.highschoolhowto.note.dto;
 
+import com.highschoolhowto.note.NoteType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -8,5 +9,6 @@ public record CreateNoteRequest(
         String content,
         String color,
         String textColor,
-        @Size(max = 32) String fontSize
+        @Size(max = 32) String fontSize,
+        NoteType noteType
 ) {}

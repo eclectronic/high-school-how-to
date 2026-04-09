@@ -33,6 +33,8 @@ export interface Timer {
   linkedTaskListId?: string | null;
 }
 
+export type NoteType = 'REGULAR' | 'QUOTE';
+
 export interface Note {
   id: string;
   title: string;
@@ -40,6 +42,13 @@ export interface Note {
   color: string;
   textColor?: string | null;
   fontSize?: string | null; // 'small' | 'medium' | 'large'
+  noteType?: NoteType;
+}
+
+export interface Quote {
+  id: number;
+  quoteText: string;
+  attribution?: string | null;
 }
 
 export interface Bookmark {

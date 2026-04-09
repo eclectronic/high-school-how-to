@@ -1,8 +1,9 @@
-import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Note } from '../../core/models/task.models';
+import { Note, Quote } from '../../core/models/task.models';
 import { NoteApiService, UpdateNoteRequest } from '../../core/services/note-api.service';
+import { QuoteApiService } from '../../core/services/quote-api.service';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-picker/color-utils';
@@ -31,18 +32,19 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
                autofocus />
         <ng-template #titleDisplay>
           <span class="note-card__title" (click)="startTitleEdit()" title="Click to edit title">
+            <span *ngIf="isQuote()" class="note-card__quote-icon" aria-label="Quote of the Day">💬</span>
             {{ note.title }}
           </span>
         </ng-template>
 
         <div class="note-card__actions">
-          <!-- Font size toggle -->
-          <button type="button" class="icon-btn" (click)="cycleFontSize()" [title]="'Font size: ' + (note.fontSize || 'medium')">
+          <!-- Font size toggle (regular notes only) -->
+          <button *ngIf="!isQuote()" type="button" class="icon-btn" (click)="cycleFontSize()" [title]="'Font size: ' + (note.fontSize || 'medium')">
             <span aria-hidden="true">{{ fontSizeIcon() }}</span>
           </button>
           <!-- Color picker -->
           <button type="button" class="icon-btn" (click)="toggleColorPicker()" title="Note color" aria-label="Change note color">
-            <span aria-hidden="true">🎨</span>
+            <span aria-hidden="true">🌈</span>
           </button>
           <!-- Delete -->
           <button type="button" class="icon-btn danger" (click)="requestDelete()" title="Delete note" aria-label="Delete note">
@@ -62,8 +64,21 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
         <button type="button" class="done-btn" (click)="saveColor()">Done</button>
       </div>
 
-      <!-- Note content textarea -->
-      <textarea
+      <!-- Quote content (read-only) -->
+      <ng-container *ngIf="isQuote()">
+        <div *ngIf="quoteLoading" class="note-content note-content--quote-loading">Loading quote…</div>
+        <div *ngIf="!quoteLoading && quoteError" class="note-content note-content--quote-error">{{ quoteError }}</div>
+        <blockquote *ngIf="!quoteLoading && todayQuote" class="note-content note-content--quote"
+                    [class.note-content--small]="note.fontSize === 'small'"
+                    [class.note-content--large]="note.fontSize === 'large'"
+                    [style.color]="textColor()">
+          <p class="quote-text">"{{ todayQuote.quoteText }}"</p>
+          <footer *ngIf="todayQuote.attribution" class="quote-attribution">— {{ todayQuote.attribution }}</footer>
+        </blockquote>
+      </ng-container>
+
+      <!-- Note content textarea (regular notes) -->
+      <textarea *ngIf="!isQuote()"
         class="note-content"
         [class.note-content--small]="note.fontSize === 'small'"
         [class.note-content--large]="note.fontSize === 'large'"
@@ -202,7 +217,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
       background: transparent;
       color: inherit;
       font: inherit;
-      font-size: 0.9rem;
+      font-size: var(--locker-body-font-size, 0.9rem);
       line-height: 1.55;
       width: 100%;
       box-sizing: border-box;
@@ -212,9 +227,50 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
     .note-content::placeholder { color: rgba(0,0,0,0.35); }
     .note-content--small { font-size: 0.75rem; }
     .note-content--large { font-size: 1.05rem; }
+
+    .note-content--quote {
+      resize: none;
+      padding: 0.4rem 0.1rem;
+      margin: 0;
+    }
+    .note-content--quote-loading,
+    .note-content--quote-error {
+      font-size: 0.85rem;
+      font-style: italic;
+      opacity: 0.7;
+      padding: 0.25rem 0.1rem;
+    }
+
+    .note-card__quote-icon {
+      margin-right: 0.25rem;
+      font-style: normal;
+    }
+
+    blockquote.note-content--quote {
+      border: none;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+    }
+    .quote-text {
+      font-size: 0.9rem;
+      line-height: 1.55;
+      font-style: italic;
+      margin: 0 0 0.4rem;
+    }
+    .note-content--small .quote-text { font-size: 0.75rem; }
+    .note-content--large .quote-text { font-size: 1.05rem; }
+    .quote-attribution {
+      font-size: 0.8rem;
+      font-style: normal;
+      font-weight: 600;
+      opacity: 0.75;
+      text-align: right;
+      margin: 0;
+    }
   `]
 })
-export class NoteCardComponent implements OnChanges {
+export class NoteCardComponent implements OnChanges, OnInit {
   @Input({ required: true }) note!: Note;
   @Output() noteUpdated = new EventEmitter<Note>();
   @Output() noteDeleted = new EventEmitter<string>();
@@ -224,15 +280,46 @@ export class NoteCardComponent implements OnChanges {
   protected contentDraft = '';
   protected colorPickerOpen = false;
   protected confirmingDelete = false;
+  protected todayQuote: Quote | null = null;
+  protected quoteLoading = false;
+  protected quoteError: string | null = null;
   private colorDraft = '';
   private textColorDraft: string | null = null;
 
-  constructor(private readonly noteApi: NoteApiService) {}
+  constructor(
+    private readonly noteApi: NoteApiService,
+    private readonly quoteApi: QuoteApiService,
+  ) {}
+
+  ngOnInit(): void {
+    if (this.isQuote()) {
+      this.loadTodayQuote();
+    }
+  }
 
   ngOnChanges(): void {
     this.contentDraft = this.note.content ?? '';
     this.colorDraft = this.note.color;
     this.textColorDraft = this.note.textColor ?? null;
+  }
+
+  protected isQuote(): boolean {
+    return this.note.noteType === 'QUOTE';
+  }
+
+  private loadTodayQuote(): void {
+    this.quoteLoading = true;
+    this.quoteError = null;
+    this.quoteApi.getTodayQuote().subscribe({
+      next: (quote) => {
+        this.todayQuote = quote;
+        this.quoteLoading = false;
+      },
+      error: () => {
+        this.quoteError = 'No quote available today.';
+        this.quoteLoading = false;
+      },
+    });
   }
 
   protected textColor(): string {
