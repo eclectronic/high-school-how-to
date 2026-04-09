@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface LockerLayoutItemRepository extends JpaRepository<LockerLayoutItem, UUID> {
-    List<LockerLayoutItem> findByUserIdOrderBySortOrder(UUID userId);
+    List<LockerLayoutItem> findByUserIdOrderByItemOrder(UUID userId);
 
     @Modifying
     @Query("DELETE FROM LockerLayoutItem i WHERE i.userId = :userId")

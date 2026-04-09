@@ -3,8 +3,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription, switchMap } from 'rxjs';
 import { ContentApiService } from '../../core/services/content-api.service';
+import { CardType, ContentCard, LockerStatusResponse, cardTypeIcon } from '../../core/models/content.models';
 import { SessionStore } from '../../core/session/session.store';
-import { ContentCard, LockerStatusResponse } from '../../core/models/content.models';
 
 @Component({
   selector: 'app-content-viewer',
@@ -156,6 +156,8 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
       queryParams: { tag: this.tagSlug() ?? null },
     });
   }
+
+  protected readonly cardTypeIcon = cardTypeIcon;
 
   private buildEmbedUrl(url: string): string {
     const match = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);

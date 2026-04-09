@@ -56,7 +56,9 @@ describe('TimerCardComponent', () => {
   // ── Rendering ────────────────────────────────────────────────────────────
 
   it('renders timer title', () => {
-    const title = fixture.nativeElement.querySelector('.timer-card__title');
+    const titleBar = fixture.nativeElement.querySelector('app-widget-title-bar');
+    expect(titleBar).toBeTruthy();
+    const title = titleBar.querySelector('.title-bar__title');
     expect(title.textContent.trim()).toBe('Timer');
   });
 
@@ -189,20 +191,11 @@ describe('TimerCardComponent', () => {
 
   // ── Title editing ─────────────────────────────────────────────────────────
 
-  it('saveTitle calls updateTimer with new title', () => {
+  it('onTitleChanged calls updateTimer with new title', () => {
     const updated = makeTimer({ title: 'New Name' });
     timerApi.updateTimer.and.returnValue(of(updated));
-    c.startTitleEdit();
-    c.titleDraft = 'New Name';
-    c.saveTitle();
+    c.onTitleChanged('New Name');
     expect(timerApi.updateTimer).toHaveBeenCalledWith('timer-1', jasmine.objectContaining({ title: 'New Name' }));
-  });
-
-  it('saveTitle does nothing when title unchanged', () => {
-    c.startTitleEdit();
-    c.titleDraft = 'Timer';
-    c.saveTitle();
-    expect(timerApi.updateTimer).not.toHaveBeenCalled();
   });
 
   // ── Formatted time ────────────────────────────────────────────────────────

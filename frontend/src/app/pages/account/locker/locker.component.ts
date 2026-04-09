@@ -1,5 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnInit, QueryList, ViewChildren, computed, effect, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  OnInit,
+  QueryList,
+  ViewChild,
+  ViewChildren,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -9,6 +22,7 @@ import { TimerApiService } from '../../../core/services/timer-api.service';
 import { NoteApiService } from '../../../core/services/note-api.service';
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
 import { ShortcutApiService } from '../../../core/services/shortcut-api.service';
+import { LockerGridEngineService } from '../../../core/services/locker-grid-engine.service';
 import { SessionStore } from '../../../core/session/session.store';
 import { TaskItem, TaskList, Timer, Note, Shortcut, Sticker, NoteType } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
@@ -22,6 +36,7 @@ import { EmojiPickerComponent } from '../../../shared/sticker/emoji-picker.compo
 import { StickerIconComponent } from '../../../shared/sticker-icon/sticker-icon.component';
 import { StickerApiService, CreateStickerRequest } from '../../../core/services/sticker-api.service';
 import { DEFAULT_PALETTE, autoContrastColor, isGradient, firstHexFromGradient } from '../../../shared/color-picker/color-utils';
+import { WidgetTitleBarComponent } from '../../../shared/widget-title-bar/widget-title-bar.component';
 
 type LockerCard =
   | { type: 'TASK_LIST'; data: TaskList }
@@ -29,6 +44,18 @@ type LockerCard =
   | { type: 'NOTE'; data: Note }
   | { type: 'SHORTCUT'; data: Shortcut }
   | { type: 'STICKER'; data: Sticker };
+
+interface CardLayout {
+  col: number;
+  colSpan: number;
+  order: number;
+  minimized: boolean;
+}
+
+const DEFAULT_COL_SPAN = 4;
+const DESKTOP_COLS = 12;
+const TABLET_COLS = 6;
+const MOBILE_COLS = 1;
 
 interface LockerColor {
   id: string;
@@ -172,7 +199,7 @@ const LOCKER_ZONES = [
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule,
     ConfirmDialogComponent, InlineTitleEditComponent, ColorPickerComponent, DueDatePopoverComponent,
     TimerCardComponent, NoteCardComponent, ShortcutIconComponent, EmojiPickerComponent,
-    StickerIconComponent],
+    StickerIconComponent, WidgetTitleBarComponent],
   template: `
     <!-- ── Locker row animation overlay ── -->
     <div class="locker-overlay"
@@ -531,185 +558,203 @@ const LOCKER_ZONES = [
       </div>
 
       <!-- ── Normal grid ── -->
-      <div class="lists" *ngIf="!studySession() && orderedCards().length"
-           cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="reorderCards($event)">
-        <ng-container *ngFor="let card of orderedCards(); trackBy: trackByCardId">
-
-        <!-- Timer card -->
-        <app-timer-card
-          *ngIf="card.type === 'TIMER'"
-          cdkDrag
-          [attr.id]="'timer-' + card.data.id"
-          [timer]="card.data"
-          [taskLists]="taskLists()"
-          (timerUpdated)="onTimerUpdated($event)"
-          (timerDeleted)="onTimerDeleted($event)"
-          (taskCheckChange)="onTimerTaskCheckChange($event)"
-          (studySessionRequested)="enterStudySession(card.data.id)"
-          (scrollToLinkedListRequested)="scrollToLinkedList(card.data)"
-        ></app-timer-card>
-
-        <!-- Note card -->
-        <app-note-card
-          *ngIf="card.type === 'NOTE'"
-          cdkDrag
-          [note]="asNote(card)!"
-          (noteUpdated)="onNoteUpdated($event)"
-          (noteDeleted)="onNoteDeleted($event)"
-        ></app-note-card>
-
-        <!-- Shortcut icon -->
-        <app-shortcut-icon
-          *ngIf="card.type === 'SHORTCUT'"
-          cdkDrag
-          [shortcut]="asShortcut(card)!"
-          (editRequested)="onShortcutEditRequested($event)"
-          (deleteRequested)="onShortcutDeleteRequested($event)"
-        ></app-shortcut-icon>
-
-        <!-- Sticker card -->
-        <app-sticker-icon
-          *ngIf="card.type === 'STICKER'"
-          cdkDrag
-          class="sticker-grid-card"
-          [sticker]="asSticker(card)!"
-          (edit)="openEditStickerDialog(asSticker(card)!)"
-          (delete)="onStickerDeleted(asSticker(card)!.id)"
-        ></app-sticker-icon>
-
-        <!-- Task list card -->
-        <ng-container *ngIf="asTaskList(card) as list">
-        <article
-          class="list-card"
-          [attr.id]="'task-list-' + list.id"
-          [style.background]="list.color || '#fffef8'"
-          [style.color]="cardTextColor(list)"
-          [class.list-card--elevated]="dueDatePopoverListId === list.id || colorPickerListId === list.id"
-          cdkDrag
-          (click)="$event.stopPropagation()"
+      <div class="lists"
+           #gridContainer
+           *ngIf="!studySession() && orderedCards().length"
+           [style.height.px]="gridHeight()">
+        <div
+          *ngFor="let card of orderedCards(); trackBy: trackByCardId"
+          class="grid-widget"
+          [class.grid-widget--minimized]="isCardMinimized(card)"
+          [class.grid-widget--dragging]="dragCardId === card.data.id"
+          [style.top.px]="getCardTop(card)"
+          [style.left]="getCardLeft(card)"
+          [style.width]="getCardWidth(card)"
+          (mousedown)="onDragStart($event, card)"
+          [style.background]="getCardColor(card)"
         >
-          <div class="list-card__drag-handle" cdkDragHandle aria-label="Drag to reorder">⠿</div>
-          <header class="list-card__header">
-            <app-inline-title-edit
-              [title]="list.title"
-              (titleChange)="onListTitleChange(list, $event)"
-            ></app-inline-title-edit>
-            <div class="list-actions">
-              <button type="button" class="ghost clean" (click)="requestClean(list)"><span class="clean__label">Clean</span></button>
-              <button type="button" class="ghost danger" (click)="requestDelete(list)">Delete</button>
-              <button
-                type="button"
-                class="icon-button"
-                [class.palette]="!hasLinkedTimer(list)"
-                [disabled]="!hasLinkedTimer(list) && atTimerLimit()"
-                [title]="hasLinkedTimer(list) ? 'Go to linked timer' : atTimerLimit() ? 'Timer limit reached' : 'Start a Pomodoro timer for this list'"
-                aria-label="Launch Pomodoro timer for this list"
-                (click)="launchTimerFromList(list); $event.stopPropagation()"
-              >⏱</button>
-              <button
-                type="button"
-                class="icon-button palette"
-                aria-label="List color settings"
-                (click)="toggleColorPicker(list, $event)"
-              >
-                <span aria-hidden="true">🌈</span>
-              </button>
-            </div>
-            <div
-              class="color-picker-panel floating"
-              *ngIf="colorPickerListId === list.id"
-              (click)="$event.stopPropagation()"
-            >
-              <app-color-picker
-                [selectedColor]="list.color"
-                [selectedTextColor]="list.textColor ?? null"
-                (colorChange)="onCardColorChange(list, $event)"
-                (textColorChange)="onCardTextColorChange(list, $event)"
-              ></app-color-picker>
-              <button type="button" class="ghost" style="margin-top:0.5rem" (click)="saveCardColor(list)">Done</button>
-            </div>
-          </header>
+          <!-- Widget title bar (drag handle) -->
+          <app-widget-title-bar
+            [title]="getCardTitle(card)"
+            [minimized]="isCardMinimized(card)"
+            (minimizeToggled)="toggleMinimize(card)"
+          ></app-widget-title-bar>
 
-          <ul class="task-list" cdkDropList (cdkDropListDropped)="reorderTasks(list, $event)">
-            <li *ngFor="let task of list.tasks" cdkDrag cdkDragLockAxis="y">
-              <span class="drag-handle" cdkDragHandle aria-label="Drag to reorder">☰</span>
-              <div class="task-row" *ngIf="!isEditing(task.id); else editRow">
-                <input
-                  type="checkbox"
-                  [checked]="task.completed"
-                  (change)="toggleTask(list, task, $any($event.target).checked)"
-                  aria-label="Mark task complete"
-                />
-                <div class="task-content">
-                  <div class="task-main-row">
-                    <button
-                      type="button"
-                      class="task-text"
-                      [class.completed]="task.completed"
-                      (click)="startEdit(task)"
-                    >
-                      {{ task.description }}
-                    </button>
-                    <button type="button" class="calendar-icon-btn"
-                            (click)="openDueDatePopover(list, task, $event)"
-                            title="Set due date" aria-label="Set due date">🗓</button>
-                  </div>
-                  <div class="task-due" *ngIf="task.dueAt">
-                    <button type="button"
-                            class="due-date-btn"
-                            [class.due-date-btn--overdue]="isOverdue(task)"
-                            (click)="openDueDatePopover(list, task, $event)">
-                      Due: {{ formatDueDate(task.dueAt) }}
-                    </button>
-                  </div>
-                </div>
-                <button type="button" class="icon-button danger" (click)="removeTask(list, task)" aria-label="Remove task">
-                  ×
+          <!-- Widget body (hidden when minimized) -->
+          <div class="widget-body" *ngIf="!isCardMinimized(card)">
+
+          <!-- Timer card -->
+          <app-timer-card
+            *ngIf="card.type === 'TIMER'"
+            [attr.id]="'timer-' + card.data.id"
+            [timer]="card.data"
+            [taskLists]="taskLists()"
+            (timerUpdated)="onTimerUpdated($event)"
+            (timerDeleted)="onTimerDeleted($event)"
+            (taskCheckChange)="onTimerTaskCheckChange($event)"
+            (studySessionRequested)="enterStudySession(card.data.id)"
+          ></app-timer-card>
+
+          <!-- Note card -->
+          <app-note-card
+            *ngIf="card.type === 'NOTE'"
+            [note]="asNote(card)!"
+            (noteUpdated)="onNoteUpdated($event)"
+            (noteDeleted)="onNoteDeleted($event)"
+          ></app-note-card>
+
+          <!-- Shortcut card -->
+          <app-shortcut-icon
+            *ngIf="card.type === 'SHORTCUT'"
+            [shortcut]="asShortcut(card)!"
+            (editRequested)="onShortcutEditRequested($event)"
+            (deleteRequested)="onShortcutDeleteRequested($event)"
+          ></app-shortcut-icon>
+
+          <!-- Sticker card -->
+          <app-sticker-icon
+            *ngIf="card.type === 'STICKER'"
+            [sticker]="asSticker(card)!"
+            (edit)="openEditStickerDialog(asSticker(card)!)"
+            (delete)="onStickerDeleted(asSticker(card)!.id)"
+          ></app-sticker-icon>
+
+          <!-- Task list card -->
+          <ng-container *ngIf="asTaskList(card) as list">
+          <article
+            class="list-card"
+            [style.background]="list.color || '#fffef8'"
+            [style.color]="cardTextColor(list)"
+            [class.list-card--elevated]="dueDatePopoverListId === list.id || colorPickerListId === list.id"
+            (click)="$event.stopPropagation()"
+          >
+            <header class="list-card__header">
+              <app-inline-title-edit
+                [title]="list.title"
+                (titleChange)="onListTitleChange(list, $event)"
+              ></app-inline-title-edit>
+              <div class="list-actions">
+                <button type="button" class="ghost clean" (click)="requestClean(list)"><span class="clean__label">Clean</span></button>
+                <button type="button" class="ghost danger" (click)="requestDelete(list)">Delete</button>
+                <button
+                  type="button"
+                  class="icon-button"
+                  [class.palette]="!hasLinkedTimer(list)"
+                  [disabled]="!hasLinkedTimer(list) && atTimerLimit()"
+                  [title]="hasLinkedTimer(list) ? 'Go to linked timer' : atTimerLimit() ? 'Timer limit reached' : 'Start a Pomodoro timer for this list'"
+                  aria-label="Launch Pomodoro timer for this list"
+                  (click)="launchTimerFromList(list); $event.stopPropagation()"
+                >⏱</button>
+                <button
+                  type="button"
+                  class="icon-button palette"
+                  aria-label="List color settings"
+                  (click)="toggleColorPicker(list, $event)"
+                >
+                  <span aria-hidden="true">🎨</span>
                 </button>
               </div>
-
-              <!-- Due date popover -->
-              <div class="due-date-popover-wrap" *ngIf="dueDatePopoverTaskId === task.id"
-                   (click)="$event.stopPropagation()">
-                <app-due-date-popover
-                  [dueAt]="task.dueAt ?? null"
-                  (dueAtChange)="onDueDateChange(list, task, $event)"
-                ></app-due-date-popover>
+              <div
+                class="color-picker-panel floating"
+                *ngIf="colorPickerListId === list.id"
+                (click)="$event.stopPropagation()"
+              >
+                <app-color-picker
+                  [selectedColor]="list.color"
+                  [selectedTextColor]="list.textColor ?? null"
+                  (colorChange)="onCardColorChange(list, $event)"
+                  (textColorChange)="onCardTextColorChange(list, $event)"
+                ></app-color-picker>
+                <button type="button" class="ghost" style="margin-top:0.5rem" (click)="saveCardColor(list)">Done</button>
               </div>
+            </header>
 
-              <ng-template #editRow>
-                <div class="task-row editing">
+            <ul class="task-list" cdkDropList (cdkDropListDropped)="reorderTasks(list, $event)">
+              <li *ngFor="let task of list.tasks" cdkDrag cdkDragLockAxis="y">
+                <span class="drag-handle" cdkDragHandle aria-label="Drag to reorder">☰</span>
+                <div class="task-row" *ngIf="!isEditing(task.id); else editRow">
                   <input
-                    #editInput
-                    class="edit-input"
-                    [attr.data-task-id]="task.id"
-                    [(ngModel)]="editDrafts[task.id]"
-                    [ngModelOptions]="{ standalone: true }"
-                    (keydown.enter)="saveEdit(list, task)"
-                    (keydown.escape)="cancelEdit(task)"
-                    (blur)="saveEdit(list, task)"
+                    type="checkbox"
+                    [checked]="task.completed"
+                    (change)="toggleTask(list, task, $any($event.target).checked)"
+                    aria-label="Mark task complete"
                   />
-                  <button type="button" class="ghost" (click)="removeTask(list, task)">Remove</button>
+                  <div class="task-content">
+                    <div class="task-main-row">
+                      <button
+                        type="button"
+                        class="task-text"
+                        [class.completed]="task.completed"
+                        (click)="startEdit(task)"
+                      >
+                        {{ task.description }}
+                      </button>
+                      <button type="button" class="calendar-icon-btn"
+                              (click)="openDueDatePopover(list, task, $event)"
+                              title="Set due date" aria-label="Set due date">🗓</button>
+                    </div>
+                    <div class="task-due" *ngIf="task.dueAt">
+                      <button type="button"
+                              class="due-date-btn"
+                              [class.due-date-btn--overdue]="isOverdue(task)"
+                              (click)="openDueDatePopover(list, task, $event)">
+                        Due: {{ formatDueDate(task.dueAt) }}
+                      </button>
+                    </div>
+                  </div>
+                  <button type="button" class="icon-button danger" (click)="removeTask(list, task)" aria-label="Remove task">
+                    ×
+                  </button>
                 </div>
-              </ng-template>
-            </li>
-          </ul>
 
-          <form class="new-task" (ngSubmit)="addTask(list)" #taskForm="ngForm">
-            <input
-              #taskInput
-              [attr.data-list-id]="list.id"
-              name="task-{{ list.id }}"
-              [(ngModel)]="taskDrafts[list.id]"
-              placeholder="Add a to-do…"
-              required
-            />
-            <button type="submit" [disabled]="!taskDrafts[list.id]?.trim()">Add</button>
-          </form>
-        </article>
-        </ng-container>
+                <!-- Due date popover -->
+                <div class="due-date-popover-wrap" *ngIf="dueDatePopoverTaskId === task.id"
+                     (click)="$event.stopPropagation()">
+                  <app-due-date-popover
+                    [dueAt]="task.dueAt ?? null"
+                    (dueAtChange)="onDueDateChange(list, task, $event)"
+                  ></app-due-date-popover>
+                </div>
 
-        </ng-container>
+                <ng-template #editRow>
+                  <div class="task-row editing">
+                    <input
+                      #editInput
+                      class="edit-input"
+                      [attr.data-task-id]="task.id"
+                      [(ngModel)]="editDrafts[task.id]"
+                      [ngModelOptions]="{ standalone: true }"
+                      (keydown.enter)="saveEdit(list, task)"
+                      (keydown.escape)="cancelEdit(task)"
+                      (blur)="saveEdit(list, task)"
+                    />
+                    <button type="button" class="ghost" (click)="removeTask(list, task)">Remove</button>
+                  </div>
+                </ng-template>
+              </li>
+            </ul>
+
+            <form class="new-task" (ngSubmit)="addTask(list)" #taskForm="ngForm">
+              <input
+                #taskInput
+                [attr.data-list-id]="list.id"
+                name="task-{{ list.id }}"
+                [(ngModel)]="taskDrafts[list.id]"
+                placeholder="Add a to-do…"
+                required
+              />
+              <button type="submit" [disabled]="!taskDrafts[list.id]?.trim()">Add</button>
+            </form>
+          </article>
+          </ng-container>
+
+          </div><!-- /widget-body -->
+
+          <!-- Right-edge resize handle -->
+          <div class="widget-resize-handle"
+               (mousedown)="onResizeStart($event, card)"
+               title="Drag to resize"></div>
+        </div>
       </div>
 
       <!-- Empty state -->
@@ -1211,51 +1256,131 @@ const LOCKER_ZONES = [
       .new-list button:hover { opacity: 0.88; }
       .new-list button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-      /* ── List grid ── */
+      /* ── Pinnable masonry grid ── */
       .lists {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1rem;
-        align-items: start;
         position: relative;
+        width: 100%;
         z-index: 2;
-        /* Pass pointer events through empty grid gaps so stickers beneath remain
-           interactive; CDK drag items (direct children) restore pointer-events. */
         pointer-events: none;
       }
-      .lists > * {
+
+      .grid-widget {
+        position: absolute;
         pointer-events: auto;
+        box-sizing: border-box;
+        border-radius: 12px;
+        overflow: visible;
+        transition: box-shadow 0.12s;
+      }
+
+      .grid-widget--dragging {
+        opacity: 0.85;
+        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
+        z-index: 100;
+        cursor: grabbing;
+      }
+
+      /* ── Widget title bar ── */
+      .widget-title-bar {
+        display: flex;
+        align-items: center;
+        height: 32px;
+        padding: 0 0.5rem;
+        border-radius: 12px 12px 0 0;
+        cursor: grab;
+        user-select: none;
+        background: rgba(0, 0, 0, 0.12);
+        gap: 0.5rem;
+      }
+
+      .grid-widget--minimized .widget-title-bar {
+        border-radius: 12px;
+      }
+
+      .widget-title-bar__title {
+        flex: 1;
+        font-size: 0.78rem;
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: rgba(0, 0, 0, 0.75);
+        min-width: 0;
+      }
+
+      .widget-title-bar__controls {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        flex-shrink: 0;
+      }
+
+      .widget-ctrl-btn {
+        background: transparent;
+        border: none;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.7rem;
+        color: rgba(0, 0, 0, 0.6);
+        transition: background 0.1s, color 0.1s;
+        padding: 0;
+        line-height: 1;
+      }
+
+      .widget-ctrl-btn:hover {
+        background: rgba(0, 0, 0, 0.12);
+        color: rgba(0, 0, 0, 0.85);
+      }
+
+      /* ── Widget body ── */
+      .widget-body {
+        border-radius: 0 0 12px 12px;
+        overflow: hidden;
+      }
+
+      /* ── Right-edge resize handle ── */
+      .widget-resize-handle {
+        position: absolute;
+        right: -4px;
+        top: 0;
+        bottom: 0;
+        width: 8px;
+        cursor: col-resize;
+        z-index: 10;
+        border-radius: 4px;
+        transition: background 0.12s;
+      }
+      .widget-resize-handle:hover {
+        background: rgba(255, 255, 255, 0.4);
       }
 
       /* ── List card ── */
       .list-card {
-        border-radius: 12px;
+        border-radius: 0 0 12px 12px;
         padding: 1rem;
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 0;
         position: relative;
         z-index: 2;
         box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
         border: 1px solid rgba(255,255,255,0.5);
+        border-top: none;
+        overflow: hidden;
       }
       .list-card--elevated { z-index: 20; }
-      .list-card__header {
+      .list-card__body-actions {
         display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.4rem 0.75rem 0;
+        flex-wrap: wrap;
         position: relative;
-      }
-      .list-card__header h3 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 800;
-        color: #2d1a10;
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
       /* ── Buttons (inside list cards) ── */
@@ -1368,7 +1493,7 @@ const LOCKER_ZONES = [
       /* ── Tasks ── */
       .task-list {
         list-style: none;
-        padding: 0;
+        padding: 0.4rem 0.75rem 0;
         margin: 0;
         display: flex;
         flex-direction: column;
@@ -1417,6 +1542,7 @@ const LOCKER_ZONES = [
         display: flex;
         gap: 0.4rem;
         align-items: center;
+        padding: 0.4rem 0.75rem 0.75rem;
       }
       .new-task input {
         flex: 1;
@@ -1779,24 +1905,6 @@ const LOCKER_ZONES = [
         min-width: 300px;
       }
 
-      /* ── Card drag handle ── */
-      .list-card__drag-handle {
-        position: absolute;
-        top: 0.5rem;
-        left: 0.5rem;
-        cursor: grab;
-        color: rgba(45,26,16,0.3);
-        font-size: 1rem;
-        line-height: 1;
-        user-select: none;
-        padding: 0.15rem;
-      }
-      .list-card__drag-handle:active { cursor: grabbing; }
-      .list-card.cdk-drag-preview {
-        box-shadow: 0 16px 40px rgba(0,0,0,0.3);
-        border-radius: 12px;
-      }
-      .list-card.cdk-drag-placeholder { opacity: 0.3; }
 
       /* ── Task content layout ── */
       .task-content {
@@ -2118,6 +2226,7 @@ const LOCKER_ZONES = [
 export class LockerComponent implements AfterViewInit, OnInit {
   private readonly sessionStore = inject(SessionStore);
   private readonly router = inject(Router);
+  private readonly gridEngine = inject(LockerGridEngineService);
 
   protected readonly isAdmin = this.sessionStore.isAdmin;
 
@@ -2156,6 +2265,9 @@ export class LockerComponent implements AfterViewInit, OnInit {
   private readonly editingTaskIds = new Set<string>();
   protected colorDrafts: Record<string, string> = {};
   protected colorOriginals: Record<string, string> = {};
+
+  // Minimized state for task list cards (by list id)
+  protected minimizedLists: Record<string, boolean> = {};
 
   // New Phase 1 state
   protected colorPickerListId: string | null = null;
@@ -2196,6 +2308,31 @@ export class LockerComponent implements AfterViewInit, OnInit {
   );
 
   private readonly cardOrder = signal<Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT' | 'STICKER'; id: string }>>([]);
+
+  // ── Pinnable layout state ──
+  /** Per-card placement: col (1-based), colSpan, order, minimized. */
+  private readonly layoutMap = signal<Map<string, CardLayout>>(new Map());
+  /** Current column count based on container width. */
+  private readonly columnCount = signal<number>(DESKTOP_COLS);
+  /** Measured heights per card id (set by ResizeObserver). */
+  private readonly heightMap = signal<Map<string, number>>(new Map());
+  /** Grid container element ref for width measurement. */
+  @ViewChild('gridContainer') private gridContainerRef?: ElementRef<HTMLElement>;
+  private resizeObserver?: ResizeObserver;
+
+  /** Drag state */
+  protected dragCardId: string | null = null;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private dragStartCol = 1;
+  private dragStartOrder = 0;
+  private dragOffsetX = 0;
+  private dragOffsetY = 0;
+  /** Resize state */
+  private resizeCardId: string | null = null;
+  private resizeStartX = 0;
+  private resizeStartColSpan = 1;
+  private resizeColumnWidth = 0;
 
   protected readonly orderedCards = computed((): LockerCard[] => {
     const lists = this.taskLists();
@@ -2292,6 +2429,18 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.taskInputRefs.changes.subscribe(() => {
       if (this.pendingFocusListId) this.tryFocusTaskInput(this.pendingFocusListId);
     });
+
+    // Observe container width changes to update column count.
+    if (typeof ResizeObserver !== 'undefined' && this.gridContainerRef?.nativeElement) {
+      this.resizeObserver = new ResizeObserver((entries) => {
+        const width = entries[0]?.contentRect.width ?? 0;
+        const cols = width >= 1024 ? DESKTOP_COLS : width >= 600 ? TABLET_COLS : MOBILE_COLS;
+        if (cols !== this.columnCount()) {
+          this.columnCount.set(cols);
+        }
+      });
+      this.resizeObserver.observe(this.gridContainerRef.nativeElement);
+    }
   }
 
   protected setLockerColor(color: LockerColor): void {
@@ -2351,13 +2500,31 @@ export class LockerComponent implements AfterViewInit, OnInit {
       this.noteApi.getNotes(),
       this.shortcutApi.getShortcuts(),
       this.stickerApi.getStickers(),
+      this.lockerLayoutApi.getLayout(),
     ]).subscribe({
-      next: ([lists, timers, notes, shortcuts, stickers]) => {
+      next: ([lists, timers, notes, shortcuts, stickers, layout]) => {
         this.taskLists.set(lists);
         this.timers.set(timers);
         this.notes.set(notes);
         this.shortcuts.set(shortcuts);
         this.stickers.set(stickers);
+
+        // Apply saved layout into layoutMap and cardOrder
+        if (layout.length > 0) {
+          const newMap = new Map<string, CardLayout>();
+          const newOrder: Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT' | 'STICKER'; id: string }> = [];
+          layout.forEach((item) => {
+            newMap.set(item.cardId, {
+              col: item.col,
+              colSpan: item.colSpan,
+              order: item.order,
+              minimized: item.minimized,
+            });
+            newOrder.push({ type: item.cardType as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT' | 'STICKER', id: item.cardId });
+          });
+          this.layoutMap.set(newMap);
+          this.cardOrder.set(newOrder);
+        }
       },
       error: () => { this.errorMessage = 'Could not load your locker. Please log in again.'; },
     });
@@ -2380,6 +2547,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
       next: list => {
         this.taskLists.update(current => [...current, { ...list }]);
         this.errorMessage = '';
+        this.assignNewCardLayout(list.id);
         this.saveLockerLayout();
       },
       error: () => { this.errorMessage = 'Unable to add a list right now. Please try again or sign in again.'; },
@@ -2541,24 +2709,219 @@ export class LockerComponent implements AfterViewInit, OnInit {
       ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   }
 
-  // --- Card-level drag-drop (grid reordering) ---
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected reorderCards(event: CdkDragDrop<any[]>): void {
-    const cards = [...this.orderedCards()];
-    moveItemInArray(cards, event.previousIndex, event.currentIndex);
-    const newOrder = cards.map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT' | 'STICKER', id: c.data.id }));
-    this.cardOrder.set(newOrder);
-    this.saveLockerLayout(newOrder);
+  private saveLockerLayout(): void {
+    const cards = this.orderedCards();
+    const layout = this.layoutMap();
+    const colCount = this.columnCount();
+    const items = cards.map((card, index) => {
+      const id = card.data.id;
+      const placement = layout.get(id);
+      return {
+        cardType: card.type,
+        cardId: id,
+        col: placement?.col ?? 1,
+        colSpan: Math.min(placement?.colSpan ?? DEFAULT_COL_SPAN, colCount),
+        order: placement?.order ?? index,
+        minimized: placement?.minimized ?? false,
+      };
+    });
+    this.lockerLayoutApi.saveLayout(items).subscribe({ error: () => {} });
   }
 
-  private saveLockerLayout(order?: Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT' | 'STICKER'; id: string }>): void {
-    const cards = order ?? this.orderedCards().map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT' | 'STICKER', id: c.data.id }));
-    const items = cards.map(({ type, id }, index) => ({
-      cardType: type,
-      cardId: id,
-      sortOrder: index,
-    }));
-    this.lockerLayoutApi.saveLayout(items).subscribe({ error: () => {} });
+  // ── Pinnable layout helpers ──
+
+  /** Return the layout for a card, or sensible defaults. */
+  private getLayout(card: LockerCard): CardLayout {
+    const id = card.data.id;
+    return this.layoutMap().get(id) ?? { col: 1, colSpan: DEFAULT_COL_SPAN, order: 0, minimized: false };
+  }
+
+  /** Packs all cards once per signal change. Provides top positions and total height. */
+  private readonly packedLayout = computed((): { tops: Map<string, number>; height: number } => {
+    const colCount = this.columnCount();
+    const heightMap = this.heightMap();
+    const layoutMap = this.layoutMap();
+    const items = this.orderedCards().map((card) => {
+      const pl = layoutMap.get(card.data.id) ?? { col: 1, colSpan: DEFAULT_COL_SPAN, order: 0, minimized: false };
+      return {
+        id: card.data.id,
+        col: pl.col,
+        colSpan: pl.colSpan,
+        order: pl.order,
+        minimized: pl.minimized,
+        height: heightMap.get(card.data.id) ?? 200,
+      };
+    });
+    const packed = this.gridEngine.pack(items, colCount);
+    const tops = new Map(packed.map((p) => [p.id, p.top]));
+    const GAP = 16;
+    const height =
+      packed.length === 0
+        ? 0
+        : Math.max(...packed.map((p) => p.top + (p.minimized ? 40 : (heightMap.get(p.id) ?? 200)) + GAP));
+    return { tops, height };
+  });
+
+  protected readonly gridHeight = computed(() => this.packedLayout().height);
+
+  protected getCardTop(card: LockerCard): number {
+    return this.packedLayout().tops.get(card.data.id) ?? 0;
+  }
+
+  protected getCardLeft(card: LockerCard): string {
+    const id = card.data.id;
+    const layout = this.layoutMap().get(id) ?? { col: 1, colSpan: DEFAULT_COL_SPAN, order: 0, minimized: false };
+    const colCount = this.columnCount();
+    const col = Math.min(layout.col, colCount);
+    const pct = ((col - 1) / colCount) * 100;
+    return `${pct}%`;
+  }
+
+  protected getCardWidth(card: LockerCard): string {
+    const id = card.data.id;
+    const layout = this.layoutMap().get(id) ?? { col: 1, colSpan: DEFAULT_COL_SPAN, order: 0, minimized: false };
+    const colCount = this.columnCount();
+    const colSpan = Math.min(layout.colSpan, colCount - (Math.min(layout.col, colCount) - 1));
+    const pct = (colSpan / colCount) * 100;
+    return `calc(${pct}% - 1rem)`;
+  }
+
+  protected getCardColor(card: LockerCard): string {
+    if (card.type === 'TASK_LIST') return (card.data as TaskList).color || '#fffef8';
+    if (card.type === 'TIMER') return (card.data as Timer).color || '#fffef8';
+    if (card.type === 'NOTE') return (card.data as Note).color || '#fffef8';
+    return '#fffef8';
+  }
+
+  protected getCardTitle(card: LockerCard): string {
+    return (card.data as { title: string }).title ?? '';
+  }
+
+  protected isCardMinimized(card: LockerCard): boolean {
+    return this.layoutMap().get(card.data.id)?.minimized ?? false;
+  }
+
+  protected toggleMinimize(card: LockerCard): void {
+    const id = card.data.id;
+    const current = this.layoutMap().get(id) ?? { col: 1, colSpan: DEFAULT_COL_SPAN, order: 0, minimized: false };
+    const updated = new Map(this.layoutMap());
+    updated.set(id, { ...current, minimized: !current.minimized });
+    this.layoutMap.set(updated);
+    this.saveLockerLayout();
+  }
+
+  // ── Drag-and-drop (free placement) ──
+
+  protected onDragStart(event: MouseEvent, card: LockerCard): void {
+    // Don't initiate drag if the click was on a button or input
+    if ((event.target as HTMLElement).closest('button, input, a, textarea')) return;
+    // Only drag from title bar
+    if (!(event.target as HTMLElement).closest('.widget-title-bar')) return;
+
+    this.dragCardId = card.data.id;
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    const layout = this.getLayout(card);
+    this.dragStartCol = layout.col;
+    this.dragStartOrder = layout.order;
+    event.preventDefault();
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(event: MouseEvent): void {
+    this.handleDragMove(event);
+    this.handleResizeMove(event);
+  }
+
+  private handleDragMove(event: MouseEvent): void {
+    if (!this.dragCardId || !this.gridContainerRef?.nativeElement) return;
+    const container = this.gridContainerRef.nativeElement;
+    const rect = container.getBoundingClientRect();
+    const xInContainer = event.clientX - rect.left;
+    const newCol = this.gridEngine.resolveDropColumn(xInContainer, rect.width, this.columnCount());
+
+    if (newCol !== this.dragStartCol) {
+      this.dragStartCol = newCol;
+      const updated = new Map(this.layoutMap());
+      const id = this.dragCardId;
+      const current = updated.get(id) ?? { col: 1, colSpan: DEFAULT_COL_SPAN, order: 0, minimized: false };
+      updated.set(id, { ...current, col: newCol });
+      this.layoutMap.set(updated);
+    }
+  }
+
+  @HostListener('document:mouseup')
+  onMouseUp(): void {
+    if (this.dragCardId) {
+      this.dragCardId = null;
+      this.saveLockerLayout();
+    }
+    if (this.resizeCardId) {
+      this.resizeCardId = null;
+      this.saveLockerLayout();
+    }
+  }
+
+  // ── Resize (right edge) ──
+
+  protected onResizeStart(event: MouseEvent, card: LockerCard): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.resizeCardId = card.data.id;
+    this.resizeStartX = event.clientX;
+    const layout = this.getLayout(card);
+    this.resizeStartColSpan = layout.colSpan;
+    if (this.gridContainerRef?.nativeElement) {
+      this.resizeColumnWidth = this.gridContainerRef.nativeElement.getBoundingClientRect().width / this.columnCount();
+    }
+  }
+
+  private handleResizeMove(event: MouseEvent): void {
+    if (!this.resizeCardId) return;
+    const dx = event.clientX - this.resizeStartX;
+    const colDelta = Math.round(dx / (this.resizeColumnWidth || 100));
+    const newSpan = Math.max(1, this.resizeStartColSpan + colDelta);
+    const updated = new Map(this.layoutMap());
+    const id = this.resizeCardId;
+    const current = updated.get(id) ?? { col: 1, colSpan: DEFAULT_COL_SPAN, order: 0, minimized: false };
+    const maxSpan = this.columnCount() - current.col + 1;
+    const clampedSpan = Math.min(newSpan, maxSpan);
+    if (clampedSpan !== current.colSpan) {
+      updated.set(id, { ...current, colSpan: clampedSpan });
+      this.layoutMap.set(updated);
+    }
+  }
+
+  /** Assign layout for newly created cards. */
+  private assignNewCardLayout(cardId: string, colSpan = DEFAULT_COL_SPAN): void {
+    const colCount = this.columnCount();
+    const items = this.orderedCards().map((c) => {
+      const pl = this.layoutMap().get(c.data.id) ?? { col: 1, colSpan: DEFAULT_COL_SPAN, order: 0, minimized: false };
+      return {
+        id: c.data.id,
+        col: pl.col,
+        colSpan: pl.colSpan,
+        order: pl.order,
+        minimized: pl.minimized,
+        height: this.heightMap().get(c.data.id) ?? 200,
+      };
+    });
+    const existingHeights = new Array<number>(colCount).fill(0);
+    const packed = this.gridEngine.pack(items, colCount);
+    packed.forEach((p) => {
+      const bottom = p.top + (this.heightMap().get(p.id) ?? 200) + 16;
+      const pLayout = this.layoutMap().get(p.id) ?? { col: 1, colSpan: DEFAULT_COL_SPAN, order: 0, minimized: false };
+      const start = pLayout.col - 1;
+      const end = start + pLayout.colSpan;
+      for (let c = start; c < end; c++) {
+        existingHeights[c] = Math.max(existingHeights[c], bottom);
+      }
+    });
+    const col = this.gridEngine.autoLayout(existingHeights, colSpan, colCount);
+    const maxOrder = Math.max(0, ...Array.from(this.layoutMap().values()).map((l) => l.order)) + 1;
+    const updated = new Map(this.layoutMap());
+    updated.set(cardId, { col, colSpan, order: maxOrder, minimized: false });
+    this.layoutMap.set(updated);
   }
 
   protected deleteList(list: TaskList): void {
@@ -2721,6 +3084,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
         this.timers.update(current => [...current, timer]);
         this.errorMessage = '';
         this.insertTimerAfterList(timer.id, list.id);
+        this.assignNewCardLayout(timer.id);
         this.saveLockerLayout();
         setTimeout(() => this.scrollToTimer(timer.id), 80);
       },
@@ -2769,6 +3133,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
       next: timer => {
         this.timers.update(current => [...current, timer]);
         this.errorMessage = '';
+        this.assignNewCardLayout(timer.id);
         this.saveLockerLayout();
       },
       error: () => { this.errorMessage = 'Unable to create a timer right now. Please try again.'; },
@@ -2819,6 +3184,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
       next: note => {
         this.notes.update(current => [...current, note]);
         this.errorMessage = '';
+        this.assignNewCardLayout(note.id);
         this.saveLockerLayout();
       },
       error: () => { this.errorMessage = 'Unable to create a note right now. Please try again.'; },

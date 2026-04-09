@@ -6,63 +6,63 @@ import { NoteApiService, UpdateNoteRequest } from '../../core/services/note-api.
 import { QuoteApiService } from '../../core/services/quote-api.service';
 import { ColorPickerComponent } from '../color-picker/color-picker.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { WidgetTitleBarComponent } from '../widget-title-bar/widget-title-bar.component';
 import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-picker/color-utils';
 
 @Component({
   selector: 'app-note-card',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColorPickerComponent, ConfirmDialogComponent],
+  imports: [CommonModule, FormsModule, ColorPickerComponent, ConfirmDialogComponent, WidgetTitleBarComponent],
   host: { '[class.note-card--elevated]': 'colorPickerOpen || confirmingDelete' },
   template: `
     <article class="note-card" [style.background]="note.color"
              [style.color]="textColor()" (click)="$event.stopPropagation()">
 
-      <!-- Drag handle -->
-      <div class="note-card__drag-handle" cdkDragHandle aria-label="Drag to reorder">⠿</div>
+      <!-- Title bar -->
+      <app-widget-title-bar
+        [title]="note.title"
+        [minimized]="minimized"
+        (titleChanged)="onTitleChanged($event)"
+        (closeClicked)="requestDelete()"
+        (minimizeToggled)="minimized = !minimized"
+      ></app-widget-title-bar>
 
-      <!-- Header -->
-      <div class="note-card__header">
-        <input *ngIf="editingTitle; else titleDisplay"
-               class="title-input"
-               [(ngModel)]="titleDraft"
-               (blur)="saveTitle()"
-               (keydown.enter)="saveTitle()"
-               (keydown.escape)="cancelTitleEdit()"
-               [style.color]="textColor()"
-               autofocus />
-        <ng-template #titleDisplay>
-          <span class="note-card__title" (click)="startTitleEdit()" title="Click to edit title">
-            <span *ngIf="isQuote()" class="note-card__quote-icon" aria-label="Quote of the Day">💬</span>
-            {{ note.title }}
-          </span>
-        </ng-template>
-
-        <div class="note-card__actions">
+      <!-- Body (hidden when minimized) -->
+      <ng-container *ngIf="!minimized">
+        <!-- Body actions -->
+        <div class="note-card__body-actions">
           <!-- Font size toggle (regular notes only) -->
-          <button *ngIf="!isQuote()" type="button" class="icon-btn" (click)="cycleFontSize()" [title]="'Font size: ' + (note.fontSize || 'medium')">
+          <button *ngIf="!isQuote()" type="button" class="icon-btn" (click)="cycleFontSize()" [title]="'Font size: ' + (note.fontSize || 'medium')" aria-label="Font size">
             <span aria-hidden="true">{{ fontSizeIcon() }}</span>
           </button>
           <!-- Color picker -->
           <button type="button" class="icon-btn" (click)="toggleColorPicker()" title="Note color" aria-label="Change note color">
             <span aria-hidden="true">🌈</span>
           </button>
-          <!-- Delete -->
-          <button type="button" class="icon-btn danger" (click)="requestDelete()" title="Delete note" aria-label="Delete note">
-            <span aria-hidden="true">🗑</span>
-          </button>
         </div>
-      </div>
 
-      <!-- Color picker panel -->
-      <div class="color-picker-panel" *ngIf="colorPickerOpen" (click)="$event.stopPropagation()">
-        <app-color-picker
-          [selectedColor]="note.color"
-          [selectedTextColor]="note.textColor ?? null"
-          (colorChange)="onColorChange($event)"
-          (textColorChange)="onTextColorChange($event)"
-        ></app-color-picker>
-        <button type="button" class="done-btn" (click)="saveColor()">Done</button>
-      </div>
+        <!-- Color picker panel -->
+        <div class="color-picker-panel" *ngIf="colorPickerOpen" (click)="$event.stopPropagation()">
+          <app-color-picker
+            [selectedColor]="note.color"
+            [selectedTextColor]="note.textColor ?? null"
+            (colorChange)="onColorChange($event)"
+            (textColorChange)="onTextColorChange($event)"
+          ></app-color-picker>
+          <button type="button" class="done-btn" (click)="saveColor()">Done</button>
+        </div>
+
+        <!-- Note content textarea (regular notes) -->
+        <textarea *ngIf="!isQuote()"
+          class="note-content"
+          [class.note-content--small]="note.fontSize === 'small'"
+          [class.note-content--large]="note.fontSize === 'large'"
+          [style.color]="textColor()"
+          [(ngModel)]="contentDraft"
+          (blur)="saveContent()"
+          placeholder="Type a note…"
+          rows="5"
+        ></textarea>
 
       <!-- Quote content (read-only) -->
       <ng-container *ngIf="isQuote()">
@@ -76,18 +76,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
           <footer *ngIf="todayQuote.attribution" class="quote-attribution">— {{ todayQuote.attribution }}</footer>
         </blockquote>
       </ng-container>
-
-      <!-- Note content textarea (regular notes) -->
-      <textarea *ngIf="!isQuote()"
-        class="note-content"
-        [class.note-content--small]="note.fontSize === 'small'"
-        [class.note-content--large]="note.fontSize === 'large'"
-        [style.color]="textColor()"
-        [(ngModel)]="contentDraft"
-        (blur)="saveContent()"
-        placeholder="Type a note…"
-        rows="5"
-      ></textarea>
+      </ng-container><!-- end !minimized -->
 
       <!-- Confirm delete dialog -->
       <app-confirm-dialog
@@ -108,67 +97,24 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
 
     .note-card {
       border-radius: 12px;
-      padding: 1rem;
+      padding: 0;
       display: flex;
       flex-direction: column;
-      gap: 0.6rem;
       box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
       border: 1px solid rgba(255,255,255,0.5);
       position: relative;
-    }
-
-    .note-card__drag-handle {
-      position: absolute;
-      top: 0.5rem;
-      left: 0.5rem;
-      cursor: grab;
-      color: rgba(45,26,16,0.3);
-      font-size: 1rem;
-      line-height: 1;
-      user-select: none;
-      padding: 0.15rem;
-    }
-    .note-card__drag-handle:active { cursor: grabbing; }
-
-    .note-card__header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-      padding-left: 1.25rem;
-    }
-
-    .note-card__title {
-      font-size: 1rem;
-      font-weight: 800;
-      flex: 1;
-      min-width: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      cursor: text;
-      border-bottom: 1px dashed transparent;
-      transition: border-color 0.12s;
-    }
-    .note-card__title:hover { border-bottom-color: currentColor; }
-
-    .title-input {
-      flex: 1;
-      border: 1px solid rgba(45,26,16,0.2);
-      border-radius: 6px;
-      padding: 0.2rem 0.4rem;
-      background: rgba(255,255,255,0.7);
-      font: inherit;
-      font-size: 1rem;
-      font-weight: 800;
-      min-width: 0;
     }
 
-    .note-card__actions {
+    app-widget-title-bar {
+      flex-shrink: 0;
+    }
+
+    .note-card__body-actions {
       display: flex;
       gap: 0.3rem;
       align-items: center;
-      flex-shrink: 0;
+      padding: 0.4rem 0.75rem 0;
     }
 
     .icon-btn {
@@ -188,7 +134,6 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
       transition: opacity 0.12s;
     }
     .icon-btn:hover { opacity: 0.75; }
-    .icon-btn.danger { color: #b00020; border-color: rgba(176,0,32,0.25); }
 
     .color-picker-panel {
       background: #fffef8;
@@ -196,6 +141,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
       border: 1px solid rgba(45,26,16,0.12);
       box-shadow: 0 8px 24px rgba(0,0,0,0.15);
       padding: 0.5rem;
+      margin: 0 0.75rem;
     }
     .done-btn {
       margin-top: 0.5rem;
@@ -221,7 +167,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
       line-height: 1.55;
       width: 100%;
       box-sizing: border-box;
-      padding: 0.25rem 0.1rem;
+      padding: 0.5rem 0.75rem 0.75rem;
       outline: none;
     }
     .note-content::placeholder { color: rgba(0,0,0,0.35); }
@@ -275,8 +221,7 @@ export class NoteCardComponent implements OnChanges, OnInit {
   @Output() noteUpdated = new EventEmitter<Note>();
   @Output() noteDeleted = new EventEmitter<string>();
 
-  protected editingTitle = false;
-  protected titleDraft = '';
+  protected minimized = false;
   protected contentDraft = '';
   protected colorPickerOpen = false;
   protected confirmingDelete = false;
@@ -347,22 +292,8 @@ export class NoteCardComponent implements OnChanges, OnInit {
     this.saveUpdate({ fontSize: next === 'medium' ? null : next });
   }
 
-  protected startTitleEdit(): void {
-    this.editingTitle = true;
-    this.titleDraft = this.note.title;
-  }
-
-  protected saveTitle(): void {
-    const trimmed = this.titleDraft.trim();
-    if (!trimmed) { this.cancelTitleEdit(); return; }
-    if (trimmed === this.note.title) { this.editingTitle = false; return; }
-    this.saveUpdate({ title: trimmed });
-    this.editingTitle = false;
-  }
-
-  protected cancelTitleEdit(): void {
-    this.editingTitle = false;
-    this.titleDraft = this.note.title;
+  protected onTitleChanged(title: string): void {
+    this.saveUpdate({ title });
   }
 
   protected saveContent(): void {

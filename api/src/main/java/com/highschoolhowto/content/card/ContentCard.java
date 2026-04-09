@@ -89,6 +89,10 @@ public class ContentCard {
             inverseJoinColumns = @JoinColumn(name = "tag_id"))
     private List<Tag> tags = new ArrayList<>();
 
+    @OneToMany(mappedBy = "sourceCard", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<ContentCardLink> links = new ArrayList<>();
+
     @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
     private List<ContentCardTask> templateTasks = new ArrayList<>();
@@ -154,6 +158,9 @@ public class ContentCard {
 
     public List<Tag> getTags() { return tags; }
     public void setTags(List<Tag> tags) { this.tags = tags; }
+
+    public List<ContentCardLink> getLinks() { return links; }
+    public void setLinks(List<ContentCardLink> links) { this.links = links; }
 
     public List<ContentCardTask> getTemplateTasks() { return templateTasks; }
     public void setTemplateTasks(List<ContentCardTask> templateTasks) { this.templateTasks = templateTasks; }

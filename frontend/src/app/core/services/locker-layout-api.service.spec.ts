@@ -10,7 +10,7 @@ describe('LockerLayoutApiService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [LockerLayoutApiService, provideHttpClient(), provideHttpClientTesting()]
+      providers: [LockerLayoutApiService, provideHttpClient(), provideHttpClientTesting()],
     });
     service = TestBed.inject(LockerLayoutApiService);
     http = TestBed.inject(HttpTestingController);
@@ -27,7 +27,7 @@ describe('LockerLayoutApiService', () => {
 
   it('saveLayout sends POST with items', () => {
     const items: LockerLayoutItem[] = [
-      { cardType: 'TASK_LIST', cardId: 'abc', sortOrder: 0 }
+      { cardType: 'TASK_LIST', cardId: 'abc', col: 1, colSpan: 4, order: 0, minimized: false },
     ];
     service.saveLayout(items).subscribe();
     const req = http.expectOne('/api/locker/layout');
