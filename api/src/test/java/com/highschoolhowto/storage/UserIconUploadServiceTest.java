@@ -82,7 +82,8 @@ class UserIconUploadServiceTest {
         String prefix = "media/icons/" + USER_ID + "/";
         when(s3StorageService.keyPrefix("icons/" + USER_ID + "/")).thenReturn(prefix);
         when(s3StorageService.countObjects(prefix)).thenReturn(0);
-        when(s3StorageService.upload(any(), anyString(), eq("image/jpeg"), anyString()))
+        when(s3StorageService.generateFilename(anyString())).thenReturn("abc.jpeg");
+        when(s3StorageService.upload(any(), eq("abc.jpeg"), eq("image/jpeg"), anyString()))
                 .thenReturn("https://cdn.example.com/media/icons/" + USER_ID + "/abc.jpeg");
 
         String result = service.uploadIcon(file, USER_ID);
@@ -148,7 +149,8 @@ class UserIconUploadServiceTest {
         String prefix = "media/icons/" + USER_ID + "/";
         when(s3StorageService.keyPrefix("icons/" + USER_ID + "/")).thenReturn(prefix);
         when(s3StorageService.countObjects(prefix)).thenReturn(0);
-        when(s3StorageService.upload(eq(svgBytes), anyString(), eq("image/svg+xml"), anyString()))
+        when(s3StorageService.generateFilename(anyString())).thenReturn("abc.svg");
+        when(s3StorageService.upload(eq(svgBytes), eq("abc.svg"), eq("image/svg+xml"), anyString()))
                 .thenReturn("https://cdn.example.com/media/icons/" + USER_ID + "/abc.svg");
 
         String result = service.uploadIcon(file, USER_ID);
