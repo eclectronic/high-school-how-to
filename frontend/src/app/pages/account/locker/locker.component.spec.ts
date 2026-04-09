@@ -46,7 +46,7 @@ function makeShortcut(overrides: Partial<Shortcut> = {}): Shortcut {
 }
 
 function makeSticker(overrides: Partial<Sticker> = {}): Sticker {
-  return { id: 'sticker-1', type: 'EMOJI', emoji: '⭐', imageUrl: null, positionX: 100, positionY: 50, size: 'medium', ...overrides };
+  return { id: 'sticker-1', emoji: '⭐', iconUrl: null, label: null, createdAt: '', updatedAt: '', ...overrides };
 }
 
 describe('nextAutoName (pure function)', () => {

@@ -18,7 +18,6 @@ import { DueDatePopoverComponent } from '../../../shared/due-date-popover/due-da
 import { TimerCardComponent } from '../../../shared/timer-card/timer-card.component';
 import { NoteCardComponent } from '../../../shared/note-card/note-card.component';
 import { ShortcutIconComponent } from '../../../shared/shortcut-icon/shortcut-icon.component';
-import { StickerComponent } from '../../../shared/sticker/sticker.component';
 import { EmojiPickerComponent } from '../../../shared/sticker/emoji-picker.component';
 import { StickerIconComponent } from '../../../shared/sticker-icon/sticker-icon.component';
 import { StickerApiService, CreateStickerRequest } from '../../../core/services/sticker-api.service';
@@ -172,7 +171,7 @@ const LOCKER_ZONES = [
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule,
     ConfirmDialogComponent, InlineTitleEditComponent, ColorPickerComponent, DueDatePopoverComponent,
-    TimerCardComponent, NoteCardComponent, ShortcutIconComponent, StickerComponent, EmojiPickerComponent,
+    TimerCardComponent, NoteCardComponent, ShortcutIconComponent, EmojiPickerComponent,
     StickerIconComponent],
   template: `
     <!-- ── Locker row animation overlay ── -->
