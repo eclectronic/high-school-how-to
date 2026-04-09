@@ -60,16 +60,6 @@ export interface Shortcut {
   iconUrl?: string | null;
 }
 
-export interface Sticker {
-  id: string;
-  type: string; // 'EMOJI' | 'IMAGE'
-  emoji: string | null;
-  imageUrl: string | null;
-  positionX: number;
-  positionY: number;
-  size: string; // 'small' | 'medium' | 'large'
-}
-
 export interface Bookmark {
   id: string;
   url: string;
