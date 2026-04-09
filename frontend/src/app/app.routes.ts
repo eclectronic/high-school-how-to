@@ -8,8 +8,6 @@ import { SignupComponent } from './pages/auth/signup/signup.component';
 import { ForgotPasswordComponent } from './pages/auth/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './pages/auth/reset-password/reset-password.component';
 import { VerifyEmailComponent } from './pages/auth/verify-email/verify-email.component';
-import { AccountSecurityComponent } from './pages/account/account-security/account-security.component';
-import { LockerComponent } from './pages/account/locker/locker.component';
 import { authGuard } from './core/auth/auth.guard';
 import { adminGuard } from './core/auth/admin.guard';
 
@@ -33,12 +31,16 @@ export const routes: Routes = [
   {
     path: 'account/security',
     canActivate: [authGuard],
-    component: AccountSecurityComponent
+    loadComponent: () =>
+      import('./pages/account/account-security/account-security.component').then(
+        (m) => m.AccountSecurityComponent,
+      ),
   },
   {
     path: 'account/locker',
     canActivate: [authGuard],
-    component: LockerComponent
+    loadComponent: () =>
+      import('./pages/account/locker/locker.component').then((m) => m.LockerComponent),
   },
   {
     path: 'infographics/:slug',
