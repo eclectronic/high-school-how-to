@@ -36,6 +36,7 @@ import { EmojiPickerComponent } from '../../../shared/sticker/emoji-picker.compo
 import { StickerIconComponent } from '../../../shared/sticker-icon/sticker-icon.component';
 import { StickerApiService, CreateStickerRequest } from '../../../core/services/sticker-api.service';
 import { DEFAULT_PALETTE, autoContrastColor, isGradient, firstHexFromGradient } from '../../../shared/color-picker/color-utils';
+import { WidgetTitleBarComponent } from '../../../shared/widget-title-bar/widget-title-bar.component';
 
 type LockerCard =
   | { type: 'TASK_LIST'; data: TaskList }
@@ -198,7 +199,7 @@ const LOCKER_ZONES = [
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule,
     ConfirmDialogComponent, InlineTitleEditComponent, ColorPickerComponent, DueDatePopoverComponent,
     TimerCardComponent, NoteCardComponent, BookmarkCardComponent, EmojiPickerComponent,
-    StickerIconComponent],
+    StickerIconComponent, WidgetTitleBarComponent],
   template: `
     <!-- ── Locker row animation overlay ── -->
     <div class="locker-overlay"
@@ -503,21 +504,14 @@ const LOCKER_ZONES = [
           [style.left]="getCardLeft(card)"
           [style.width]="getCardWidth(card)"
           (mousedown)="onDragStart($event, card)"
+          [style.background]="getCardColor(card)"
         >
           <!-- Widget title bar (drag handle) -->
-          <div class="widget-title-bar"
-               [style.background]="getCardColor(card)">
-            <span class="widget-title-bar__title">{{ getCardTitle(card) }}</span>
-            <div class="widget-title-bar__controls" (mousedown)="$event.stopPropagation()">
-              <button type="button"
-                      class="widget-ctrl-btn"
-                      [title]="isCardMinimized(card) ? 'Restore' : 'Minimize'"
-                      [attr.aria-label]="isCardMinimized(card) ? 'Restore widget' : 'Minimize widget'"
-                      (click)="toggleMinimize(card)">
-                {{ isCardMinimized(card) ? '☐' : '─' }}
-              </button>
-            </div>
-          </div>
+          <app-widget-title-bar
+            [title]="getCardTitle(card)"
+            [minimized]="isCardMinimized(card)"
+            (minimizeToggled)="toggleMinimize(card)"
+          ></app-widget-title-bar>
 
           <!-- Widget body (hidden when minimized) -->
           <div class="widget-body" *ngIf="!isCardMinimized(card)">
@@ -1304,30 +1298,22 @@ const LOCKER_ZONES = [
         padding: 1rem;
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 0;
         position: relative;
         z-index: 2;
         box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
         border: 1px solid rgba(255,255,255,0.5);
         border-top: none;
+        overflow: hidden;
       }
       .list-card--elevated { z-index: 20; }
-      .list-card__header {
+      .list-card__body-actions {
         display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.4rem 0.75rem 0;
+        flex-wrap: wrap;
         position: relative;
-      }
-      .list-card__header h3 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 800;
-        color: #2d1a10;
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
       /* ── Buttons (inside list cards) ── */
@@ -1440,7 +1426,7 @@ const LOCKER_ZONES = [
       /* ── Tasks ── */
       .task-list {
         list-style: none;
-        padding: 0;
+        padding: 0.4rem 0.75rem 0;
         margin: 0;
         display: flex;
         flex-direction: column;
@@ -1489,6 +1475,7 @@ const LOCKER_ZONES = [
         display: flex;
         gap: 0.4rem;
         align-items: center;
+        padding: 0.4rem 0.75rem 0.75rem;
       }
       .new-task input {
         flex: 1;
@@ -2087,6 +2074,9 @@ export class LockerComponent implements AfterViewInit, OnInit {
   private readonly editingTaskIds = new Set<string>();
   protected colorDrafts: Record<string, string> = {};
   protected colorOriginals: Record<string, string> = {};
+
+  // Minimized state for task list cards (by list id)
+  protected minimizedLists: Record<string, boolean> = {};
 
   // New Phase 1 state
   protected colorPickerListId: string | null = null;
