@@ -210,7 +210,7 @@ export class ColorPickerComponent implements OnInit, OnChanges {
   protected colorHistory = signal<string[]>([]);
 
   /** Internal signal tracking the current color so computed() can react to changes. */
-  private readonly currentColor = signal<string>('#fffef8');
+  protected readonly currentColor = signal<string>('#fffef8');
 
   /**
    * The solid hex portion of the current selection (strips gradient wrapper).
