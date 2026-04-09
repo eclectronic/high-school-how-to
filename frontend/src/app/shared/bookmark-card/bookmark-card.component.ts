@@ -299,7 +299,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
     }
 
     .bookmark-title {
-      font-size: 0.875rem;
+      font-size: var(--locker-body-font-size, 0.875rem);
       font-weight: 600;
       text-decoration: none;
       white-space: nowrap;

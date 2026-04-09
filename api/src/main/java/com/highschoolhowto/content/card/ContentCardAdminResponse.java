@@ -24,6 +24,7 @@ public record ContentCardAdminResponse(
         CardStatus status,
         List<TagResponse> tags,
         List<ContentCardLinkResponse> links,
+        List<ContentCardTaskResponse> templateTasks,
         Instant createdAt,
         Instant updatedAt) {
 
@@ -50,6 +51,7 @@ public record ContentCardAdminResponse(
                         .map(TagResponse::from)
                         .toList(),
                 card.getLinks().stream().map(ContentCardLinkResponse::from).toList(),
+                card.getTemplateTasks().stream().map(ContentCardTaskResponse::from).toList(),
                 card.getCreatedAt(),
                 card.getUpdatedAt());
     }

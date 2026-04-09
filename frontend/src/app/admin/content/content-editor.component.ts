@@ -23,6 +23,10 @@ interface LinkDraft {
   linkText: string;
 }
 
+interface TemplateTaskForm {
+  description: string;
+}
+
 interface CardForm {
   title: string;
   slug: string;
@@ -75,6 +79,8 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
   protected bodyHtml: string | null = null;
   protected previewMode = signal(false);
   protected uploadingImage = signal(false);
+  protected templateTasks = signal<TemplateTaskForm[]>([]);
+  protected newTaskDescription = '';
 
   // Related content links
   protected links: LinkDraft[] = [];
@@ -158,6 +164,7 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
             targetCardType: l.targetCardType,
             linkText: l.linkText === l.targetTitle ? '' : l.linkText,
           }));
+          this.templateTasks.set((card.templateTasks ?? []).map((t) => ({ description: t.description })));
           this.loading.set(false);
         },
         error: () => {
@@ -227,6 +234,32 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
     this.bodyHtml = event.html;
   }
 
+  protected addTemplateTask() {
+    const desc = this.newTaskDescription.trim();
+    if (!desc) return;
+    this.templateTasks.update((tasks) => [...tasks, { description: desc }]);
+    this.newTaskDescription = '';
+  }
+
+  protected removeTemplateTask(index: number) {
+    this.templateTasks.update((tasks) => tasks.filter((_, i) => i !== index));
+  }
+
+  protected updateTemplateTask(index: number, description: string) {
+    this.templateTasks.update((tasks) =>
+      tasks.map((t, i) => (i === index ? { description } : t)),
+    );
+  }
+
+  protected moveTemplateTask(index: number, direction: -1 | 1) {
+    const tasks = this.templateTasks();
+    const target = index + direction;
+    if (target < 0 || target >= tasks.length) return;
+    const updated = [...tasks];
+    [updated[index], updated[target]] = [updated[target], updated[index]];
+    this.templateTasks.set(updated);
+  }
+
   protected toggleTag(tagId: number) {
     if (this.form.tagIds.has(tagId)) {
       this.form.tagIds.delete(tagId);
@@ -269,23 +302,29 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
       sortOrder: i,
     }));
 
+    if (this.form.cardType === 'TODO_LIST' && this.templateTasks().length === 0) {
+      this.error.set('TODO_LIST cards require at least one template task');
+      return;
+    }
+
     const req: SaveCardRequest = {
       title: this.form.title,
       slug: this.form.slug,
       description: this.form.description || null,
       cardType: this.form.cardType,
-      mediaUrl: this.form.mediaUrl || null,
-      printMediaUrl: this.form.printMediaUrl || null,
+      mediaUrl: this.form.cardType === 'TODO_LIST' ? null : this.form.mediaUrl || null,
+      printMediaUrl: this.form.cardType === 'TODO_LIST' ? null : this.form.printMediaUrl || null,
       thumbnailUrl: this.form.thumbnailUrl || null,
       coverImageUrl: this.form.coverImageUrl || null,
-      bodyJson: this.bodyJson,
-      bodyHtml: this.bodyHtml,
+      bodyJson: this.form.cardType === 'TODO_LIST' ? null : this.bodyJson,
+      bodyHtml: this.form.cardType === 'TODO_LIST' ? null : this.bodyHtml,
       backgroundColor: this.form.backgroundColor || null,
       textColor: this.form.textColor || null,
       simpleLayout: this.form.simpleLayout,
       status: this.form.status,
       tagIds: Array.from(this.form.tagIds),
       links: linkRequests,
+      templateTasks: this.form.cardType === 'TODO_LIST' ? this.templateTasks() : null,
     };
 
     this.saving.set(true);

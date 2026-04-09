@@ -24,4 +24,5 @@ public record SaveCardRequest(
         boolean simpleLayout,
         @NotNull CardStatus status,
         @NotEmpty(message = "At least one tag is required") List<Long> tagIds,
-        @Valid List<ContentCardLinkRequest> links) {}
+        @Valid List<ContentCardLinkRequest> links,
+        @Valid List<ContentCardTaskRequest> templateTasks) {}

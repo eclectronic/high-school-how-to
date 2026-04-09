@@ -50,6 +50,7 @@ export interface ContentCard {
   status: CardStatus;
   tags: Tag[];
   links: ContentCardLinkResponse[];
+  templateTasks: ContentCardTask[];
   createdAt: string;
   updatedAt: string;
 }
@@ -82,6 +83,7 @@ export interface SaveCardRequest {
   status: CardStatus;
   tagIds: number[];
   links: ContentCardLinkRequest[];
+  templateTasks: Array<{ description: string }> | null;
 }
 
 export interface SectionResponse {
@@ -92,6 +94,17 @@ export interface SectionResponse {
 
 export interface HomeLayoutResponse {
   sections: SectionResponse[];
+}
+
+export interface ContentCardTask {
+  id: number;
+  description: string;
+  sortOrder: number;
+}
+
+export interface LockerStatusResponse {
+  added: boolean;
+  taskListId: string | null;
 }
 
 export interface ImageUploadResponse {

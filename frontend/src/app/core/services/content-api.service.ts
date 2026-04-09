@@ -6,10 +6,12 @@ import {
   ContentCardSummary,
   HomeLayoutResponse,
   ImageUploadResponse,
+  LockerStatusResponse,
   SaveCardRequest,
   SaveTagRequest,
   Tag,
 } from '../models/content.models';
+import { TaskList } from '../models/task.models';
 
 @Injectable({ providedIn: 'root' })
 export class ContentApiService {
@@ -22,6 +24,14 @@ export class ContentApiService {
 
   getCardBySlug(slug: string) {
     return this.http.get<ContentCard>(`/api/content/cards/${slug}`);
+  }
+
+  addToLocker(slug: string) {
+    return this.http.post<TaskList>(`/api/content/cards/${slug}/add-to-locker`, {});
+  }
+
+  getLockerStatus(slug: string) {
+    return this.http.get<LockerStatusResponse>(`/api/content/cards/${slug}/locker-status`);
   }
 
   getAllTags() {
