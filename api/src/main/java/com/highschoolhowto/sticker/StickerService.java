@@ -113,12 +113,9 @@ public class StickerService {
             Sticker sticker, com.highschoolhowto.badge.dto.EarnedBadgeResponse earnedBadge) {
         return new CreateStickerResponse(
                 sticker.getId(),
-                sticker.getType(),
                 sticker.getEmoji(),
-                sticker.getImageUrl(),
-                sticker.getPositionX(),
-                sticker.getPositionY(),
-                sticker.getSize(),
+                sticker.getIconUrl(),
+                sticker.getLabel(),
                 earnedBadge
         );
     }

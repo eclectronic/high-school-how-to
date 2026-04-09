@@ -9,10 +9,7 @@ import java.util.UUID;
  */
 public record CreateStickerResponse(
         UUID id,
-        String type,
         String emoji,
-        String imageUrl,
-        double positionX,
-        double positionY,
-        String size,
+        String iconUrl,
+        String label,
         EarnedBadgeResponse earnedBadge) {}
