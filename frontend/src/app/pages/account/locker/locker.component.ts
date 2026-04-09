@@ -1992,7 +1992,6 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected dueDatePopoverListId: string | null = null;
   protected fontPickerOpen = false;
 
-<<<<<<< HEAD
   // Shortcut dialog state
   protected shortcutDialogOpen = false;
   protected editingShortcut: Shortcut | null = null;
@@ -2002,9 +2001,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected shortcutIconType: 'favicon' | 'emoji' = 'favicon';
   protected shortcutEmojiDraft = '';
   protected confirmDeleteShortcut: Shortcut | null = null;
-=======
   protected noteMenuOpen = false;
->>>>>>> origin/develop
 
   protected readonly atListLimit = computed(() => this.taskLists().length >= 20);
   protected readonly atTimerLimit = computed(() => this.timers().length >= 10);
