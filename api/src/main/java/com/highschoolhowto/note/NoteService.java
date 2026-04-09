@@ -122,6 +122,7 @@ public class NoteService {
                 note.getColor(),
                 note.getTextColor(),
                 note.getFontSize(),
+                note.getNoteType(),
                 earnedBadge
         );
     }

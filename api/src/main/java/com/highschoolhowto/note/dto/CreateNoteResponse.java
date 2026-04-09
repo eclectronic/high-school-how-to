@@ -1,6 +1,7 @@
 package com.highschoolhowto.note.dto;
 
 import com.highschoolhowto.badge.dto.EarnedBadgeResponse;
+import com.highschoolhowto.note.NoteType;
 import java.util.UUID;
 
 /**
@@ -14,4 +15,5 @@ public record CreateNoteResponse(
         String color,
         String textColor,
         String fontSize,
+        NoteType noteType,
         EarnedBadgeResponse earnedBadge) {}
