@@ -4,6 +4,7 @@ import com.highschoolhowto.security.UserPrincipal;
 import com.highschoolhowto.timer.dto.CreateTimerRequest;
 import com.highschoolhowto.timer.dto.TimerResponse;
 import com.highschoolhowto.timer.dto.UpdateTimerRequest;
+import com.highschoolhowto.timer.dto.UpdateTimerResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -43,7 +44,7 @@ public class TimerController {
     }
 
     @PutMapping("/{timerId}")
-    public ResponseEntity<TimerResponse> update(
+    public ResponseEntity<UpdateTimerResponse> update(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable("timerId") UUID timerId,
             @Valid @RequestBody UpdateTimerRequest request) {

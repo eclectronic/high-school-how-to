@@ -15,6 +15,7 @@ import { NoteApiService } from '../../../core/services/note-api.service';
 import { BookmarkApiService } from '../../../core/services/bookmark-api.service';
 import { StickerApiService } from '../../../core/services/sticker-api.service';
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
+import { BadgeApiService } from '../../../core/services/badge-api.service';
 import { TaskList, TaskItem, Timer, Note, BookmarkList, Sticker } from '../../../core/models/task.models';
 import { RouterTestingModule } from '@angular/router/testing';
 
@@ -82,6 +83,7 @@ describe('LockerComponent', () => {
   let bookmarkApi: jasmine.SpyObj<BookmarkApiService>;
   let stickerApi: jasmine.SpyObj<StickerApiService>;
   let lockerLayoutApi: jasmine.SpyObj<LockerLayoutApiService>;
+  let badgeApi: jasmine.SpyObj<BadgeApiService>;
 
   beforeEach(async () => {
     localStorage.removeItem(MOCK_FONT_KEY);
@@ -108,6 +110,9 @@ describe('LockerComponent', () => {
     lockerLayoutApi = jasmine.createSpyObj<LockerLayoutApiService>('LockerLayoutApiService', [
       'getLayout', 'saveLayout',
     ]);
+    badgeApi = jasmine.createSpyObj<BadgeApiService>('BadgeApiService', [
+      'getEarnedBadges', 'adminListBadges', 'adminCreateBadge', 'adminUpdateBadge', 'adminDeleteBadge',
+    ]);
 
     taskApi.getTaskLists.and.returnValue(of([]));
     timerApi.getTimers.and.returnValue(of([]));
@@ -116,6 +121,7 @@ describe('LockerComponent', () => {
     stickerApi.getStickers.and.returnValue(of([]));
     lockerLayoutApi.getLayout.and.returnValue(of([]));
     lockerLayoutApi.saveLayout.and.returnValue(of([]));
+    badgeApi.getEarnedBadges.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [LockerComponent, RouterTestingModule],
@@ -128,6 +134,7 @@ describe('LockerComponent', () => {
         { provide: BookmarkApiService, useValue: bookmarkApi },
         { provide: StickerApiService, useValue: stickerApi },
         { provide: LockerLayoutApiService, useValue: lockerLayoutApi },
+        { provide: BadgeApiService, useValue: badgeApi },
       ],
     }).compileComponents();
   });

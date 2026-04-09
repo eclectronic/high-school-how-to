@@ -33,6 +33,11 @@ export const adminRoutes: Routes = [
             (m) => m.QuoteLibraryComponent,
           ),
       },
+      {
+        path: 'badges',
+        loadComponent: () =>
+          import('./badges/badge-manager.component').then((m) => m.BadgeManagerComponent),
+      },
     ],
   },
 ];

@@ -7,11 +7,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.highschoolhowto.badge.BadgeService;
 import com.highschoolhowto.tasks.TaskList;
 import com.highschoolhowto.tasks.TaskListRepository;
 import com.highschoolhowto.timer.dto.CreateTimerRequest;
 import com.highschoolhowto.timer.dto.TimerResponse;
 import com.highschoolhowto.timer.dto.UpdateTimerRequest;
+import com.highschoolhowto.timer.dto.UpdateTimerResponse;
 import com.highschoolhowto.user.User;
 import com.highschoolhowto.user.UserRepository;
 import com.highschoolhowto.web.ApiException;
@@ -35,6 +37,9 @@ class TimerServiceTest {
 
     @Mock
     TaskListRepository taskListRepository;
+
+    @Mock
+    BadgeService badgeService;
 
     @InjectMocks
     TimerService service;
@@ -159,8 +164,8 @@ class TimerServiceTest {
         when(timerRepository.findByIdAndUserId(timerId, userId)).thenReturn(Optional.of(timer));
         when(timerRepository.save(any(Timer.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        TimerResponse response = service.updateTimer(userId, timerId,
-                new UpdateTimerRequest("New Title", null, null, null, null, null, null, null, null, false));
+        UpdateTimerResponse response = service.updateTimer(userId, timerId,
+                new UpdateTimerRequest("New Title", null, null, null, null, null, null, null, null, false, false, false));
 
         assertThat(response.title()).isEqualTo("New Title");
     }
@@ -178,8 +183,8 @@ class TimerServiceTest {
         when(timerRepository.findByIdAndUserId(timerId, userId)).thenReturn(Optional.of(timer));
         when(timerRepository.save(any(Timer.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        TimerResponse response = service.updateTimer(userId, timerId,
-                new UpdateTimerRequest("Timer", null, null, null, null, null, null, null, null, true));
+        UpdateTimerResponse response = service.updateTimer(userId, timerId,
+                new UpdateTimerRequest("Timer", null, null, null, null, null, null, null, null, true, false, false));
 
         assertThat(response.linkedTaskListId()).isNull();
     }
@@ -192,7 +197,7 @@ class TimerServiceTest {
         when(timerRepository.findByIdAndUserId(timerId, userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.updateTimer(userId, timerId,
-                new UpdateTimerRequest("Timer", null, null, null, null, null, null, null, null, false)))
+                new UpdateTimerRequest("Timer", null, null, null, null, null, null, null, null, false, false, false)))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }

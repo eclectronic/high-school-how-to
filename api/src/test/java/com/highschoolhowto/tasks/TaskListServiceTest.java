@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.highschoolhowto.badge.BadgeService;
 import com.highschoolhowto.tasks.dto.CreateTaskListRequest;
 import com.highschoolhowto.tasks.dto.CreateTaskRequest;
 import com.highschoolhowto.tasks.dto.TaskListResponse;
@@ -36,6 +37,9 @@ class TaskListServiceTest {
 
     @Mock
     UserRepository userRepository;
+
+    @Mock
+    BadgeService badgeService;
 
     @InjectMocks
     TaskListService service;

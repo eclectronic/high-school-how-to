@@ -47,3 +47,7 @@ databaseChangeLog:
       file: db/changelog/v4-pinnable-layout-0040.sql
   - include:
       file: db/changelog/v4-quotes-0041.sql
+  - include:
+      file: db/changelog/v4-badges-0042.sql
+  - include:
+      file: db/changelog/v4-tasklist-source-0043.sql

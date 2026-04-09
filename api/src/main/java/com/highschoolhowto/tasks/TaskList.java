@@ -40,6 +40,7 @@ public class TaskList {
     @Column(name = "text_color", length = 255)
     private String textColor;
 
+    /** The content card this list was copied from (set when added from content viewer). */
     @Column(name = "source_content_card_id")
     private Long sourceContentCardId;
 
