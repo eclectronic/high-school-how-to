@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/tags", "/api/tags/**").permitAll()
                         .requestMatchers("/api/content/cards", "/api/content/cards/**").permitAll()
                         .requestMatchers("/api/pages/home/layout").permitAll()
+                        .requestMatchers("/api/quotes/today").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())

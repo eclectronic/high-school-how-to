@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testin
 import { of } from 'rxjs';
 import { TimerCardComponent, TIMER_PRESETS } from './timer-card.component';
 import { TimerApiService, UpdateTimerResponse } from '../../core/services/timer-api.service';
-import { Timer } from '../../core/models/task.models';
+import { Timer, TaskList } from '../../core/models/task.models';
 
 function makeUpdateTimerResponse(overrides: Partial<Timer> = {}): UpdateTimerResponse {
   return {
@@ -27,6 +27,16 @@ function makeTimer(overrides: Partial<Timer> = {}): Timer {
     shortBreakDuration: 5,
     longBreakDuration: 15,
     sessionsBeforeLongBreak: 4,
+    ...overrides,
+  };
+}
+
+function makeTaskList(overrides: Partial<TaskList> = {}): TaskList {
+  return {
+    id: 'list-1',
+    title: 'My Tasks',
+    color: '#fffef8',
+    tasks: [],
     ...overrides,
   };
 }
@@ -72,6 +82,12 @@ describe('TimerCardComponent', () => {
 
   it('shows 25:00 for idle 25-minute timer', () => {
     expect(fixture.nativeElement.querySelector('.timer-display__time').textContent.trim()).toBe('00:00');
+  });
+
+  it('does not render inline task list or checkboxes', () => {
+    expect(fixture.nativeElement.querySelector('.linked-list')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.linked-list__tasks')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.linked-task input[type="checkbox"]')).toBeNull();
   });
 
   // ── Phase state machine ───────────────────────────────────────────────────
@@ -238,5 +254,50 @@ describe('TimerCardComponent', () => {
     c.toggleStartPause(); // starts focus
     c.skipPhase(); // completedSessions=2, 2%2=0 → long break
     expect(c.phase()).toBe('long-break');
+  });
+
+  // ── Linked list UI ────────────────────────────────────────────────────────
+
+  it('hides Study button when no linked list', () => {
+    const studyBtn = fixture.nativeElement.querySelector('[title="Enter Study Session"]');
+    expect(studyBtn).toBeNull();
+  });
+
+  it('hides 📋 icon when no linked list', () => {
+    const clipboardBtn = fixture.nativeElement.querySelector('[title="Go to linked list"]');
+    expect(clipboardBtn).toBeNull();
+  });
+
+  describe('with a linked list', () => {
+    let linkedFixture: ComponentFixture<TimerCardComponent>;
+    let linkedComponent: TimerCardComponent;
+    const linkedList = makeTaskList();
+
+    beforeEach(async () => {
+      linkedFixture = TestBed.createComponent(TimerCardComponent);
+      linkedComponent = linkedFixture.componentInstance;
+      linkedComponent.timer = makeTimer({ linkedTaskListId: linkedList.id });
+      linkedFixture.componentRef.setInput('taskLists', [linkedList]);
+      linkedFixture.detectChanges();
+    });
+
+    afterEach(() => (linkedFixture.componentInstance as any).clearTick());
+
+    it('shows Study button', () => {
+      const studyBtn = linkedFixture.nativeElement.querySelector('[title="Enter Study Session"]');
+      expect(studyBtn).toBeTruthy();
+    });
+
+    it('shows 📋 icon', () => {
+      const clipboardBtn = linkedFixture.nativeElement.querySelector('[title="Go to linked list"]');
+      expect(clipboardBtn).toBeTruthy();
+    });
+
+    it('emits scrollToLinkedListRequested', () => {
+      let emitCount = 0;
+      linkedComponent.scrollToLinkedListRequested.subscribe(() => emitCount++);
+      linkedComponent.scrollToLinkedListRequested.emit();
+      expect(emitCount).toBe(1);
+    });
   });
 });

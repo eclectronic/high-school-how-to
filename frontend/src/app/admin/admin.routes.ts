@@ -27,6 +27,13 @@ export const adminRoutes: Routes = [
           import('./tags/tag-manager.component').then((m) => m.TagManagerComponent),
       },
       {
+        path: 'quotes',
+        loadComponent: () =>
+          import('./quote-library/quote-library.component').then(
+            (m) => m.QuoteLibraryComponent,
+          ),
+      },
+      {
         path: 'badges',
         loadComponent: () =>
           import('./badges/badge-manager.component').then((m) => m.BadgeManagerComponent),

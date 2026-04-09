@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Note, EarnedBadge } from '../models/task.models';
+import { Note, EarnedBadge, NoteType } from '../models/task.models';
 
 export interface CreateNoteResponse extends Note {
   earnedBadge?: EarnedBadge | null;
@@ -13,6 +13,7 @@ export interface CreateNoteRequest {
   color?: string;
   textColor?: string | null;
   fontSize?: string | null;
+  noteType?: NoteType;
 }
 
 export interface UpdateNoteRequest {

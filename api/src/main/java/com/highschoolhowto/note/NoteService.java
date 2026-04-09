@@ -49,10 +49,23 @@ public class NoteService {
                     "Limit reached",
                     "Maximum of " + MAX_NOTES_PER_USER + " notes per user reached");
         }
+        NoteType noteType = request.noteType() != null ? request.noteType() : NoteType.REGULAR;
+        if (noteType == NoteType.QUOTE) {
+            long quoteCount = noteRepository.countByUserIdAndNoteType(userId, NoteType.QUOTE);
+            if (quoteCount >= 1) {
+                throw new ApiException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "Limit reached",
+                        "You can only have one Quote of the Day note");
+            }
+        }
         Note note = new Note();
         note.setUser(user);
         note.setTitle(request.title().trim());
-        note.setContent(request.content());
+        note.setNoteType(noteType);
+        if (noteType != NoteType.QUOTE) {
+            note.setContent(request.content());
+        }
         if (StringUtils.hasText(request.color())) {
             note.setColor(request.color().trim());
         }
@@ -96,7 +109,8 @@ public class NoteService {
                 note.getContent(),
                 note.getColor(),
                 note.getTextColor(),
-                note.getFontSize()
+                note.getFontSize(),
+                note.getNoteType()
         );
     }
 
