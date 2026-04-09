@@ -76,7 +76,8 @@ class ContentCardServiceLinksTest {
                 false,
                 CardStatus.PUBLISHED,
                 List.of(1L),
-                links);
+                links,
+                null);
     }
 
     @Test
