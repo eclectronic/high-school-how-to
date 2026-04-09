@@ -1,6 +1,7 @@
 package com.highschoolhowto.note;
 
 import com.highschoolhowto.note.dto.CreateNoteRequest;
+import com.highschoolhowto.note.dto.CreateNoteResponse;
 import com.highschoolhowto.note.dto.NoteResponse;
 import com.highschoolhowto.note.dto.UpdateNoteRequest;
 import com.highschoolhowto.security.UserPrincipal;
@@ -35,7 +36,7 @@ public class NoteController {
     }
 
     @PostMapping
-    public ResponseEntity<NoteResponse> create(
+    public ResponseEntity<CreateNoteResponse> create(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateNoteRequest request) {
         UUID userId = principal.getUser().getId();

@@ -7,7 +7,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.highschoolhowto.badge.BadgeService;
+import com.highschoolhowto.badge.BadgeTriggerType;
 import com.highschoolhowto.sticker.dto.CreateStickerRequest;
+import com.highschoolhowto.sticker.dto.CreateStickerResponse;
 import com.highschoolhowto.sticker.dto.StickerResponse;
 import com.highschoolhowto.sticker.dto.UpdateStickerRequest;
 import com.highschoolhowto.user.User;
@@ -31,6 +34,9 @@ class StickerServiceTest {
 
     @Mock
     UserRepository userRepository;
+
+    @Mock
+    BadgeService badgeService;
 
     @InjectMocks
     StickerService service;
@@ -82,7 +88,8 @@ class StickerServiceTest {
         Sticker saved = makeSticker(userId, "⭐", null, "My star");
         when(stickerRepository.save(any(Sticker.class))).thenReturn(saved);
 
-        StickerResponse response = service.createSticker(userId, new CreateStickerRequest("⭐", null, "My star"));
+        when(badgeService.checkFeatureBadge(any(), any(BadgeTriggerType.class))).thenReturn(Optional.empty());
+        CreateStickerResponse response = service.createSticker(userId, new CreateStickerRequest("⭐", null, "My star"));
 
         assertThat(response.emoji()).isEqualTo("⭐");
         assertThat(response.iconUrl()).isNull();
@@ -101,7 +108,8 @@ class StickerServiceTest {
         Sticker saved = makeSticker(userId, null, "/media/icons/abc.png", null);
         when(stickerRepository.save(any(Sticker.class))).thenReturn(saved);
 
-        StickerResponse response =
+        when(badgeService.checkFeatureBadge(any(), any(BadgeTriggerType.class))).thenReturn(Optional.empty());
+        CreateStickerResponse response =
                 service.createSticker(userId, new CreateStickerRequest(null, "/media/icons/abc.png", null));
 
         assertThat(response.iconUrl()).isEqualTo("/media/icons/abc.png");

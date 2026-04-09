@@ -1,7 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { LockerLayoutItem, TaskItem, TaskList } from '../models/task.models';
+import { EarnedBadge, LockerLayoutItem, TaskItem, TaskList } from '../models/task.models';
+
+export interface UpdateTaskResponse extends TaskItem {
+  earnedBadge?: EarnedBadge | null;
+}
 
 interface CreateListRequest {
   title: string;
@@ -63,8 +67,8 @@ export class TaskApiService {
     return this.http.post<TaskItem>(`/api/tasklists/${listId}/tasks`, payload);
   }
 
-  updateTask(listId: string, taskId: string, update: UpdateTaskRequest): Observable<TaskItem> {
-    return this.http.put<TaskItem>(`/api/tasklists/${listId}/tasks/${taskId}`, update);
+  updateTask(listId: string, taskId: string, update: UpdateTaskRequest): Observable<UpdateTaskResponse> {
+    return this.http.put<UpdateTaskResponse>(`/api/tasklists/${listId}/tasks/${taskId}`, update);
   }
 
   updateTaskDueDate(listId: string, taskId: string, dueAt: string | null): Observable<TaskItem> {

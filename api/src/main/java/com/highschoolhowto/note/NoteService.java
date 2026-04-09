@@ -1,6 +1,9 @@
 package com.highschoolhowto.note;
 
+import com.highschoolhowto.badge.BadgeService;
+import com.highschoolhowto.badge.BadgeTriggerType;
 import com.highschoolhowto.note.dto.CreateNoteRequest;
+import com.highschoolhowto.note.dto.CreateNoteResponse;
 import com.highschoolhowto.note.dto.NoteResponse;
 import com.highschoolhowto.note.dto.UpdateNoteRequest;
 import com.highschoolhowto.user.User;
@@ -20,10 +23,12 @@ public class NoteService {
 
     private final NoteRepository noteRepository;
     private final UserRepository userRepository;
+    private final BadgeService badgeService;
 
-    public NoteService(NoteRepository noteRepository, UserRepository userRepository) {
+    public NoteService(NoteRepository noteRepository, UserRepository userRepository, BadgeService badgeService) {
         this.noteRepository = noteRepository;
         this.userRepository = userRepository;
+        this.badgeService = badgeService;
     }
 
     @Transactional(readOnly = true)
@@ -34,7 +39,7 @@ public class NoteService {
     }
 
     @Transactional
-    public NoteResponse createNote(UUID userId, CreateNoteRequest request) {
+    public CreateNoteResponse createNote(UUID userId, CreateNoteRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found", "User not found"));
         long count = noteRepository.countByUserId(userId);
@@ -70,7 +75,9 @@ public class NoteService {
         if (StringUtils.hasText(request.fontSize())) {
             note.setFontSize(request.fontSize().trim());
         }
-        return toResponse(noteRepository.save(note));
+        Note saved = noteRepository.save(note);
+        var earnedBadge = badgeService.checkFeatureBadge(user, BadgeTriggerType.FIRST_NOTE);
+        return toCreateResponse(saved, earnedBadge.orElse(null));
     }
 
     @Transactional
@@ -104,6 +111,19 @@ public class NoteService {
                 note.getTextColor(),
                 note.getFontSize(),
                 note.getNoteType()
+        );
+    }
+
+    private CreateNoteResponse toCreateResponse(Note note, com.highschoolhowto.badge.dto.EarnedBadgeResponse earnedBadge) {
+        return new CreateNoteResponse(
+                note.getId(),
+                note.getTitle(),
+                note.getContent(),
+                note.getColor(),
+                note.getTextColor(),
+                note.getFontSize(),
+                note.getNoteType(),
+                earnedBadge
         );
     }
 }

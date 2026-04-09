@@ -1,7 +1,11 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Sticker } from '../models/task.models';
+import { Sticker, EarnedBadge } from '../models/task.models';
+
+export interface CreateStickerResponse extends Sticker {
+  earnedBadge?: EarnedBadge | null;
+}
 
 export interface CreateStickerRequest {
   emoji?: string | null;
@@ -23,8 +27,8 @@ export class StickerApiService {
     return this.http.get<Sticker[]>('/api/stickers');
   }
 
-  createSticker(request: CreateStickerRequest): Observable<Sticker> {
-    return this.http.post<Sticker>('/api/stickers', request);
+  createSticker(request: CreateStickerRequest): Observable<CreateStickerResponse> {
+    return this.http.post<CreateStickerResponse>('/api/stickers', request);
   }
 
   updateSticker(id: string, request: UpdateStickerRequest): Observable<Sticker> {

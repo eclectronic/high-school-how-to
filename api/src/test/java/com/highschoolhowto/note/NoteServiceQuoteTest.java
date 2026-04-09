@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.highschoolhowto.badge.BadgeService;
 import com.highschoolhowto.note.dto.CreateNoteRequest;
 import com.highschoolhowto.user.User;
 import com.highschoolhowto.user.UserRepository;
@@ -29,6 +30,9 @@ class NoteServiceQuoteTest {
 
     @Mock
     UserRepository userRepository;
+
+    @Mock
+    BadgeService badgeService;
 
     @InjectMocks
     NoteService noteService;

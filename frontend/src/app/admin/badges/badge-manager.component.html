@@ -1,0 +1,102 @@
+<div class="admin-page">
+  <div class="admin-page__header">
+    <h1>Badges</h1>
+    <button class="btn btn--primary" (click)="openNew()">+ Create Badge</button>
+  </div>
+
+  @if (error()) {
+    <div class="admin-error">{{ error() }}</div>
+  }
+
+  @if (showForm()) {
+    <div class="admin-card form-card">
+      <h2>{{ editingBadge() ? 'Edit Badge' : 'Create Badge' }}</h2>
+
+      <div class="form-row">
+        <label>Name</label>
+        <input [(ngModel)]="form.name" placeholder="Driver's Test Ready" maxlength="255" />
+      </div>
+
+      <div class="form-row">
+        <label>Description</label>
+        <textarea [(ngModel)]="form.description" rows="2" placeholder="Completed all steps..."></textarea>
+      </div>
+
+      <div class="form-row">
+        <label>Emoji Icon</label>
+        <input [(ngModel)]="form.emoji" placeholder="🚗" maxlength="10" />
+      </div>
+
+      <div class="form-row">
+        <label>Icon URL (optional, overrides emoji)</label>
+        <input [(ngModel)]="form.iconUrl" placeholder="https://..." maxlength="2000" />
+      </div>
+
+      <div class="form-row">
+        <label>Trigger Type</label>
+        <select [(ngModel)]="form.triggerType" (ngModelChange)="onTriggerTypeChange()">
+          @for (t of triggerTypes; track t) {
+            <option [value]="t">{{ triggerLabels[t] }}</option>
+          }
+        </select>
+      </div>
+
+      @if (needsContentCard) {
+        <div class="form-row">
+          <label>Content Card</label>
+          <div class="card-search">
+            <input
+              [(ngModel)]="cardSearch"
+              (input)="searchCards()"
+              placeholder="Search cards by title..."
+            />
+            @if (cardResults().length > 0) {
+              <ul class="card-search__results">
+                @for (card of cardResults(); track card.id) {
+                  <li (click)="selectCard(card)">{{ card.title }}</li>
+                }
+              </ul>
+            }
+          </div>
+          @if (form.triggerParam) {
+            <p class="card-search__selected">Selected card ID: {{ form.triggerParam }}</p>
+          }
+        </div>
+      }
+
+      <div class="form-actions">
+        <button class="btn btn--secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn--primary" (click)="save()">Save</button>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <p>Loading...</p>
+  } @else {
+    <div class="badge-list">
+      @for (badge of badges(); track badge.id) {
+        <div class="admin-card badge-card">
+          <div class="badge-card__icon">
+            @if (badge.iconUrl) {
+              <img [src]="badge.iconUrl" [alt]="badge.name" />
+            } @else {
+              <span>{{ badge.emoji }}</span>
+            }
+          </div>
+          <div class="badge-card__info">
+            <strong>{{ badge.name }}</strong>
+            @if (badge.description) {
+              <p>{{ badge.description }}</p>
+            }
+            <code>{{ triggerLabel(badge.triggerType) }}{{ badge.triggerParam ? ' · ' + badge.triggerParam : '' }}</code>
+          </div>
+          <div class="badge-card__actions">
+            <button class="btn btn--secondary btn--sm" (click)="openEdit(badge)">Edit</button>
+            <button class="btn btn--danger btn--sm" (click)="delete(badge)">Delete</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
