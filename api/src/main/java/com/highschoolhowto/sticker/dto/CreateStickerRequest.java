@@ -3,8 +3,7 @@ package com.highschoolhowto.sticker.dto;
 import jakarta.validation.constraints.Size;
 
 public record CreateStickerRequest(
-        @Size(max = 16) String emoji,
-        double positionX,
-        double positionY,
-        @Size(max = 16) String size
+        @Size(max = 10) String emoji,
+        @Size(max = 2000) String iconUrl,
+        @Size(max = 255) String label
 ) {}

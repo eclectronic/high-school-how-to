@@ -27,23 +27,14 @@ public class Sticker {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(nullable = false, length = 16)
-    private String type = "EMOJI";
-
-    @Column(length = 16)
+    @Column(length = 10)
     private String emoji;
 
-    @Column(name = "image_url", length = 2000)
-    private String imageUrl;
+    @Column(name = "icon_url", length = 2000)
+    private String iconUrl;
 
-    @Column(name = "position_x", nullable = false)
-    private double positionX;
-
-    @Column(name = "position_y", nullable = false)
-    private double positionY;
-
-    @Column(nullable = false, length = 16)
-    private String size = "medium";
+    @Column(length = 255)
+    private String label;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -68,23 +59,14 @@ public class Sticker {
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
 
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-
     public String getEmoji() { return emoji; }
     public void setEmoji(String emoji) { this.emoji = emoji; }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getIconUrl() { return iconUrl; }
+    public void setIconUrl(String iconUrl) { this.iconUrl = iconUrl; }
 
-    public double getPositionX() { return positionX; }
-    public void setPositionX(double positionX) { this.positionX = positionX; }
-
-    public double getPositionY() { return positionY; }
-    public void setPositionY(double positionY) { this.positionY = positionY; }
-
-    public String getSize() { return size; }
-    public void setSize(String size) { this.size = size; }
+    public String getLabel() { return label; }
+    public void setLabel(String label) { this.label = label; }
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

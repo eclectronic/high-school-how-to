@@ -611,36 +611,41 @@ describe('LockerComponent', () => {
 
   // ── Stickers ──────────────────────────────────────────────────────────────
 
-  it('onEmojiSelected creates a sticker via API', () => {
+  it('submitStickerDialog creates a sticker via API with emoji', () => {
     const newSticker = makeSticker({ id: 'new-sticker', emoji: '🎉' });
     stickerApi.createSticker.and.returnValue(of(newSticker));
+    lockerLayoutApi.saveLayout.and.returnValue(of([]));
     render();
 
-    component['onEmojiSelected']('🎉');
+    component['stickerDialogTab'] = 'emoji';
+    component['stickerDialogEmoji'] = '🎉';
+    component['stickerDialogLabel'] = '';
+    component['submitStickerDialog']();
 
     expect(stickerApi.createSticker).toHaveBeenCalledWith(jasmine.objectContaining({ emoji: '🎉' }));
     expect(component['stickers']().some(s => s.id === 'new-sticker')).toBeTrue();
   });
 
-  it('atStickerLimit is true at 30 stickers', () => {
-    const stickers = Array.from({ length: 30 }, (_, i) => makeSticker({ id: `s${i}` }));
+  it('atStickerLimit is true at 50 stickers', () => {
+    const stickers = Array.from({ length: 50 }, (_, i) => makeSticker({ id: `s${i}` }));
     stickerApi.getStickers.and.returnValue(of(stickers));
     render();
     expect(component['atStickerLimit']()).toBeTrue();
   });
 
-  it('onEmojiSelected does nothing when at sticker limit', () => {
-    const stickers = Array.from({ length: 30 }, (_, i) => makeSticker({ id: `s${i}` }));
+  it('openStickerDialog does nothing when at sticker limit', () => {
+    const stickers = Array.from({ length: 50 }, (_, i) => makeSticker({ id: `s${i}` }));
     stickerApi.getStickers.and.returnValue(of(stickers));
     render();
 
-    component['onEmojiSelected']('⭐');
+    component['openStickerDialog']();
 
-    expect(stickerApi.createSticker).not.toHaveBeenCalled();
+    expect(component['stickerDialogOpen']).toBeFalse();
   });
 
   it('onStickerDeleted removes sticker from signal and calls API', () => {
     stickerApi.deleteSticker.and.returnValue(of(undefined));
+    lockerLayoutApi.saveLayout.and.returnValue(of([]));
     stickerApi.getStickers.and.returnValue(of([makeSticker()]));
     render();
 
@@ -650,16 +655,19 @@ describe('LockerComponent', () => {
     expect(stickerApi.deleteSticker).toHaveBeenCalledWith('sticker-1');
   });
 
-  it('onStickerPositionChanged updates sticker position optimistically', () => {
-    stickerApi.updateSticker.and.returnValue(of(makeSticker({ positionX: 200, positionY: 150 })));
+  it('submitStickerDialog updates a sticker via API when editing', () => {
+    const updated = makeSticker({ emoji: '🎉', label: 'updated' });
+    stickerApi.updateSticker.and.returnValue(of(updated));
     stickerApi.getStickers.and.returnValue(of([makeSticker()]));
     render();
 
-    component['onStickerPositionChanged']('sticker-1', 200, 150);
+    component['stickerEditId'] = 'sticker-1';
+    component['stickerDialogTab'] = 'emoji';
+    component['stickerDialogEmoji'] = '🎉';
+    component['stickerDialogLabel'] = 'updated';
+    component['submitStickerDialog']();
 
-    const updated = component['stickers']().find(s => s.id === 'sticker-1');
-    expect(updated?.positionX).toBe(200);
-    expect(updated?.positionY).toBe(150);
+    expect(stickerApi.updateSticker).toHaveBeenCalledWith('sticker-1', jasmine.objectContaining({ emoji: '🎉' }));
   });
 
   // ── Font size ─────────────────────────────────────────────────────────────
