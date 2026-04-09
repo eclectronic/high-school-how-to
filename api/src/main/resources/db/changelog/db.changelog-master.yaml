@@ -39,3 +39,5 @@ databaseChangeLog:
       file: db/changelog/v3-phase7-0035.sql
   - include:
       file: db/changelog/v4-shortcuts-0038.sql
+  - include:
+      file: db/changelog/v4-quotes-0041.sql

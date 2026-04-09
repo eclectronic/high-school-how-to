@@ -10,7 +10,7 @@ import { NoteApiService } from '../../../core/services/note-api.service';
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
 import { ShortcutApiService } from '../../../core/services/shortcut-api.service';
 import { SessionStore } from '../../../core/session/session.store';
-import { TaskItem, TaskList, Timer, Note, Shortcut, Sticker } from '../../../core/models/task.models';
+import { TaskItem, TaskList, Timer, Note, Shortcut, Sticker, NoteType } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { InlineTitleEditComponent } from '../../../shared/inline-title-edit/inline-title-edit.component';
 import { ColorPickerComponent } from '../../../shared/color-picker/color-picker.component';
@@ -82,6 +82,21 @@ const LOCKER_COLORS: LockerColor[] = [
 
 const LOCKER_COLOR_KEY = 'hsht_lockerColorId';
 const LOCKER_FONT_KEY = 'hsht_lockerFontId';
+const LOCKER_FONT_SIZE_KEY = 'hsht_lockerFontSize';
+
+export type LockerFontSizeId = 'small' | 'medium' | 'large';
+
+export interface LockerFontSize {
+  id: LockerFontSizeId;
+  label: string;
+  value: string;
+}
+
+export const LOCKER_FONT_SIZES: LockerFontSize[] = [
+  { id: 'small', label: 'Small', value: '0.8rem' },
+  { id: 'medium', label: 'Medium', value: '0.875rem' },
+  { id: 'large', label: 'Large', value: '1rem' },
+];
 
 export interface LockerFont {
   id: string;
@@ -226,7 +241,8 @@ const LOCKER_ZONES = [
       class="dashboard"
       [ngStyle]="{
         '--lc-accent': lockerColor().doorSolid,
-        '--lc-shelf-text': lockerColor().shelfText
+        '--lc-shelf-text': lockerColor().shelfText,
+        '--locker-body-font-size': lockerFontSize().value
       }"
       (click)="closeConfig()"
     >
@@ -275,12 +291,25 @@ const LOCKER_ZONES = [
                   (click)="createTimer()" aria-label="Create new timer">
             ⏱
           </button>
-          <button type="button" class="app-icon-btn"
-                  [disabled]="atNoteLimit()"
-                  [title]="atNoteLimit() ? 'Maximum of 20 notes reached' : 'Create a sticky note'"
-                  (click)="createNote()" aria-label="Create new sticky note">
-            📝
-          </button>
+          <div style="position:relative;display:inline-block">
+            <button type="button" class="app-icon-btn"
+                    [disabled]="atNoteLimit()"
+                    [title]="atNoteLimit() ? 'Maximum of 20 notes reached' : 'Create a note'"
+                    (click)="toggleNoteMenu(); $event.stopPropagation()" aria-label="Create new note">
+              📝
+            </button>
+            <div *ngIf="noteMenuOpen" class="note-submenu" (click)="$event.stopPropagation()">
+              <button type="button" class="note-submenu__item" (click)="createNote('REGULAR')">
+                📝 Blank Note
+              </button>
+              <button type="button" class="note-submenu__item"
+                      [disabled]="hasQuoteNote()"
+                      [title]="hasQuoteNote() ? 'You already have a Quote of the Day note.' : 'Create a Quote of the Day note'"
+                      (click)="createNote('QUOTE')">
+                💬 Quote of the Day
+              </button>
+            </div>
+          </div>
           <button type="button" class="app-icon-btn"
                   [disabled]="atShortcutLimit()"
                   [title]="atShortcutLimit() ? 'Maximum of 50 shortcuts reached' : 'Add a shortcut'"
@@ -310,6 +339,14 @@ const LOCKER_ZONES = [
                   [class.font-option--active]="lockerFont().id === f.id"
                   [style.fontFamily]="f.family"
                   (click)="setLockerFont(f)">{{ f.name }}</button>
+          <div class="font-size-row">
+            <span class="font-size-label">Size</span>
+            <div class="font-size-stops">
+              <button *ngFor="let s of LOCKER_FONT_SIZES" type="button" class="font-size-stop"
+                      [class.font-size-stop--active]="lockerFontSize().id === s.id"
+                      (click)="setLockerFontSize(s)">{{ s.label }}</button>
+            </div>
+          </div>
         </div>
         <app-emoji-picker
           *ngIf="stickerPickerOpen"
@@ -465,6 +502,7 @@ const LOCKER_ZONES = [
           (timerDeleted)="onTimerDeleted($event)"
           (taskCheckChange)="onTimerTaskCheckChange($event)"
           (studySessionRequested)="enterStudySession(card.data.id)"
+          (scrollToLinkedListRequested)="scrollToLinkedList(card.data)"
         ></app-timer-card>
 
         <!-- Note card -->
@@ -489,6 +527,7 @@ const LOCKER_ZONES = [
         <ng-container *ngIf="asTaskList(card) as list">
         <article
           class="list-card"
+          [attr.id]="'task-list-' + list.id"
           [style.background]="list.color || '#fffef8'"
           [style.color]="cardTextColor(list)"
           [class.list-card--elevated]="dueDatePopoverListId === list.id || colorPickerListId === list.id"
@@ -1220,6 +1259,12 @@ const LOCKER_ZONES = [
         100% { box-shadow: 0 0 0 0 rgba(255,165,0,0); }
       }
       .timer-flash { animation: timer-flash 0.9s ease-out forwards; }
+      @keyframes list-flash {
+        0%   { box-shadow: 0 0 0 3px rgba(99,102,241,0.8); }
+        60%  { box-shadow: 0 0 0 6px rgba(99,102,241,0.3); }
+        100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+      }
+      .list-flash { animation: list-flash 0.9s ease-out forwards; }
       .list-actions {
         display: flex;
         gap: 0.3rem;
@@ -1321,7 +1366,6 @@ const LOCKER_ZONES = [
         text-align: left;
         padding: 0.3rem 0.4rem;
         font: inherit;
-        font-size: 0.875rem;
         color: #2d1a10;
         cursor: text;
       }
@@ -1339,7 +1383,6 @@ const LOCKER_ZONES = [
         background: rgba(255,255,255,0.75);
         color: #2d1a10;
         font: inherit;
-        font-size: 0.875rem;
       }
       .new-task input::placeholder { color: rgba(45,26,16,0.35); }
       .new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
@@ -1453,6 +1496,50 @@ const LOCKER_ZONES = [
         border-color: transparent;
       }
 
+      /* ── Font size row (inside font picker panel) ── */
+      .font-size-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding-top: 0.4rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        margin-top: 0.15rem;
+      }
+      .font-size-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #52525b;
+        white-space: nowrap;
+      }
+      .font-size-stops {
+        display: flex;
+        gap: 0.3rem;
+      }
+      .font-size-stop {
+        padding: 0.3rem 0.65rem;
+        border-radius: 6px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        background: rgba(255, 255, 255, 0.7);
+        cursor: pointer;
+        font-size: 0.82rem;
+        transition: background 0.12s;
+      }
+      .font-size-stop:hover { background: rgba(0, 0, 0, 0.06); }
+      .font-size-stop--active {
+        background: var(--lc-accent, #3d8ed4);
+        color: #fff;
+        border-color: transparent;
+      }
+
+      /* ── Widget body font size variable ── */
+      .task-text,
+      .new-task input,
+      .study-task__text,
+      .study-new-task input {
+        font-size: var(--locker-body-font-size, 0.875rem);
+      }
+
       .sticker-picker-panel {
         position: absolute;
         top: 100%;
@@ -1460,6 +1547,38 @@ const LOCKER_ZONES = [
         z-index: 100;
         margin-top: 0.25rem;
       }
+
+      /* ── Note submenu ── */
+      .note-submenu {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        margin-top: 0.25rem;
+        background: rgba(255,255,255,0.97);
+        backdrop-filter: blur(12px);
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.1);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        min-width: 11rem;
+        overflow: hidden;
+      }
+      .note-submenu__item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.55rem 0.9rem;
+        background: none;
+        border: none;
+        font: inherit;
+        font-size: 0.88rem;
+        cursor: pointer;
+        color: #1c1c1e;
+        transition: background 0.1s;
+      }
+      .note-submenu__item:hover:not(:disabled) { background: rgba(0,0,0,0.06); }
+      .note-submenu__item:disabled { opacity: 0.4; cursor: not-allowed; }
 
       .sticker-layer {
         position: absolute;
@@ -1662,7 +1781,6 @@ const LOCKER_ZONES = [
       .study-task input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
 
       .study-task__text {
-        font-size: 0.875rem;
         line-height: 1.4;
       }
       .study-task__text--done {
@@ -1684,7 +1802,6 @@ const LOCKER_ZONES = [
         background: rgba(255,255,255,0.75);
         color: inherit;
         font: inherit;
-        font-size: 0.875rem;
       }
       .study-new-task input::placeholder { color: rgba(45,26,16,0.35); }
       .study-new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
@@ -1837,8 +1954,10 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   protected readonly LOCKER_COLORS = LOCKER_COLORS;
   protected readonly LOCKER_FONTS = LOCKER_FONTS;
+  protected readonly LOCKER_FONT_SIZES = LOCKER_FONT_SIZES;
   protected lockerColor = signal<LockerColor>(this.loadLockerColor());
   protected lockerFont = signal<LockerFont>(this.loadLockerFont());
+  protected lockerFontSize = signal<LockerFontSize>(this.loadLockerFontSize());
 
   // Animation phases
   protected lockerDone = signal(false);
@@ -1873,6 +1992,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected dueDatePopoverListId: string | null = null;
   protected fontPickerOpen = false;
 
+<<<<<<< HEAD
   // Shortcut dialog state
   protected shortcutDialogOpen = false;
   protected editingShortcut: Shortcut | null = null;
@@ -1882,12 +2002,16 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected shortcutIconType: 'favicon' | 'emoji' = 'favicon';
   protected shortcutEmojiDraft = '';
   protected confirmDeleteShortcut: Shortcut | null = null;
+=======
+  protected noteMenuOpen = false;
+>>>>>>> origin/develop
 
   protected readonly atListLimit = computed(() => this.taskLists().length >= 20);
   protected readonly atTimerLimit = computed(() => this.timers().length >= 10);
   protected readonly atNoteLimit = computed(() => this.notes().length >= 20);
   protected readonly atShortcutLimit = computed(() => this.shortcuts().length >= 50);
   protected readonly atStickerLimit = computed(() => this.stickers().length >= 30);
+  protected readonly hasQuoteNote = computed(() => this.notes().some(n => n.noteType === 'QUOTE'));
 
   protected readonly studySession = signal<{ timerId: string; listId: string } | null>(null);
   protected readonly studySessionTimer = computed(() =>
@@ -2015,6 +2139,16 @@ export class LockerComponent implements AfterViewInit, OnInit {
     return LOCKER_FONTS.find(f => f.id === saved) ?? LOCKER_FONTS[0];
   }
 
+  protected setLockerFontSize(size: LockerFontSize): void {
+    this.lockerFontSize.set(size);
+    localStorage.setItem(LOCKER_FONT_SIZE_KEY, size.id);
+  }
+
+  private loadLockerFontSize(): LockerFontSize {
+    const saved = localStorage.getItem(LOCKER_FONT_SIZE_KEY);
+    return LOCKER_FONT_SIZES.find(s => s.id === saved) ?? LOCKER_FONT_SIZES.find(s => s.id === 'medium')!;
+  }
+
   private loadGoogleFont(font: LockerFont): void {
     const name = font.name.replace(/ /g, '+');
     const id = `gfont-${font.id}`;
@@ -2056,6 +2190,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.fontPickerOpen = false;
     this.dueDatePopoverTaskId = null;
     this.dueDatePopoverListId = null;
+    this.noteMenuOpen = false;
   }
 
   protected createList(): void {
@@ -2425,13 +2560,22 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.cardOrder.set(current);
   }
 
-  private scrollToTimer(timerId: string): void {
-    const el = document.getElementById('timer-' + timerId);
+  private scrollToElement(elementId: string, flashClass: string): void {
+    const el = document.getElementById(elementId);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      el.classList.add('timer-flash');
-      setTimeout(() => el.classList.remove('timer-flash'), 900);
+      el.classList.add(flashClass);
+      setTimeout(() => el.classList.remove(flashClass), 900);
     }
+  }
+
+  private scrollToTimer(timerId: string): void {
+    this.scrollToElement('timer-' + timerId, 'timer-flash');
+  }
+
+  protected scrollToLinkedList(timer: Timer): void {
+    if (!timer.linkedTaskListId) return;
+    this.scrollToElement('task-list-' + timer.linkedTaskListId, 'list-flash');
   }
 
   // --- Timer CRUD ---
@@ -2477,12 +2621,20 @@ export class LockerComponent implements AfterViewInit, OnInit {
   }
 
   // --- Note CRUD ---
-  protected createNote(): void {
+  protected toggleNoteMenu(): void {
     if (this.atNoteLimit()) return;
+    this.noteMenuOpen = !this.noteMenuOpen;
+  }
+
+  protected createNote(noteType: NoteType = 'REGULAR'): void {
+    this.noteMenuOpen = false;
+    if (this.atNoteLimit()) return;
+    if (noteType === 'QUOTE' && this.hasQuoteNote()) return;
     const existingTitles = this.notes().map(n => n.title);
-    const title = nextAutoName(existingTitles, 'Note');
+    const baseName = noteType === 'QUOTE' ? 'Quote of the Day' : 'Note';
+    const title = nextAutoName(existingTitles, baseName);
     const color = this.nextAvailableColor();
-    this.noteApi.createNote({ title, color }).subscribe({
+    this.noteApi.createNote({ title, color, noteType }).subscribe({
       next: note => {
         this.notes.update(current => [...current, note]);
         this.errorMessage = '';
