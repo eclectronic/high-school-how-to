@@ -8,6 +8,7 @@ function makeItem(overrides: Partial<ItemInput> & { id: string }): ItemInput {
     col: 1,
     colSpan: 4,
     order: 0,
+    row: 0,
     minimized: false,
     height: 200,
     ...overrides,
@@ -78,7 +79,7 @@ describe('LockerGridEngineService', () => {
       heightMap[1] = 50;
       heightMap[2] = 50;
       heightMap[3] = 50;
-      const packed = service.pack(items, 12, heightMap);
+      const packed = service.pack(items, 12, 0, heightMap);
       expect(packed[0].top).toBe(50);
     });
 

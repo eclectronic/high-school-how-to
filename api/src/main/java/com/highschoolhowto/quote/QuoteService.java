@@ -24,8 +24,10 @@ public class QuoteService {
         if (quotes.isEmpty()) {
             throw new ApiException(HttpStatus.NOT_FOUND, "No quotes", "No quotes are available");
         }
-        long index = LocalDate.now().toEpochDay() % quotes.size();
-        return toResponse(quotes.get((int) index));
+        // Day-of-year (1–366) maps to a fixed quote index so the same quote
+        // appears on the same calendar date every year with no repeats.
+        int index = LocalDate.now().getDayOfYear() - 1;
+        return toResponse(quotes.get(Math.min(index, quotes.size() - 1)));
     }
 
     @Transactional(readOnly = true)

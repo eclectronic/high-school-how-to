@@ -8,4 +8,9 @@ public record LockerLayoutItemResponse(
         int col,
         int colSpan,
         int order,
-        boolean minimized) {}
+        boolean minimized,
+        Integer posX,
+        Integer posY,
+        Integer minHeight,
+        Integer width,
+        Integer height) {}

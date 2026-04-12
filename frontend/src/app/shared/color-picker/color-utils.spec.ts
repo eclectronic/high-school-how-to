@@ -95,6 +95,18 @@ describe('color-utils', () => {
       const result = addToColorHistory('#aaaaaa', existing);
       expect(result.length).toBe(16);
     });
+
+    it('removes pre-existing duplicates from history', () => {
+      const result = addToColorHistory('#new', ['#a', '#b', '#a', '#c', '#b']);
+      expect(result).toEqual(['#new', '#a', '#b', '#c']);
+    });
+
+    it('compares hex colors case-insensitively', () => {
+      const result = addToColorHistory('#ABCDEF', ['#abcdef', '#123456']);
+      expect(result.length).toBe(2);
+      expect(result[0]).toBe('#ABCDEF');
+      expect(result[1]).toBe('#123456');
+    });
   });
 
 });

@@ -1,4 +1,4 @@
-import { Component, output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 const EMOJI_SECTIONS: { label: string; emojis: string[] }[] = [
@@ -25,7 +25,7 @@ const EMOJI_SECTIONS: { label: string; emojis: string[] }[] = [
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="emoji-picker" (click)="$event.stopPropagation()">
+    <div class="emoji-picker" [class.emoji-picker--inline]="inline()" (click)="$event.stopPropagation()">
       @for (section of sections; track section.label) {
         <div class="emoji-picker__section">
           <div class="emoji-picker__label">{{ section.label }}</div>
@@ -34,7 +34,9 @@ const EMOJI_SECTIONS: { label: string; emojis: string[] }[] = [
               <button
                 type="button"
                 class="emoji-picker__btn"
+                draggable="true"
                 (click)="emojiSelected.emit(emoji)"
+                (dragstart)="onDragStart($event, emoji)"
                 [title]="emoji"
                 aria-label="{{ emoji }}"
               >{{ emoji }}</button>
@@ -56,6 +58,18 @@ const EMOJI_SECTIONS: { label: string; emojis: string[] }[] = [
       box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     }
 
+    /* Inline mode: fills its container, no popup chrome */
+    .emoji-picker--inline {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      width: 100%;
+      max-height: none;
+      overflow-y: visible;
+      box-shadow: none;
+    }
+
     .emoji-picker__section { margin-bottom: 0.5rem; }
 
     .emoji-picker__label {
@@ -68,14 +82,14 @@ const EMOJI_SECTIONS: { label: string; emojis: string[] }[] = [
     }
 
     .emoji-picker__grid {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
       gap: 2px;
     }
 
     .emoji-picker__btn {
-      width: 34px;
-      height: 34px;
+      width: 100%;
+      aspect-ratio: 1;
       border: none;
       background: transparent;
       border-radius: 6px;
@@ -92,5 +106,17 @@ const EMOJI_SECTIONS: { label: string; emojis: string[] }[] = [
 })
 export class EmojiPickerComponent {
   readonly sections = EMOJI_SECTIONS;
+  readonly inline = input(false);
   readonly emojiSelected = output<string>();
+
+  /** Drag payload key for emojis dropped from this picker into the locker grid. */
+  static readonly DRAG_MIME = 'application/x-locker-sticker-emoji';
+
+  protected onDragStart(event: DragEvent, emoji: string): void {
+    if (!event.dataTransfer) return;
+    event.dataTransfer.setData(EmojiPickerComponent.DRAG_MIME, emoji);
+    // Fallback for browsers that ignore custom MIME types in tests.
+    event.dataTransfer.setData('text/plain', emoji);
+    event.dataTransfer.effectAllowed = 'copy';
+  }
 }

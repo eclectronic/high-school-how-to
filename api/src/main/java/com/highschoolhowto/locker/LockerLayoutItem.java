@@ -37,6 +37,21 @@ public class LockerLayoutItem {
     @Column(name = "minimized", nullable = false)
     private boolean minimized;
 
+    @Column(name = "pos_x")
+    private Integer posX;
+
+    @Column(name = "pos_y")
+    private Integer posY;
+
+    @Column(name = "min_height")
+    private Integer minHeight;
+
+    @Column(name = "width")
+    private Integer width;
+
+    @Column(name = "height")
+    private Integer height;
+
     public UUID getId() {
         return id;
     }
@@ -95,5 +110,45 @@ public class LockerLayoutItem {
 
     public void setMinimized(boolean minimized) {
         this.minimized = minimized;
+    }
+
+    public Integer getPosX() {
+        return posX;
+    }
+
+    public void setPosX(Integer posX) {
+        this.posX = posX;
+    }
+
+    public Integer getPosY() {
+        return posY;
+    }
+
+    public void setPosY(Integer posY) {
+        this.posY = posY;
+    }
+
+    public Integer getMinHeight() {
+        return minHeight;
+    }
+
+    public void setMinHeight(Integer minHeight) {
+        this.minHeight = minHeight;
+    }
+
+    public Integer getWidth() {
+        return width;
+    }
+
+    public void setWidth(Integer width) {
+        this.width = width;
+    }
+
+    public Integer getHeight() {
+        return height;
+    }
+
+    public void setHeight(Integer height) {
+        this.height = height;
     }
 }

@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ShortcutRepository extends JpaRepository<Shortcut, UUID> {
 
-    List<Shortcut> findByUserIdOrderByCreatedAtAsc(UUID userId);
+    List<Shortcut> findByUserIdOrderBySortOrderAsc(UUID userId);
 
     long countByUserId(UUID userId);
 

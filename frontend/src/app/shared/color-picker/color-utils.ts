@@ -54,30 +54,56 @@ export function firstHexFromGradient(gradient: string): string | null {
   return match ? match[0] : null;
 }
 
+/** Extracts the last hex color from a gradient string (the end/bottom stop). */
+export function lastHexFromGradient(gradient: string): string | null {
+  const matches = gradient.match(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g);
+  return matches ? matches[matches.length - 1] : null;
+}
+
 /** Default color palette used for auto-assigning card colors. */
 export const DEFAULT_PALETTE: string[] = [
-  '#fffef8', '#fef3c7', '#fde68a', '#fcd34d',
-  '#fef2f2', '#fecdd3', '#fda4af', '#fbcfe8',
-  '#ede9fe', '#ddd6fe', '#c7d2fe', '#bfdbfe',
-  '#dcfce7', '#bbf7d0', '#a7f3d0', '#e0f2fe',
+  // Locker colors
+  '#3d8ed4', '#d42e2e', '#28a855', '#e07820',
+  '#7048c0', '#1898a8', '#c8a810', '#6878a0',
+  // Pastels (no white)
+  '#fef3c7', '#fde68a', '#fcd34d', '#fef2f2',
+  '#fecdd3', '#fda4af', '#fbcfe8', '#ede9fe',
+  '#ddd6fe', '#c7d2fe', '#bfdbfe', '#dcfce7',
+  '#bbf7d0', '#a7f3d0', '#e0f2fe',
 ];
 
 const LS_HISTORY_KEY = 'hsht_colorHistory';
+
+/**
+ * Removes duplicate colors while preserving the order of first occurrences.
+ * Hex colors are compared case-insensitively.
+ */
+function dedupeColors(colors: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const c of colors) {
+    const key = isHexColor(c) ? c.toLowerCase() : c;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(c);
+    }
+  }
+  return result;
+}
 
 export function loadColorHistory(): string[] {
   try {
     const stored = localStorage.getItem(LS_HISTORY_KEY);
     if (stored) {
       const parsed = JSON.parse(stored) as string[];
-      if (Array.isArray(parsed)) return parsed.slice(0, 16);
+      if (Array.isArray(parsed)) return dedupeColors(parsed).slice(0, 16);
     }
   } catch { /* ignore */ }
   return [];
 }
 
 export function addToColorHistory(color: string, history: string[]): string[] {
-  const filtered = history.filter(c => c !== color);
-  return [color, ...filtered].slice(0, 16);
+  return dedupeColors([color, ...history]).slice(0, 16);
 }
 
 export function saveColorHistory(history: string[]): void {

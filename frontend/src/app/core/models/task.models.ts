@@ -15,19 +15,34 @@ export interface TaskList {
 }
 
 export interface LockerLayoutItem {
-  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT'
+  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT' | 'STICKER'
   cardId: string;
   col: number;
   colSpan: number;
   order: number;
+  row?: number;
   minimized: boolean;
+  /** Free-position pixel offsets within the grid container. */
+  posX?: number | null;
+  posY?: number | null;
+  /** Legacy minimum height in px (kept for rollback compat). */
+  minHeight?: number | null;
+  /** Widget width in pixels (free-form layout). */
+  width?: number | null;
+  /** Widget height in pixels (free-form layout). */
+  height?: number | null;
 }
+
+export type TimerType = 'POMODORO' | 'BASIC';
 
 export interface Timer {
   id: string;
   title: string;
   color: string;
   textColor?: string | null;
+  timerType: TimerType;
+  /** Configured duration (in seconds) for a BASIC timer. Ignored for POMODORO. */
+  basicDurationSeconds: number;
   focusDuration: number;
   shortBreakDuration: number;
   longBreakDuration: number;

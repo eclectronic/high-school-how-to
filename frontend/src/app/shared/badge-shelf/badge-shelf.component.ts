@@ -55,9 +55,6 @@ import { EarnedBadge, Badge } from '../../core/models/task.models';
   styles: [`
     .badge-shelf {
       padding: 0.75rem 1rem;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 8px;
-      margin-bottom: 1rem;
     }
     .badge-shelf__title {
       font-size: 0.85rem;

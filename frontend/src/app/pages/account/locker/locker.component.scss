@@ -286,10 +286,10 @@
           rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px
         );
         color: #1c1c1e;
-        padding: clamp(1.5rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.5rem);
+        padding: clamp(0.5rem, 1.5vw, 0.75rem) clamp(1rem, 3vw, 2.5rem) 0 5px;
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 0;
       }
 
       /* ── Header / shelf — frosted white over the vibrant background ── */
@@ -302,8 +302,8 @@
         flex-wrap: wrap;
         align-items: flex-start;
         justify-content: space-between;
-        gap: 1rem;
-        padding: 1.25rem 1.5rem;
+        gap: 0.5rem;
+        padding: 0.5rem 1.5rem 0.5rem;
       }
 
       /* Frosted background lives on a pseudo-element so the sticker layer can
@@ -334,6 +334,53 @@
       .top-row > *,
       .locker-app-bar > * {
         pointer-events: auto;
+      }
+
+      .quote-panel {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        margin-top: 0.25rem;
+        padding: 0.75rem 1.5rem;
+        box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      }
+
+      .quote-panel__quote {
+        margin: 0;
+        padding: 0;
+        border: none;
+        text-align: left;
+        max-width: 680px;
+      }
+
+      .quote-panel__text {
+        margin: 0 0 0.2rem;
+        font-size: 0.9rem;
+        font-style: italic;
+        color: #3f3f46;
+        line-height: 1.55;
+      }
+
+      .quote-panel__attribution {
+        display: block;
+        font-size: 0.78rem;
+        font-style: normal;
+        font-weight: 600;
+        color: #71717a;
+      }
+
+      .quote-panel__loading {
+        font-size: 0.82rem;
+        font-style: italic;
+        color: #71717a;
       }
       .top-row {
         display: flex;
@@ -480,12 +527,25 @@
       .new-list button:hover { opacity: 0.88; }
       .new-list button:disabled { opacity: 0.4; cursor: not-allowed; }
 
+      /* Prevent always-present empty elements from creating ghost flex gaps */
+      app-badge-celebration { display: contents; }
+
       /* ── Pinnable masonry grid ── */
       .lists {
         position: relative;
         width: 100%;
         z-index: 2;
-        pointer-events: none;
+        /* Must receive pointer/drag events so emoji-picker drops land on the gaps
+           between widgets (children re-enable their own pointer-events as needed). */
+        pointer-events: auto;
+        flex: 1 0 auto;
+        /* margin-top creates visible background between the header card and the
+           first widget. Padding is ineffective here because all children are
+           position:absolute (they start from the container's outer edge, not
+           the content edge). */
+        margin-top: 10px;
+        padding: 0 4px 4px;
+        box-sizing: border-box;
       }
 
       .grid-widget {
@@ -494,14 +554,111 @@
         box-sizing: border-box;
         border-radius: 12px;
         overflow: visible;
-        transition: box-shadow 0.12s;
+        transition: left 180ms ease, top 180ms ease, width 180ms ease, height 180ms ease,
+                    box-shadow 0.12s, opacity 0.2s ease;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.10);
+        /* Widgets sit above the sticker layer */
+        z-index: 2;
+        opacity: 0.95;
       }
 
       .grid-widget--dragging {
-        opacity: 0.85;
+        opacity: 0.95;
         box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
         z-index: 100;
         cursor: grabbing;
+        pointer-events: none;
+        transition: none;
+      }
+
+      /* When a widget has an open popup/panel, elevate it above sibling widgets
+         (all at z-index:2) and allow overflow so panels aren't clipped. */
+      .grid-widget:has(.color-picker-panel.floating),
+      .grid-widget:has(.list-card--elevated),
+      .grid-widget:has(.note-card--elevated) {
+        z-index: 200;
+      }
+      .grid-widget:has(.color-picker-panel.floating) .widget-body,
+      .grid-widget:has(.list-card--elevated) .widget-body,
+      .grid-widget:has(.note-card--elevated) .widget-body {
+        overflow: visible;
+      }
+      .grid-widget:has(.color-picker-panel.floating) .widget-rh,
+      .grid-widget:has(.list-card--elevated) .widget-rh,
+      .grid-widget:has(.note-card--elevated) .widget-rh {
+        display: none;
+      }
+      .grid-widget--sticker:has(.sticker-menu-open) {
+        z-index: 200;
+        overflow: visible;
+      }
+
+
+      /* Task-list, note, and timer widgets: chain flex height so the card body fills the widget.
+         Without this, the grid-widget background shows below the card when content is
+         shorter than the widget's min-height, producing a disconnected "two windows" look. */
+      .grid-widget--task-list,
+      .grid-widget--note,
+      .grid-widget--timer {
+        display: flex;
+        flex-direction: column;
+
+        .widget-body {
+          flex: 1;
+          min-height: 0;
+          display: flex;
+          flex-direction: column;
+        }
+      }
+
+      /* Sticker cards — no card chrome, transparent background, behind widgets.
+         overflow: visible so the resize handles (positioned at -5px outside the
+         bounding box) are not clipped by the widget boundary. */
+      .grid-widget--sticker {
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0;
+        cursor: grab;
+        overflow: visible;
+        z-index: 1; /* always behind widgets */
+
+        .widget-body {
+          padding: 0;
+          background: transparent;
+          width: 100%;
+        }
+      }
+
+      .grid-widget--sticker.grid-widget--dragging {
+        cursor: grabbing;
+      }
+
+      /* ── Sticker mode vs. normal mode ──
+         Normal mode: stickers are purely decorative — no pointer events, no drag,
+         no delete button. Sticker edit mode (panel open): widget layer fades and
+         loses interaction so stickers become the focus. */
+
+      /* Normal mode — stickers are decorative and permanently on the bottom layer.
+         z-index:1 !important ensures they never rise above any widget regardless
+         of their stored order value or hover state. */
+      .lists:not(.lists--sticker-mode) .grid-widget--sticker {
+        pointer-events: none;
+        cursor: default;
+        z-index: 1 !important;
+      }
+
+      /* Sticker edit mode — app widgets fade out and become non-interactive */
+      .lists--sticker-mode .grid-widget:not(.grid-widget--sticker) {
+        opacity: 0.08;
+        pointer-events: none;
+        transition: opacity 200ms ease;
+      }
+
+      /* Sticker edit mode — stickers come to the front and are fully interactive */
+      .lists--sticker-mode .grid-widget--sticker {
+        pointer-events: auto !important;
+        cursor: grab;
+        z-index: 10 !important;
       }
 
       /* ── Widget title bar ── */
@@ -523,7 +680,7 @@
 
       .widget-title-bar__title {
         flex: 1;
-        font-size: 0.78rem;
+        font-size: 0.78em;
         font-weight: 700;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -549,7 +706,7 @@
         justify-content: center;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 0.7rem;
+        font-size: 0.7em;
         color: rgba(0, 0, 0, 0.6);
         transition: background 0.1s, color 0.1s;
         padding: 0;
@@ -567,21 +724,85 @@
         overflow: hidden;
       }
 
-      /* ── Right-edge resize handle ── */
-      .widget-resize-handle {
+      /* ── Widget resize handles (all sides + corners) ──
+         Handles sit just outside the widget boundary (negative offsets).
+         They are faintly visible at rest and fully visible on widget hover. */
+      .widget-rh {
         position: absolute;
-        right: -4px;
-        top: 0;
-        bottom: 0;
-        width: 8px;
-        cursor: col-resize;
-        z-index: 10;
+        z-index: 20;
+        opacity: 0.25; /* faint at rest so users discover them */
+        transition: opacity 0.15s, transform 0.12s, box-shadow 0.12s;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1.5px solid rgba(0, 0, 0, 0.35);
         border-radius: 4px;
-        transition: background 0.12s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
       }
-      .widget-resize-handle:hover {
-        background: rgba(255, 255, 255, 0.4);
+      .grid-widget:hover { opacity: 1; }
+      .grid-widget:hover .widget-rh { opacity: 1; }
+      .widget-rh:hover {
+        background: rgba(255, 255, 255, 1);
+        transform: scale(1.15);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
       }
+
+      // Edge handles — 7px wide, centred in the middle 40% of each edge
+      .widget-rh--e  { right: -4px; top: 20%; bottom: 20%; width: 7px; cursor: e-resize; }
+      .widget-rh--n  { top: -4px; left: 20%; right: 20%; height: 7px; cursor: n-resize; }
+      .widget-rh--s  { bottom: -4px; left: 20%; right: 20%; height: 7px; cursor: s-resize; }
+      .widget-rh--w  { left: -4px; top: 20%; bottom: 20%; width: 7px; cursor: w-resize; }
+
+      // Corner handles — L-shaped picture corners made from two perpendicular
+      // strips (::before horizontal, ::after vertical). Each strip mirrors the
+      // N/S/E/W edge-handle styling (white fill, dark border, subtle shadow).
+      .widget-rh--nw,
+      .widget-rh--ne,
+      .widget-rh--sw,
+      .widget-rh--se {
+        width: 13px;
+        height: 13px;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+      }
+      .widget-rh--nw::before,
+      .widget-rh--ne::before,
+      .widget-rh--sw::before,
+      .widget-rh--se::before,
+      .widget-rh--nw::after,
+      .widget-rh--ne::after,
+      .widget-rh--sw::after,
+      .widget-rh--se::after {
+        content: '';
+        position: absolute;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1.5px solid rgba(0, 0, 0, 0.35);
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+        transition: background 0.12s, box-shadow 0.12s;
+      }
+      // Horizontal strip of each L
+      .widget-rh--nw::before,
+      .widget-rh--ne::before { top: 0;    left: 0; right: 0; height: 7px; }
+      .widget-rh--sw::before,
+      .widget-rh--se::before { bottom: 0; left: 0; right: 0; height: 7px; }
+      // Vertical strip of each L
+      .widget-rh--nw::after,
+      .widget-rh--sw::after  { top: 0; bottom: 0; left: 0;  width: 7px; }
+      .widget-rh--ne::after,
+      .widget-rh--se::after  { top: 0; bottom: 0; right: 0; width: 7px; }
+      // Hover: brighten both strips in unison with edge handles
+      .widget-rh--nw:hover::before, .widget-rh--nw:hover::after,
+      .widget-rh--ne:hover::before, .widget-rh--ne:hover::after,
+      .widget-rh--sw:hover::before, .widget-rh--sw:hover::after,
+      .widget-rh--se:hover::before, .widget-rh--se:hover::after {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      }
+      .widget-rh--nw { top: -4px; left: -4px; cursor: nw-resize; }
+      .widget-rh--ne { top: -4px; right: -4px; cursor: ne-resize; }
+      .widget-rh--sw { bottom: -4px; left: -4px; cursor: sw-resize; }
+      .widget-rh--se { bottom: -4px; right: -4px; cursor: se-resize; }
 
       /* ── List card ── */
       .list-card {
@@ -592,12 +813,13 @@
         gap: 0;
         position: relative;
         z-index: 2;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
-        border: 1px solid rgba(255,255,255,0.5);
-        border-top: none;
+        flex: 1;
+        min-height: 0;
+        box-shadow: none;
+        border: none;
         overflow: hidden;
       }
-      .list-card--elevated { z-index: 20; }
+      .list-card--elevated { z-index: 20; overflow: visible; }
       .list-card__body-actions {
         display: flex;
         align-items: center;
@@ -615,7 +837,7 @@
         background: rgba(255,255,255,0.8);
         color: #2d1a10;
         font-weight: 700;
-        font-size: 0.8rem;
+        font-size: 0.8em;
         font-family: inherit;
         cursor: pointer;
         transition: opacity 0.12s;
@@ -627,17 +849,34 @@
         border: 1px dashed rgba(45,26,16,0.2);
         padding: 0.3rem 0.6rem;
       }
-      .ghost.clean { background: rgba(130,201,255,0.2); }
-      .clean__label { text-decoration: line-through; }
       .danger { color: #b00020; border-color: rgba(176,0,32,0.25); }
+      .title-bar-icon-btn {
+        width: 1.5em;
+        height: 1.5em;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        font-size: 0.85em;
+        line-height: 1;
+        padding: 0;
+        background: rgba(255,255,255,0.5);
+        border: 1px solid rgba(0,0,0,0.15);
+        cursor: pointer;
+        color: inherit;
+        flex-shrink: 0;
+        transition: opacity 0.12s, background 0.12s;
+        &:hover { opacity: 0.8; background: rgba(255,255,255,0.75); }
+      }
+
       .icon-button {
-        width: 1.8rem;
-        height: 1.8rem;
+        width: 1.8em;
+        height: 1.8em;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        font-size: 1rem;
+        font-size: 1em;
         line-height: 1;
         padding: 0;
         background: rgba(255,255,255,0.7);
@@ -645,6 +884,13 @@
         color: #2d1a10;
       }
       .icon-button.gear { background: rgba(255,255,255,0.9); }
+      .icon-button--save {
+        background: #4caf50;
+        border-color: #388e3c;
+        color: #fff;
+        font-weight: 700;
+        &:hover { background: #388e3c; }
+      }
       @keyframes timer-flash {
         0%   { box-shadow: 0 0 0 3px rgba(255,165,0,0.8); }
         60%  { box-shadow: 0 0 0 6px rgba(255,165,0,0.3); }
@@ -657,11 +903,18 @@
         100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
       }
       .list-flash { animation: list-flash 0.9s ease-out forwards; }
+      .list-card__header {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        app-inline-title-edit { flex: 1; min-width: 0; }
+      }
       .list-actions {
         display: flex;
         gap: 0.3rem;
         align-items: center;
         justify-content: flex-end;
+        margin-left: auto;
       }
       .confirm-bar {
         display: flex;
@@ -672,7 +925,7 @@
         border-radius: 6px;
         padding: 0.3rem 0.5rem;
         color: #8c1f24;
-        font-size: 0.8rem;
+        font-size: 0.8em;
         font-weight: 700;
       }
       .config-panel {
@@ -695,7 +948,7 @@
         align-items: center;
         gap: 0.5rem;
         font-weight: 700;
-        font-size: 0.85rem;
+        font-size: 0.85em;
         color: #2d1a10;
       }
       .swatches {
@@ -722,6 +975,11 @@
         display: flex;
         flex-direction: column;
         gap: 0.4rem;
+        /* Scroll when the list grows beyond 500px (roughly 10–12 tasks).
+           Below that threshold the widget expands naturally to show all items. */
+        max-height: 500px;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
       .task-list li {
         display: flex;
@@ -737,7 +995,7 @@
         padding: 0.3rem 0.2rem;
         cursor: grab;
         color: rgba(45,26,16,0.4);
-        font-size: 0.85rem;
+        font-size: 0.85em;
         user-select: none;
       }
       .drag-handle:active { cursor: grabbing; }
@@ -751,6 +1009,13 @@
         justify-content: space-between;
       }
       .task-row.editing { align-items: stretch; }
+      .task-row--clickable { cursor: pointer; }
+      .task-row input[type="checkbox"] {
+        width: 1.4rem;
+        height: 1.4rem;
+        flex-shrink: 0;
+        cursor: pointer;
+      }
       .task-text {
         flex: 1;
         background: transparent;
@@ -762,6 +1027,10 @@
         cursor: text;
       }
       .task-text.completed { color: #8a8a8a; text-decoration: line-through; }
+      .task-text--readonly {
+        cursor: default;
+        display: inline-block;
+      }
       .new-task {
         display: flex;
         gap: 0.4rem;
@@ -788,7 +1057,7 @@
         background: #fffdf7;
         color: #2d1a10;
         font: inherit;
-        font-size: 0.875rem;
+        font-size: 0.875em;
         min-width: 120px;
       }
 
@@ -837,6 +1106,11 @@
         width: 100%;
         margin-top: 0.25rem;
       }
+      /* Elevate the app bar above grid widgets when a dropdown is open */
+      .locker-app-bar:has(.note-submenu),
+      .locker-app-bar:has(.shortcut-menu-open) {
+        z-index: 200;
+      }
 
       .app-icon-btn {
         display: inline-flex;
@@ -879,6 +1153,18 @@
         white-space: nowrap;
       }
       .app-icon-btn:disabled .app-icon-btn__label { opacity: 0.5; }
+
+      /* ── Shared header panel style (badges, etc.) ── */
+      .header-panel {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        width: 100%;
+        margin-top: 0.25rem;
+        overflow: hidden;
+      }
 
       /* ── Font picker panel ── */
       .font-picker-panel {
@@ -947,37 +1233,29 @@
         border-color: transparent;
       }
 
-      /* ── Widget body font size variable ── */
       .task-text,
       .new-task input,
       .study-task__text,
       .study-new-task input {
-        font-size: var(--locker-body-font-size, 0.875rem);
+        font-size: 0.875em;
       }
 
       /* ── Sticker dialog panel ── */
-      .sticker-dialog {
-        position: absolute;
-        top: 100%;
-        right: 0;
-        z-index: 100;
+      .sticker-panel {
+        width: 100%;
         margin-top: 0.25rem;
-        background: #fffef8;
-        border: 1px solid rgba(0,0,0,0.12);
-        border-radius: 12px;
-        box-shadow: 0 12px 32px rgba(0,0,0,0.2);
-        padding: 1rem;
-        min-width: 320px;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(12px);
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.1);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        padding: 0.5rem;
       }
 
-      .sticker-dialog__title {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 800;
-        color: #1c1c1e;
+      .sticker-panel__limit {
+        margin: 0.5rem;
+        font-size: 0.85rem;
+        opacity: 0.6;
       }
 
       /* ── Note submenu ── */
@@ -1021,91 +1299,6 @@
         app-sticker { pointer-events: all; }
       }
 
-      .sticker-dialog__tabs {
-        display: flex;
-        gap: 0.35rem;
-      }
-
-      .sticker-dialog__tab {
-        padding: 0.35rem 0.75rem;
-        border: 1px solid rgba(0,0,0,0.15);
-        border-radius: 20px;
-        background: transparent;
-        font: inherit;
-        font-size: 0.82rem;
-        font-weight: 600;
-        cursor: pointer;
-        color: #3f3f46;
-        transition: background 0.1s, border-color 0.1s;
-      }
-
-      .sticker-dialog__tab--active {
-        background: var(--lc-accent, #3d8ed4);
-        border-color: var(--lc-accent, #3d8ed4);
-        color: #fff;
-      }
-
-      .sticker-dialog__selected-emoji {
-        font-size: 0.85rem;
-        color: #52525b;
-      }
-
-      .sticker-dialog__field {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-      }
-
-      .sticker-dialog__label {
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: #52525b;
-      }
-
-      .sticker-dialog__input {
-        border: 1px solid rgba(0,0,0,0.15);
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        font: inherit;
-        font-size: 0.9rem;
-        color: #1c1c1e;
-        background: rgba(255,255,255,0.85);
-      }
-
-      .sticker-dialog__input:focus {
-        outline: none;
-        border-color: var(--lc-accent, #3d8ed4);
-        background: #fff;
-      }
-
-      .sticker-dialog__actions {
-        display: flex;
-        gap: 0.5rem;
-        justify-content: flex-end;
-      }
-
-      .sticker-dialog__btn {
-        padding: 0.45rem 1rem;
-        border-radius: 8px;
-        border: none;
-        font: inherit;
-        font-size: 0.875rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: opacity 0.12s;
-      }
-
-      .sticker-dialog__btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-      .sticker-dialog__btn--cancel {
-        background: rgba(0,0,0,0.08);
-        color: #3f3f46;
-      }
-
-      .sticker-dialog__btn--submit {
-        background: var(--lc-accent, #3d8ed4);
-        color: #fff;
-      }
 
       /* ── Sticker grid card ── */
       .sticker-grid-card {
@@ -1127,6 +1320,22 @@
         box-shadow: 0 12px 32px rgba(0,0,0,0.2);
         padding: 0.5rem;
         min-width: 300px;
+      }
+
+      .color-picker-actions {
+        display: flex;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+      }
+      .color-picker-cancel,
+      .color-picker-save {
+        flex: 1;
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 0.3rem 0.6rem;
+      }
+      .color-picker-save {
+        background: rgba(45,26,16,0.1);
       }
 
 
@@ -1155,7 +1364,7 @@
         border: 1px solid rgba(45,26,16,0.15);
         border-radius: 4px;
         padding: 0.1rem 0.4rem;
-        font-size: 0.72rem;
+        font-size: 0.72em;
         font-weight: 600;
         cursor: pointer;
         color: #52525b;
@@ -1173,7 +1382,7 @@
         background: transparent;
         border: none;
         padding: 0.1rem 0.25rem;
-        font-size: 0.85rem;
+        font-size: 0.85em;
         cursor: pointer;
         opacity: 0.4;
         transition: opacity 0.12s;
@@ -1184,142 +1393,73 @@
       /* ── Due date popover wrapper ── */
       .due-date-popover-wrap {
         padding: 0.25rem 0;
+        position: relative;
+        z-index: 30;
       }
 
       /* ══════════════════════════════════════════════════════════
-         STUDY SESSION
+         SHORTCUTS PANEL
          ══════════════════════════════════════════════════════════ */
 
-      .study-session {
+      .shortcuts-panel {
         display: flex;
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      .study-session__header {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-      }
-
-      .study-session__back {
-        background: rgba(255,255,255,0.85);
-        border: 1px solid rgba(0,0,0,0.12);
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        font: inherit;
-        font-size: 0.875rem;
-        font-weight: 700;
-        cursor: pointer;
-        color: #3f3f46;
-        transition: background 0.12s;
-      }
-      .study-session__back:hover { background: rgba(255,255,255,1); }
-
-      .study-session__title {
-        margin: 0;
-        font-size: 1.2rem;
-        color: rgba(255,255,255,0.92);
-        text-shadow: 0 1px 4px rgba(0,0,0,0.3);
-      }
-
-      .study-session__panels {
-        display: grid;
-        grid-template-columns: 1fr 320px;
-        gap: 1rem;
-        align-items: start;
-      }
-
-      @media (max-width: 700px) {
-        .study-session__panels {
-          grid-template-columns: 1fr;
-        }
-        .study-panel--timer { order: -1; }
-      }
-
-      .study-panel {
-        border-radius: 12px;
-        padding: 1rem;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
-        border: 1px solid rgba(255,255,255,0.5);
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-      }
-
-      .study-panel--timer {
-        background: transparent;
-        padding: 0;
-        box-shadow: none;
-        border: none;
-      }
-
-      .study-panel__title {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 800;
-      }
-
-      .study-task-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-      }
-
-      .study-task {
-        display: flex;
-        align-items: center;
+        flex-wrap: nowrap;
         gap: 0.5rem;
-        background: rgba(255,255,255,0.55);
-        border-radius: 6px;
-        padding: 0.35rem 0.6rem;
-      }
-
-      .study-task input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
-
-      .study-task__text {
-        line-height: 1.4;
-      }
-      .study-task__text--done {
-        text-decoration: line-through;
-        opacity: 0.5;
-      }
-
-      .study-new-task {
-        display: flex;
-        gap: 0.4rem;
-        align-items: center;
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        width: 100%;
         margin-top: 0.25rem;
+        align-items: flex-start;
+        overflow-x: auto;
       }
-      .study-new-task input {
+      /* Allow shortcut context menu to overflow below the panel */
+      .shortcuts-panel:has(.shortcut-menu-open) {
+        overflow: visible;
+      }
+
+      .shortcuts-panel__list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: flex-start;
         flex: 1;
-        border: 1px solid rgba(45,26,16,0.18);
-        border-radius: 6px;
-        padding: 0.45rem 0.65rem;
-        background: rgba(255,255,255,0.75);
-        color: inherit;
-        font: inherit;
       }
-      .study-new-task input::placeholder { color: rgba(45,26,16,0.35); }
-      .study-new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
-      .study-new-task button {
-        background: var(--lc-accent, #3d8ed4);
-        border: none;
-        border-radius: 8px;
-        padding: 0.45rem 0.9rem;
-        color: #fff;
-        font-weight: 800;
-        font-size: 0.85rem;
-        font-family: inherit;
+
+      /* CDK drag placeholder and preview */
+      .cdk-drag-preview app-shortcut-icon { opacity: 1; }
+      .cdk-drag-placeholder { opacity: 0.3; }
+      .cdk-drag-animating { transition: transform 200ms ease; }
+
+      .shortcuts-panel__add {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        border: 2px dashed rgba(0, 0, 0, 0.2);
+        background: transparent;
         cursor: pointer;
-        transition: opacity 0.12s;
+        font-size: 1.4rem;
+        color: rgba(0, 0, 0, 0.4);
+        font-family: inherit;
+        transition: background 0.12s, border-color 0.12s;
+        padding: 0;
       }
-      .study-new-task button:hover { opacity: 0.88; }
-      .study-new-task button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      .shortcuts-panel__add:hover {
+        background: rgba(0, 0, 0, 0.04);
+        border-color: rgba(0, 0, 0, 0.35);
+      }
+
+      .shortcuts-panel__add:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
 
       /* ══════════════════════════════════════════════════════════
          SHORTCUT DIALOG
@@ -1369,6 +1509,27 @@
         font-size: 0.75rem;
       }
 
+      .shortcut-dialog__label-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .shortcut-dialog__refetch-btn {
+        background: none;
+        border: 1px solid rgba(0,0,0,0.15);
+        border-radius: 6px;
+        padding: 0.15rem 0.5rem;
+        font: inherit;
+        font-size: 0.75rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: #3f3f46;
+        transition: background 0.1s;
+        &:hover:not(:disabled) { background: rgba(0,0,0,0.06); }
+        &:disabled { opacity: 0.4; cursor: not-allowed; }
+      }
+
       .shortcut-dialog__input {
         width: 100%;
         border: 1px solid rgba(0, 0, 0, 0.15);
@@ -1407,15 +1568,9 @@
         object-fit: contain;
       }
 
-      .shortcut-dialog__emoji-input {
-        width: 60px;
-        border: 1px solid rgba(0, 0, 0, 0.15);
-        border-radius: 6px;
-        padding: 0.3rem 0.5rem;
-        font: inherit;
-        font-size: 1.1rem;
-        text-align: center;
-        background: rgba(255, 255, 255, 0.8);
+      .shortcut-dialog__emoji-preview {
+        font-size: 1.2rem;
+        margin-left: 0.4rem;
       }
 
       .shortcut-dialog__actions {

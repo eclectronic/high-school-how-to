@@ -1,12 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Timer, EarnedBadge } from '../models/task.models';
+import { Timer, TimerType, EarnedBadge } from '../models/task.models';
 
 export interface CreateTimerRequest {
   title: string;
   color?: string;
   textColor?: string | null;
+  timerType?: TimerType;
+  basicDurationSeconds?: number;
   focusDuration?: number;
   shortBreakDuration?: number;
   longBreakDuration?: number;
@@ -19,6 +21,8 @@ export interface UpdateTimerRequest {
   title: string;
   color?: string;
   textColor?: string | null;
+  timerType?: TimerType;
+  basicDurationSeconds?: number;
   focusDuration?: number;
   shortBreakDuration?: number;
   longBreakDuration?: number;
@@ -28,8 +32,6 @@ export interface UpdateTimerRequest {
   clearLinkedTaskList?: boolean;
   /** Set to true when the client reports a focus session just completed. */
   focusSessionCompleted?: boolean;
-  /** Set to true when a full study session (all focus + breaks) completed. */
-  studySessionCompleted?: boolean;
 }
 
 export interface UpdateTimerResponse extends Timer {

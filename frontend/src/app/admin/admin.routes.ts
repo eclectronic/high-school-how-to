@@ -38,6 +38,13 @@ export const adminRoutes: Routes = [
         loadComponent: () =>
           import('./badges/badge-manager.component').then((m) => m.BadgeManagerComponent),
       },
+      {
+        path: 'color-palette',
+        loadComponent: () =>
+          import('./color-palette/color-palette-editor.component').then(
+            (m) => m.ColorPaletteEditorComponent,
+          ),
+      },
     ],
   },
 ];

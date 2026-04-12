@@ -1,15 +1,12 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, signal, computed } from '@angular/core';
+import { Component, HostListener, Input, Output, EventEmitter, OnChanges, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  addToColorHistory,
   autoContrastColor,
   contrastRatio,
   isGradient,
   firstHexFromGradient,
   isHexColor,
-  loadColorHistory,
-  saveColorHistory,
 } from './color-utils';
 
 @Component({
@@ -21,7 +18,8 @@ import {
       <!-- Color input row -->
       <div class="color-row">
         <input type="color" class="native-color" [value]="solidColor()"
-               (input)="onNativeColorInput($event)" />
+               (input)="onNativeColorInput($event)"
+               (change)="onNativeColorChange($event)" />
         <input type="text" class="hex-input" [value]="solidColor()"
                (blur)="applyHexValue($event)"
                (keydown.enter)="applyHexValue($event)"
@@ -34,23 +32,6 @@ import {
                (change)="onGradientToggle($event)" />
         <span>Gradient (white → color)</span>
       </label>
-
-      <!-- Recent colors -->
-      @if (colorHistory().length > 0) {
-        <div class="recent-section">
-          <span class="section-label">Recent</span>
-          <div class="swatch-row">
-            @for (color of colorHistory(); track color) {
-              <button type="button" class="swatch"
-                      [style.background]="color"
-                      [class.swatch--selected]="currentColor() === color"
-                      [title]="color"
-                      (click)="selectFromHistory(color)">
-              </button>
-            }
-          </div>
-        </div>
-      }
 
       <!-- Text color section -->
       <div class="text-color-section">
@@ -135,31 +116,6 @@ import {
 
     .section-label { color: #5f4f43; font-size: 0.8rem; }
 
-    .recent-section {
-      display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-    }
-
-    .swatch-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-
-    .swatch {
-      width: 22px;
-      height: 22px;
-      border-radius: 4px;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: transform 0.1s, border-color 0.1s;
-      outline: none;
-
-      &:hover { transform: scale(1.15); border-color: rgba(0,0,0,0.3); }
-      &--selected { border-color: #2d1a10 !important; }
-    }
-
     .text-color-section {
       border-top: 1px solid rgba(45, 26, 16, 0.1);
       padding-top: 0.5rem;
@@ -201,13 +157,17 @@ import {
     }
   `],
 })
-export class ColorPickerComponent implements OnInit, OnChanges {
+export class ColorPickerComponent implements OnChanges {
   @Input() selectedColor = '#fffef8';
   @Input() selectedTextColor: string | null = null;
   @Output() colorChange = new EventEmitter<string>();
   @Output() textColorChange = new EventEmitter<string | null>();
+  @Output() escaped = new EventEmitter<void>();
 
-  protected colorHistory = signal<string[]>([]);
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.escaped.emit();
+  }
 
   /** Internal signal tracking the current color so computed() can react to changes. */
   protected readonly currentColor = signal<string>('#fffef8');
@@ -247,15 +207,16 @@ export class ColorPickerComponent implements OnInit, OnChanges {
     return contrastRatio(bg, this.selectedTextColor) < 4.5;
   });
 
-  ngOnInit(): void {
-    this.colorHistory.set(loadColorHistory());
-  }
-
   ngOnChanges(): void {
     this.currentColor.set(this.selectedColor);
   }
 
   protected onNativeColorInput(event: Event): void {
+    const hex = (event.target as HTMLInputElement).value;
+    this.applyColor(hex);
+  }
+
+  protected onNativeColorChange(event: Event): void {
     const hex = (event.target as HTMLInputElement).value;
     this.applyColor(hex);
   }
@@ -275,10 +236,6 @@ export class ColorPickerComponent implements OnInit, OnChanges {
     } else {
       this.emitColor(hex);
     }
-  }
-
-  protected selectFromHistory(color: string): void {
-    this.emitColor(color);
   }
 
   protected clearTextColor(): void {
@@ -317,12 +274,6 @@ export class ColorPickerComponent implements OnInit, OnChanges {
   private emitColor(color: string): void {
     this.selectedColor = color;
     this.currentColor.set(color);
-    const history = addToColorHistory(
-      isGradient(color) ? (firstHexFromGradient(color) ?? color) : color,
-      this.colorHistory(),
-    );
-    this.colorHistory.set(history);
-    saveColorHistory(history);
     this.colorChange.emit(color);
   }
 }

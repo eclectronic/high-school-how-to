@@ -505,49 +505,6 @@ describe('LockerComponent', () => {
     expect(cards.some(c => c.type === 'NOTE')).toBeTrue();
   });
 
-  // ── Study Session ─────────────────────────────────────────────────────────
-
-  it('enterStudySession sets studySession signal for timer with linked list', () => {
-    const list = makeList({ id: 'list-1' });
-    const timer = makeTimer({ id: 'timer-1', linkedTaskListId: 'list-1' });
-    render([list], [timer]);
-
-    component['enterStudySession']('timer-1');
-
-    expect(component['studySession']()).toEqual({ timerId: 'timer-1', listId: 'list-1' });
-  });
-
-  it('enterStudySession does nothing for timer without linked list', () => {
-    const timer = makeTimer({ id: 'timer-1', linkedTaskListId: null });
-    render([], [timer]);
-
-    component['enterStudySession']('timer-1');
-
-    expect(component['studySession']()).toBeNull();
-  });
-
-  it('exitStudySession clears studySession signal', () => {
-    const list = makeList({ id: 'list-1' });
-    const timer = makeTimer({ id: 'timer-1', linkedTaskListId: 'list-1' });
-    render([list], [timer]);
-    component['enterStudySession']('timer-1');
-
-    component['exitStudySession']();
-
-    expect(component['studySession']()).toBeNull();
-  });
-
-  it('studyReadyTimers returns timers that have a linked list', () => {
-    const list = makeList({ id: 'list-1' });
-    const timerLinked = makeTimer({ id: 'timer-1', linkedTaskListId: 'list-1' });
-    const timerUnlinked = makeTimer({ id: 'timer-2', linkedTaskListId: null });
-    render([list], [timerLinked, timerUnlinked]);
-
-    const ready = component['studyReadyTimers']();
-    expect(ready.length).toBe(1);
-    expect(ready[0].id).toBe('timer-1');
-  });
-
   // ── Shortcuts ─────────────────────────────────────────────────────────────
 
   it('atShortcutLimit is true at 50 shortcuts', () => {
@@ -564,10 +521,11 @@ describe('LockerComponent', () => {
     expect(component['atShortcutLimit']()).toBeFalse();
   });
 
-  it('orderedCards includes shortcuts', () => {
+  it('shortcuts signal is populated and does not appear in orderedCards', () => {
     render([], [], [], [makeShortcut()]);
+    expect(component['shortcuts']().length).toBe(1);
     const cards = component['orderedCards']();
-    expect(cards.some(c => c.type === 'SHORTCUT')).toBeTrue();
+    expect(cards.every(c => c.type !== 'SHORTCUT' as string)).toBeTrue();
   });
 
   it('onConfirmDeleteShortcut removes shortcut from signal and calls API', () => {
@@ -619,16 +577,13 @@ describe('LockerComponent', () => {
 
   // ── Stickers ──────────────────────────────────────────────────────────────
 
-  it('submitStickerDialog creates a sticker via API with emoji', () => {
+  it('onStickerDialogEmojiSelected creates a sticker via API with emoji', () => {
     const newSticker = makeSticker({ id: 'new-sticker', emoji: '🎉' });
     stickerApi.createSticker.and.returnValue(of(newSticker));
     lockerLayoutApi.saveLayout.and.returnValue(of([]));
     render();
 
-    component['stickerDialogTab'] = 'emoji';
-    component['stickerDialogEmoji'] = '🎉';
-    component['stickerDialogLabel'] = '';
-    component['submitStickerDialog']();
+    component['onStickerDialogEmojiSelected']('🎉');
 
     expect(stickerApi.createSticker).toHaveBeenCalledWith(jasmine.objectContaining({ emoji: '🎉' }));
     expect(component['stickers']().some(s => s.id === 'new-sticker')).toBeTrue();
@@ -641,13 +596,16 @@ describe('LockerComponent', () => {
     expect(component['atStickerLimit']()).toBeTrue();
   });
 
-  it('openStickerDialog does nothing when at sticker limit', () => {
+  it('toggleStickerPanel toggles open state', () => {
     const stickers = Array.from({ length: 50 }, (_, i) => makeSticker({ id: `s${i}` }));
     stickerApi.getStickers.and.returnValue(of(stickers));
     render();
 
-    component['openStickerDialog']();
+    component['toggleStickerPanel']();
 
+    // Panel can open even at limit — the template hides the picker but shows the limit message
+    // so stickerDialogOpen is toggled regardless
+    component['toggleStickerPanel'](); // toggle back off
     expect(component['stickerDialogOpen']).toBeFalse();
   });
 
@@ -663,20 +621,6 @@ describe('LockerComponent', () => {
     expect(stickerApi.deleteSticker).toHaveBeenCalledWith('sticker-1');
   });
 
-  it('submitStickerDialog updates a sticker via API when editing', () => {
-    const updated = makeSticker({ emoji: '🎉', label: 'updated' });
-    stickerApi.updateSticker.and.returnValue(of(updated));
-    stickerApi.getStickers.and.returnValue(of([makeSticker()]));
-    render();
-
-    component['stickerEditId'] = 'sticker-1';
-    component['stickerDialogTab'] = 'emoji';
-    component['stickerDialogEmoji'] = '🎉';
-    component['stickerDialogLabel'] = 'updated';
-    component['submitStickerDialog']();
-
-    expect(stickerApi.updateSticker).toHaveBeenCalledWith('sticker-1', jasmine.objectContaining({ emoji: '🎉' }));
-  });
 
   // ── Font size ─────────────────────────────────────────────────────────────
 

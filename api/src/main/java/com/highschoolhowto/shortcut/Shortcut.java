@@ -42,6 +42,9 @@ public class Shortcut {
     @Column(name = "icon_url", length = 2000)
     private String iconUrl;
 
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -61,6 +64,9 @@ public class Shortcut {
     }
 
     public UUID getId() { return id; }
+
+    public int getSortOrder() { return sortOrder; }
+    public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }

@@ -1,26 +1,30 @@
 # High School How To — v4.0 Design Document
 
 **Status**: Draft
-**Last updated**: 2026-04-07
+I w**Last updated**: 2026-04-09
 
 ## Table of Contents
 
 1. [Overview](#1-overview)
 2. [To-Do List Content Card](#2-to-do-list-content-card)
 3. [Content Links](#3-content-links)
-4. [Implementation Phases](#4-implementation-phases)
-5. [Testing Requirements](#5-testing-requirements)
+4. [Locker Free-Form Drag-and-Drop](#4-locker-free-form-drag-and-drop)
+5. [Shortcuts Panel](#5-shortcuts-panel)
+6. [Implementation Phases](#6-implementation-phases)
+7. [Testing Requirements](#7-testing-requirements)
 
 ---
 
 ## 1. Overview
 
-v4.0 introduces two foundational content features:
+v4.0 introduces two foundational content features and two locker UX improvements:
 
 1. **To-Do List content card** — a new content type that lets admins author template to-do lists (e.g., "How to study for your driver's test") that users can add to their personal locker with one click.
 2. **Content links** — any content card can link to other content cards with customizable link text, rendered automatically at the bottom of the content viewer.
+3. **Locker free-form drag-and-drop** — replaces the column-only drag system with full free-form rearrangement, allowing users to move cards both horizontally between columns and vertically to reorder within columns.
+4. **Shortcuts panel** — redesigns shortcuts from individual locker grid cards into a compact dropdown panel toggled from the locker header, similar to the font picker.
 
-Together, these features connect the content layer (public, admin-curated) to the locker layer (personal, per-user), and allow content cards to cross-reference each other — e.g., an infographic about "driver's test prep" can link to the companion to-do list.
+Together, these features connect the content layer (public, admin-curated) to the locker layer (personal, per-user), allow content cards to cross-reference each other, and make the locker feel more interactive and customizable.
 
 ---
 
@@ -469,7 +473,266 @@ CREATE INDEX idx_content_card_links_target ON content_card_links(target_card_id)
 
 ---
 
-## 4. Implementation Phases
+## 4. Locker Free-Form Drag-and-Drop
+
+### Problem
+
+The current locker drag system only moves cards horizontally between columns. Dragging updates `col` but never changes `order`, so cards always stack in their original creation order within each column. Users cannot reorder cards vertically — there is no way to move a card above or below another card.
+
+### Solution
+
+Replace the column-only drag with full free-form drag-and-drop that updates both column placement and vertical ordering in a single gesture.
+
+### Drag Behavior
+
+#### Initiation
+- Drag initiates from the `.widget-title-bar` (unchanged)
+- Clicks on buttons, inputs, links, and textareas do not initiate drag (unchanged)
+
+#### During Drag
+- The dragged card follows the cursor via CSS `transform: translate(dx, dy)` for smooth, GPU-accelerated movement
+- The dragged card gets elevated styling: semi-transparent (`opacity: 0.85`), raised shadow, and `z-index` above other cards
+- **Target column** is resolved from the cursor's X position using the existing `resolveDropColumn()` logic
+- **Insertion index** is resolved from the cursor's Y position by comparing the card's vertical center against the midpoints of other cards in the target column range
+- A **drop indicator** (horizontal line/gap) appears at the resolved insertion point, showing where the card will land
+- Other cards **reflow in real-time** around the gap to preview the final layout
+
+#### Column Clamping
+- Multi-column-span cards are clamped to valid positions. A card with `colSpan: 2` cannot be placed beyond column 11 on a 12-column grid (its rightmost valid starting column is `columnCount - colSpan + 1`).
+- The card stops sliding right at the edge rather than pushing other cards out of the way. If a wide card doesn't fit somewhere, the user should resize it first, then move — this keeps behavior predictable and avoids disorienting cascading shifts.
+
+#### On Drop
+- Set the card's `col` to the resolved (clamped) column
+- Insert the card at the resolved position in the sequence
+- **Renumber all cards** with sequential `order` values (0, 1, 2, 3, ...) based on their new positions — `order` is a pure sequence number, not a meaningful value
+- Call `saveLockerLayout()` to persist
+
+### Frontend Changes
+
+#### LockerGridEngineService
+
+No changes to the `pack()` algorithm — it already sorts by `order` then `col` and stacks items correctly. The fix is entirely in how drag events update `order`.
+
+New helper method:
+
+```typescript
+/**
+ * Given the current packed layout and a cursor Y position, determine the
+ * insertion index among items occupying the target column range.
+ *
+ * Compares the cursor Y against the vertical midpoint of each item in the
+ * target columns. The insertion index is the position of the first item
+ * whose midpoint is below the cursor.
+ */
+resolveDropIndex(
+  packedItems: PackedItem[],
+  targetCol: number,
+  targetColSpan: number,
+  cursorY: number,
+  heightMap: Map<string, number>,
+  draggedId: string,
+): number
+```
+
+#### LockerComponent
+
+Update `onDragStart()`:
+- Record initial cursor position and the card's current packed position (for computing translate offset)
+
+Update `handleDragMove()`:
+- Apply `transform: translate(dx, dy)` to the dragged card element (delta from drag start)
+- Resolve target column from X (existing logic, with clamping for colSpan)
+- Resolve insertion index from Y using the new `resolveDropIndex()`
+- Update `layoutMap` with the new `col` and tentative `order` so the reflow preview is live
+- Track drop indicator position for rendering
+
+Update `onMouseUp()`:
+- Renumber all card `order` values sequentially based on final positions
+- Clear drag state and visual styling
+- Save layout
+
+New template elements:
+- Drop indicator element (a thin horizontal line, e.g., 2px accent-colored bar) positioned absolutely at the resolved insertion point
+- CSS class `.dragging` on the dragged card for elevated/transparent styling
+
+#### CSS Changes (`locker.component.scss`)
+
+```scss
+.grid-widget.dragging {
+  opacity: 0.85;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  z-index: 100;
+  pointer-events: none; // prevent hover effects on the dragged card
+  transition: none;     // disable transitions during drag for instant response
+}
+
+.drop-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-color, #4a90d9);
+  border-radius: 1px;
+  z-index: 99;
+  pointer-events: none;
+}
+```
+
+### Backend Changes
+
+None. The existing `POST /api/locker/layout` endpoint already persists `gridCol`, `colSpan`, `itemOrder`, and `minimized` per card. The only change is that the frontend will now send updated `itemOrder` values after drag-and-drop — the API contract is unchanged.
+
+---
+
+## 5. Shortcuts Panel
+
+### Problem
+
+Shortcuts currently render as individual cards in the locker grid, each with its own title bar and grid cell. This clutters the locker layout — shortcuts are small, quick-access links that don't need the same visual weight as task lists, timers, and notes. Users with many shortcuts end up with a grid dominated by tiny cards.
+
+### Solution
+
+Move shortcuts out of the locker grid into a **dropdown panel** toggled by the rocket (🚀) icon in the locker header. The panel follows the same pattern as the font picker — a floating container that appears below the header button and disappears when toggled off.
+
+### Panel Behavior
+
+#### Toggle
+- Clicking the 🚀 button **opens** the shortcuts panel
+- Clicking the 🚀 button again **closes** it
+- Clicking outside the panel closes it (consistent with font picker)
+- Opening other panels (font picker, sticker dialog, etc.) closes the shortcuts panel
+
+#### Layout
+
+```
+  🚀 Shortcuts
+  ┌─────────────────────────────────────────┐
+  │                                         │
+  │  ┌────┐  ┌────┐  ┌────┐  ┌────┐  ┌──┐  │
+  │  │ 🌐 │  │ 📺 │  │ 🎓 │  │ 📝 │  │ + │  │
+  │  │Khan│  │ YT │  │ SAT │  │Docs│  │   │  │
+  │  └────┘  └────┘  └────┘  └────┘  └──┘  │
+  │                                         │
+  └─────────────────────────────────────────┘
+```
+
+- Shortcuts display as a **grid of icons** — each shortcut shows its icon (favicon, emoji, or custom image) above a truncated label, using the same `ShortcutIconComponent` visual style
+- The panel is **sized to fit its content** — it grows horizontally with the number of shortcuts up to a max width, then wraps to additional rows
+- A **+ button** appears at the end of the icon grid, styled consistently with the shortcut icons. Clicking it opens the existing add-shortcut dialog.
+- When there are **no shortcuts**, the panel shows the + button alone
+
+#### Interactions
+- **Click** a shortcut icon → opens the URL in a new tab (unchanged)
+- **Right-click** a shortcut icon → context menu with Edit and Delete options (unchanged)
+- **Hover** a shortcut icon → subtle background highlight and edit pencil overlay (unchanged)
+- **Click +** → opens the add-shortcut dialog (same dialog as today)
+
+### Frontend Changes
+
+#### LockerComponent
+
+- Replace the current 🚀 button behavior: instead of `openAddShortcutDialog()`, it calls `toggleShortcutsPanel()`
+- New state: `shortcutsPanelOpen` boolean, toggled by the rocket button
+- Close the panel when other panels open (font picker, sticker dialog, note menu)
+- Close the panel on `document:click` outside (consistent with other panels)
+
+Template changes:
+```html
+<!-- Rocket button in header -->
+<button type="button" class="app-icon-btn"
+        (click)="toggleShortcutsPanel(); $event.stopPropagation()"
+        aria-label="Shortcuts">
+  🚀
+</button>
+
+<!-- Shortcuts panel -->
+<div class="shortcuts-panel" *ngIf="shortcutsPanelOpen" (click)="$event.stopPropagation()">
+  <app-shortcut-icon
+    *ngFor="let s of shortcuts()"
+    [shortcut]="s"
+    (editRequested)="onShortcutEditRequested($event)"
+    (deleteRequested)="onShortcutDeleteRequested($event)"
+  ></app-shortcut-icon>
+
+  <button type="button" class="shortcuts-panel__add"
+          [disabled]="atShortcutLimit()"
+          [title]="atShortcutLimit() ? 'Maximum of 50 shortcuts reached' : 'Add a shortcut'"
+          (click)="openAddShortcutDialog()"
+          aria-label="Add a shortcut">
+    +
+  </button>
+</div>
+```
+
+#### Locker Grid Changes
+
+- Remove `SHORTCUT` from the `LockerCard` union type — shortcuts no longer participate in the grid
+- Remove `SHORTCUT` entries from `cardOrder` signal and `orderedCards` computed
+- Remove `SHORTCUT` from `locker_layout` persistence — no more grid position for shortcuts
+- Remove the `<app-shortcut-icon>` block from the grid widget template
+
+#### CSS (`locker.component.scss`)
+
+```scss
+.shortcuts-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  margin-top: 0.25rem;
+  max-width: 480px;         // wraps to rows beyond this
+  align-items: flex-start;
+}
+
+.shortcuts-panel__add {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 2px dashed rgba(0, 0, 0, 0.2);
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.4rem;
+  color: rgba(0, 0, 0, 0.4);
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.shortcuts-panel__add:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.35);
+}
+
+.shortcuts-panel__add:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+```
+
+### Backend Changes
+
+None. The shortcut CRUD API (`/api/shortcuts`) is unchanged. The only change is removing `SHORTCUT` entries from the locker layout data — this can be handled with a migration that deletes existing `SHORTCUT` rows from `locker_layout`, or the frontend can simply stop persisting them and ignore any stale entries.
+
+#### Database Migration
+
+```sql
+-- v4-shortcuts-panel-cleanup.sql
+
+-- Remove shortcut entries from locker layout (shortcuts no longer live in the grid)
+DELETE FROM locker_layout WHERE card_type = 'SHORTCUT';
+
+-- rollback: (no-op — shortcut layout entries will be re-created if the feature is reverted)
+```
+
+---
+
+## 6. Implementation Phases
 
 ### Phase 1 — To-Do List Content Card (Backend)
 - Add `TODO_LIST` to `CardType` enum
@@ -512,9 +775,29 @@ CREATE INDEX idx_content_card_links_target ON content_card_links(target_card_id)
 - Content viewer: render links at bottom with type icons
 - Update content API service with search endpoint
 
+### Phase 5 — Locker Free-Form Drag-and-Drop (Frontend)
+- Add `resolveDropIndex()` method to `LockerGridEngineService`
+- Update `onDragStart()`: record initial cursor position and card's packed position
+- Update `handleDragMove()`: apply CSS transform to follow cursor, resolve target column (clamped for colSpan), resolve insertion index from Y, update `layoutMap` with new `col` and tentative `order`, live reflow preview
+- Update `onMouseUp()`: renumber all card `order` values sequentially, clear drag state, save layout
+- Add drop indicator element (horizontal bar at resolved insertion point)
+- Add `.dragging` CSS class (semi-transparent, elevated shadow, z-index, no pointer-events)
+- Verify existing resize behavior still works alongside new drag logic
+
+### Phase 6 — Shortcuts Panel (Frontend)
+- Replace 🚀 button click handler: `openAddShortcutDialog()` → `toggleShortcutsPanel()`
+- Add `shortcutsPanelOpen` state and `toggleShortcutsPanel()` method
+- Close shortcuts panel when other panels open (font picker, sticker dialog, note menu)
+- Add shortcuts panel template with icon grid and + button
+- Add `.shortcuts-panel` and `.shortcuts-panel__add` CSS
+- Remove `SHORTCUT` from `LockerCard` union and `orderedCards` computed
+- Remove `SHORTCUT` from `cardOrder` signal and locker layout persistence
+- Remove `<app-shortcut-icon>` from grid widget template
+- Run migration to clean up stale `SHORTCUT` entries from `locker_layout`
+
 ---
 
-## 5. Testing Requirements
+## 7. Testing Requirements
 
 ### Backend Testing
 
@@ -586,3 +869,33 @@ CREATE INDEX idx_content_card_links_target ON content_card_links(target_card_id)
 - `addToLocker(slug)` calls correct endpoint
 - `getLockerStatus(slug)` calls correct endpoint
 - `searchCards(query, exclude)` calls correct endpoint
+
+**LockerGridEngineService:**
+- `resolveDropIndex()` returns correct insertion index when cursor is above all items
+- `resolveDropIndex()` returns correct insertion index when cursor is between two items
+- `resolveDropIndex()` returns correct insertion index when cursor is below all items
+- `resolveDropIndex()` excludes the dragged card from midpoint comparison
+- `resolveDropIndex()` only considers items overlapping the target column range
+
+**Locker Drag-and-Drop:**
+- Dragging a card horizontally changes its `col`
+- Dragging a card vertically changes its `order` (insertion index)
+- Dragging a card to a new column and vertical position updates both `col` and `order`
+- Multi-column-span card is clamped to valid column range (cannot exceed grid boundary)
+- Drop renumbers all cards with sequential `order` values (no gaps)
+- `saveLockerLayout()` is called on drop
+- Dragged card gets `.dragging` class during drag, removed on drop
+- Drop indicator is positioned at resolved insertion point during drag
+- Resize still works independently of the new drag logic
+
+**Shortcuts Panel:**
+- Clicking 🚀 opens the shortcuts panel; clicking again closes it
+- Clicking outside the panel closes it
+- Opening font picker / sticker dialog / note menu closes the shortcuts panel
+- All user shortcuts render as icons inside the panel
+- Clicking a shortcut icon opens URL in new tab
+- Right-click on shortcut icon shows context menu with Edit and Delete
+- The + button opens the add-shortcut dialog
+- The + button is disabled when at 50 shortcut limit
+- Shortcuts do not appear as cards in the locker grid
+- Panel width adjusts to fit content, wraps to rows beyond max width

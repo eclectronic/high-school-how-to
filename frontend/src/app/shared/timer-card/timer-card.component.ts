@@ -1,13 +1,13 @@
 import {
-  Component, Input, Output, EventEmitter, OnDestroy, signal, computed, effect, input
+  Component, ElementRef, HostListener, Input, Output, EventEmitter, OnDestroy, OnInit, signal, computed, effect, input
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Timer, TaskList } from '../../core/models/task.models';
 import { TimerApiService, UpdateTimerRequest, UpdateTimerResponse } from '../../core/services/timer-api.service';
+import { TimerSoundService } from '../../core/services/timer-sound.service';
 import { autoContrastColor, isHexColor, firstHexFromGradient, isGradient } from '../color-picker/color-utils';
-import { ColorPickerComponent } from '../color-picker/color-picker.component';
-import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { SwatchPickerComponent } from '../swatch-picker/swatch-picker.component';
 import { WidgetTitleBarComponent } from '../widget-title-bar/widget-title-bar.component';
 
 export type TimerPhase = 'idle' | 'focus' | 'short-break' | 'long-break' | 'paused' | 'done';
@@ -29,20 +29,24 @@ export const TIMER_PRESETS: TimerPreset[] = [
 @Component({
   selector: 'app-timer-card',
   standalone: true,
-  imports: [CommonModule, FormsModule, ColorPickerComponent, ConfirmDialogComponent, WidgetTitleBarComponent],
-  host: { '[class.timer-card--elevated]': 'colorPickerOpen || confirmingDelete' },
+  imports: [CommonModule, FormsModule, SwatchPickerComponent, WidgetTitleBarComponent],
+  host: { '[class.timer-card--elevated]': 'colorPickerOpen' },
   template: `
-    <article class="timer-card" [style.background]="timer.color"
+    <article class="timer-card"
+             [style.background]="colorPreview() ?? timer.color"
              [style.color]="textColor()" (click)="$event.stopPropagation()">
 
       <!-- Title bar -->
       <app-widget-title-bar
+        prefix="Timer: "
         [title]="timer.title"
         [minimized]="minimized"
         (titleChanged)="onTitleChanged($event)"
-        (closeClicked)="confirmingDelete = true"
+        (closeClicked)="deleteConfirmed()"
         (minimizeToggled)="minimized = !minimized"
-      ></app-widget-title-bar>
+      >
+        <button type="button" class="title-bar-icon-btn" title="Color" aria-label="Change timer color" (click)="toggleColorPicker($event)">🌈</button>
+      </app-widget-title-bar>
 
       <!-- Body (hidden when minimized) -->
       <ng-container *ngIf="!minimized">
@@ -51,25 +55,26 @@ export const TIMER_PRESETS: TimerPreset[] = [
       <div class="timer-card__body-actions">
         <button type="button" class="icon-btn" *ngIf="linkedList()" title="Go to linked list"
                 (click)="scrollToLinkedListRequested.emit(); $event.stopPropagation()">📋</button>
-        <button type="button" class="icon-btn" *ngIf="linkedList()" title="Enter Study Session"
-                (click)="studySessionRequested.emit(); $event.stopPropagation()">📚</button>
-        <button type="button" class="icon-btn" title="Color" (click)="toggleColorPicker($event)">🌈</button>
-        <button type="button" class="icon-btn" title="Settings" (click)="toggleSettings($event)">⚙️</button>
+<button type="button" class="icon-btn" title="Settings" (click)="toggleSettings($event)">⋯</button>
       </div>
 
       <!-- Color picker -->
-      <div *ngIf="colorPickerOpen" class="color-picker-panel" (click)="$event.stopPropagation()">
-        <app-color-picker [selectedColor]="timer.color" (colorChange)="onColorChange($event)" />
+      <div *ngIf="colorPickerOpen" class="color-picker-panel" (click)="$event.stopPropagation()" (keydown.enter)="saveColor()">
+        <app-swatch-picker [selectedColor]="colorPreview() ?? timer.color" (colorChange)="onColorChange($event)" (colorCommit)="onColorCommit($event)" (escaped)="cancelColor()" />
+        <div class="color-picker-actions">
+          <button type="button" class="btn btn--cancel" (click)="cancelColor()">Cancel</button>
+          <button type="button" class="btn btn--save" (click)="saveColor()">Save</button>
+        </div>
       </div>
 
       <!-- Settings panel -->
-      <div *ngIf="settingsOpen" class="settings-panel" (click)="$event.stopPropagation()">
+      <div *ngIf="settingsOpen" class="settings-panel" (click)="$event.stopPropagation()" (keydown.escape)="cancelSettings()" (keydown.enter)="saveSettings()">
         <h4 class="settings-panel__title">Timer Settings</h4>
 
         <div class="settings-presets">
           <button *ngFor="let preset of presets" type="button"
                   class="preset-btn"
-                  [class.preset-btn--active]="timer.presetName === preset.name"
+                  [class.preset-btn--active]="draftPresetName === preset.name"
                   (click)="applyPreset(preset)">
             {{ preset.name }}
           </button>
@@ -103,55 +108,56 @@ export const TIMER_PRESETS: TimerPreset[] = [
         </div>
       </div>
 
-      <!-- Timer face -->
-      <div class="timer-face" *ngIf="!settingsOpen && !colorPickerOpen">
-        <svg class="progress-ring" [class.progress-ring--done]="phase() === 'done'" viewBox="0 0 120 120">
-          <circle class="progress-ring__track" cx="60" cy="60" r="52" />
-          <circle class="progress-ring__fill"
-                  cx="60" cy="60" r="52"
-                  [attr.stroke]="ringColor()"
-                  [style.stroke-dasharray]="circumference"
-                  [style.stroke-dashoffset]="dashOffset()" />
-        </svg>
-        <div class="timer-display">
-          <div *ngIf="phase() === 'done'; else timeDisplay" class="timer-display__done">🎉</div>
-          <ng-template #timeDisplay>
-            <div class="timer-display__time">{{ formattedTime() }}</div>
-          </ng-template>
-          <div class="timer-display__phase">{{ phaseLabel() }}</div>
-          <div class="timer-display__session">
-            <ng-container *ngIf="phase() === 'done'">All sessions complete!</ng-container>
-            <ng-container *ngIf="phase() === 'short-break' || phase() === 'long-break'">Break after session {{ completedSessions }} of {{ timer.sessionsBeforeLongBreak }}</ng-container>
-            <ng-container *ngIf="phase() !== 'done' && phase() !== 'short-break' && phase() !== 'long-break'">Session {{ completedSessions + 1 }} of {{ timer.sessionsBeforeLongBreak }}</ng-container>
+      <!-- Timer body: face + controls, centered vertically when widget is expanded -->
+      <div class="timer-body" *ngIf="!settingsOpen && !colorPickerOpen">
+
+        <!-- Timer face -->
+        <div class="timer-face" [style.width.px]="ringSize()" [style.height.px]="ringSize()">
+          <svg class="progress-ring" [class.progress-ring--done]="phase() === 'done'" viewBox="0 0 120 120">
+            <circle class="progress-ring__track" cx="60" cy="60" r="52" />
+            <circle class="progress-ring__fill"
+                    cx="60" cy="60" r="52"
+                    [attr.stroke]="ringColor()"
+                    [style.stroke-dasharray]="circumference"
+                    [style.stroke-dashoffset]="dashOffset()" />
+          </svg>
+          <div class="timer-display">
+            <div *ngIf="phase() === 'done'; else timeDisplay" class="timer-display__done">🎉</div>
+            <ng-template #timeDisplay>
+              <div class="timer-display__time">{{ formattedTime() }}</div>
+            </ng-template>
+            <div class="timer-display__phase">{{ phaseLabel() }}</div>
+            <div class="timer-display__session">
+              <ng-container *ngIf="phase() === 'done'">All sessions complete!</ng-container>
+              <ng-container *ngIf="phase() === 'short-break' || phase() === 'long-break'">Break after session {{ completedSessions }} of {{ timer.sessionsBeforeLongBreak }}</ng-container>
+              <ng-container *ngIf="phase() !== 'done' && phase() !== 'short-break' && phase() !== 'long-break'">Session {{ completedSessions + 1 }} of {{ timer.sessionsBeforeLongBreak }}</ng-container>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Controls -->
-      <div class="timer-controls" *ngIf="!settingsOpen && !colorPickerOpen">
-        <ng-container *ngIf="phase() !== 'done'">
-          <button type="button" class="ctrl-btn ctrl-btn--primary" (click)="toggleStartPause()">
-            {{ phase() === 'focus' || phase() === 'short-break' || phase() === 'long-break' ? '⏸ Pause' : (phase() === 'paused' ? '▶ Resume' : '▶ Start') }}
-          </button>
-          <button type="button" class="ctrl-btn" (click)="skipPhase()" [disabled]="phase() === 'idle'">⏭ Skip</button>
-        </ng-container>
-        <button type="button" class="ctrl-btn" (click)="reset()" [disabled]="phase() === 'idle' && completedSessions === 0">↩ Reset</button>
+        <!-- Controls -->
+        <div class="timer-controls">
+          <ng-container *ngIf="phase() !== 'done'">
+            <button type="button" class="ctrl-btn ctrl-btn--primary" (click)="toggleStartPause()">
+              {{ phase() === 'focus' || phase() === 'short-break' || phase() === 'long-break' ? '⏸ Pause' : (phase() === 'paused' ? '▶ Resume' : '▶ Start') }}
+            </button>
+            <button type="button" class="ctrl-btn" (click)="skipPhase()" [disabled]="phase() === 'idle'">⏭ Skip</button>
+          </ng-container>
+          <button type="button" class="ctrl-btn" (click)="reset()" [disabled]="phase() === 'idle' && completedSessions === 0">↩ Reset</button>
+        </div>
+
       </div>
 
 
       </ng-container><!-- end !minimized -->
-
-      <!-- Confirm delete -->
-      <app-confirm-dialog
-        *ngIf="confirmingDelete"
-        itemName="this timer"
-        (confirmed)="deleteConfirmed()"
-        (cancelled)="confirmingDelete = false" />
     </article>
   `,
   styles: [`
     :host {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
       position: relative;
       z-index: 1;
 
@@ -159,16 +165,13 @@ export const TIMER_PRESETS: TimerPreset[] = [
     }
 
     .timer-card {
-      border-radius: 0.75rem;
-      padding: 0;
-      box-shadow: 0 2px 8px rgba(45, 26, 16, 0.12);
-      border: 1px solid rgba(45, 26, 16, 0.1);
       font-family: var(--locker-font, var(--font-body));
       display: flex;
       flex-direction: column;
-      gap: 0;
-      overflow: hidden;
+      flex: 1;
+      min-height: 0;
     }
+
 
     .timer-card__body-actions {
       display: flex;
@@ -177,14 +180,33 @@ export const TIMER_PRESETS: TimerPreset[] = [
       padding: 0.4rem 0.75rem 0;
     }
 
+    .title-bar-icon-btn {
+      width: 1.5em;
+      height: 1.5em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 0.85em;
+      line-height: 1;
+      padding: 0;
+      background: rgba(255,255,255,0.5);
+      border: 1px solid rgba(0,0,0,0.15);
+      cursor: pointer;
+      color: inherit;
+      flex-shrink: 0;
+      transition: opacity 0.12s, background 0.12s;
+      &:hover { opacity: 0.8; background: rgba(255,255,255,0.75); }
+    }
+
     .icon-btn {
-      width: 1.8rem;
-      height: 1.8rem;
+      width: 1.8em;
+      height: 1.8em;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       border-radius: 50%;
-      font-size: 1rem;
+      font-size: 1em;
       line-height: 1;
       padding: 0;
       background: rgba(255,255,255,0.7);
@@ -195,18 +217,30 @@ export const TIMER_PRESETS: TimerPreset[] = [
       &:hover { opacity: 0.8; }
     }
 
-    /* Timer face */
+    /* Timer body — stretches to fill available height and centers content */
+    .timer-body {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+    }
+
+    /* Timer face — width/height set via [style] binding from ringSize() signal */
     .timer-face {
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0 0.75rem;
+      flex-shrink: 1;
+      min-height: 0;
     }
 
     .progress-ring {
-      width: 120px;
-      height: 120px;
+      width: 100%;
+      height: 100%;
     }
 
     .progress-ring__track {
@@ -233,30 +267,34 @@ export const TIMER_PRESETS: TimerPreset[] = [
 
     .timer-display {
       position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       text-align: center;
       line-height: 1.2;
+      width: 80%;
     }
 
     .timer-display__done {
-      font-size: 2rem;
+      font-size: 2em;
       line-height: 1;
     }
 
     .timer-display__time {
-      font-size: 1.6rem;
+      font-size: 1.6em;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
 
     .timer-display__phase {
-      font-size: var(--locker-body-font-size, 0.65rem);
+      font-size: 0.65em;
       opacity: 0.7;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
     .timer-display__session {
-      font-size: var(--locker-body-font-size, 0.6rem);
+      font-size: 0.6em;
       opacity: 0.6;
     }
 
@@ -265,14 +303,15 @@ export const TIMER_PRESETS: TimerPreset[] = [
       display: flex;
       gap: 0.4rem;
       justify-content: center;
-      padding: 0 0.75rem;
+      padding: 0.5rem 0.75rem;
+      flex-shrink: 0;
     }
 
     .ctrl-btn {
       padding: 0.3rem 0.7rem;
       border-radius: 6px;
       font-family: var(--locker-font, var(--font-body));
-      font-size: 0.78rem;
+      font-size: 0.78em;
       font-weight: 600;
       cursor: pointer;
       border: 1px solid rgba(0,0,0,0.2);
@@ -292,13 +331,16 @@ export const TIMER_PRESETS: TimerPreset[] = [
       display: flex;
       flex-direction: column;
       gap: 0.6rem;
-      font-size: 0.82rem;
+      font-size: 0.82em;
       padding: 0 0.75rem 0.75rem;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
     }
 
     .settings-panel__title {
       margin: 0;
-      font-size: 0.85rem;
+      font-size: 0.85em;
       font-weight: 700;
     }
 
@@ -311,7 +353,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
     .preset-btn {
       padding: 0.2rem 0.5rem;
       border-radius: 4px;
-      font-size: 0.72rem;
+      font-size: 0.72em;
       font-family: var(--locker-font, var(--font-body));
       cursor: pointer;
       border: 1px solid rgba(0,0,0,0.2);
@@ -329,7 +371,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
         display: flex;
         flex-direction: column;
         gap: 0.15rem;
-        font-size: 0.72rem;
+        font-size: 0.72em;
         font-weight: 600;
         opacity: 0.8;
       }
@@ -339,7 +381,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
         border-radius: 4px;
         border: 1px solid rgba(0,0,0,0.2);
         background: rgba(255,255,255,0.5);
-        font-size: 0.82rem;
+        font-size: 0.82em;
         color: inherit;
         width: 100%;
         box-sizing: border-box;
@@ -350,7 +392,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
       display: flex;
       flex-direction: column;
       gap: 0.15rem;
-      font-size: 0.72rem;
+      font-size: 0.72em;
       font-weight: 600;
       opacity: 0.8;
 
@@ -359,7 +401,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
         border-radius: 4px;
         border: 1px solid rgba(0,0,0,0.2);
         background: rgba(255,255,255,0.5);
-        font-size: 0.82rem;
+        font-size: 0.82em;
         color: inherit;
       }
     }
@@ -374,7 +416,7 @@ export const TIMER_PRESETS: TimerPreset[] = [
       padding: 0.3rem 0.8rem;
       border-radius: 6px;
       font-family: var(--locker-font, var(--font-body));
-      font-size: 0.78rem;
+      font-size: 0.78em;
       font-weight: 600;
       cursor: pointer;
       border: none;
@@ -385,16 +427,35 @@ export const TIMER_PRESETS: TimerPreset[] = [
 
     .color-picker-panel {
       margin: 0 0.75rem;
+      background: #fffef8;
+      border-radius: 8px;
+      padding: 0.5rem;
+    }
+    .color-picker-actions {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+    .color-picker-actions .btn {
+      flex: 1;
+      font-size: 0.8em;
+      font-weight: 700;
+      border-radius: 6px;
+      padding: 0.3rem 0.6rem;
+      border: 1px solid rgba(0,0,0,0.15);
+      cursor: pointer;
+      font-family: inherit;
     }
   `]
 })
-export class TimerCardComponent implements OnDestroy {
+export class TimerCardComponent implements OnDestroy, OnInit {
   @Input({ required: true }) timer!: Timer;
   readonly taskLists = input<TaskList[]>([]);
+  /** When true, the settings panel is opened on first render (used for newly-created timers). */
+  readonly startInConfigMode = input<boolean>(false);
   @Output() timerUpdated = new EventEmitter<UpdateTimerResponse>();
   @Output() timerDeleted = new EventEmitter<string>();
   @Output() taskCheckChange = new EventEmitter<{ taskId: string; listId: string; completed: boolean }>();
-  @Output() studySessionRequested = new EventEmitter<void>();
   @Output() scrollToLinkedListRequested = new EventEmitter<void>();
 
   readonly presets = TIMER_PRESETS;
@@ -402,8 +463,9 @@ export class TimerCardComponent implements OnDestroy {
 
   // UI state
   protected colorPickerOpen = false;
+  protected colorPreview = signal<string | null>(null);
+  private colorAtOpen = '';
   protected settingsOpen = false;
-  protected confirmingDelete = false;
   protected minimized = false;
 
   // Settings drafts
@@ -412,6 +474,14 @@ export class TimerCardComponent implements OnDestroy {
   protected draftLongBreak = 15;
   protected draftSessions = 4;
   protected draftLinkedListId = '';
+  protected draftPresetName: string | null = null;
+
+  // Ring size — updated by ResizeObserver so the ring scales with the widget's pixel width
+  protected ringSize = signal(120);
+  private ringResizeObserver = new ResizeObserver(([entry]) => {
+    const w = entry.contentRect.width;
+    this.ringSize.set(Math.max(90, Math.round(w * 0.42)));
+  });
 
   // Timer state
   protected phase = signal<TimerPhase>('idle');
@@ -420,8 +490,7 @@ export class TimerCardComponent implements OnDestroy {
   private tickInterval: ReturnType<typeof setInterval> | null = null;
 
   protected textColor = computed(() => {
-    const color = this.timer.color;
-    if (this.timer.textColor) return this.timer.textColor;
+    const color = this.colorPreview() ?? this.timer.color;
     const hex = isGradient(color) ? (firstHexFromGradient(color) ?? '#fffef8') : color;
     return isHexColor(hex) ? autoContrastColor(hex) : '#2d1a10';
   });
@@ -472,7 +541,7 @@ export class TimerCardComponent implements OnDestroy {
 
   private pausedPhase: TimerPhase = 'focus';
 
-  constructor(private timerApi: TimerApiService) {
+  constructor(private timerApi: TimerApiService, private hostEl: ElementRef<HTMLElement>, private sound: TimerSoundService) {
     effect(() => {
       const s = this.secondsRemaining();
       if (s === 0 && (this.phase() === 'focus' || this.phase() === 'short-break' || this.phase() === 'long-break')) {
@@ -482,13 +551,28 @@ export class TimerCardComponent implements OnDestroy {
     effect(() => {
       if (this.allLinkedTasksDone() && this.phase() !== 'idle' && this.phase() !== 'done') {
         this.clearTick();
+        this.sound.playChime();
         this.sendNotification('All tasks complete!', 'Great work!');
         this.phase.set('done');
       }
     });
   }
 
+  ngOnInit(): void {
+    this.ringResizeObserver.observe(this.hostEl.nativeElement);
+    if (this.startInConfigMode()) {
+      this.draftFocus = this.timer.focusDuration;
+      this.draftShortBreak = this.timer.shortBreakDuration;
+      this.draftLongBreak = this.timer.longBreakDuration;
+      this.draftSessions = this.timer.sessionsBeforeLongBreak;
+      this.draftLinkedListId = this.timer.linkedTaskListId ?? '';
+      this.draftPresetName = this.timer.presetName ?? null;
+      this.settingsOpen = true;
+    }
+  }
+
   ngOnDestroy(): void {
+    this.ringResizeObserver.disconnect();
     this.clearTick();
   }
 
@@ -524,7 +608,7 @@ export class TimerCardComponent implements OnDestroy {
     } else if (p === 'short-break') {
       this.startFocus();
     } else if (p === 'long-break') {
-      this.reportSessionEvent({ studySessionCompleted: true });
+      this.reportSessionEvent({});
       this.phase.set('done');
     } else if (p === 'paused') {
       if (this.pausedPhase === 'focus') {
@@ -532,7 +616,7 @@ export class TimerCardComponent implements OnDestroy {
         this.reportSessionEvent({ focusSessionCompleted: true });
         this.startBreak();
       } else if (this.pausedPhase === 'long-break') {
-        this.reportSessionEvent({ studySessionCompleted: true });
+        this.reportSessionEvent({});
         this.phase.set('done');
       } else {
         this.startFocus();
@@ -544,6 +628,10 @@ export class TimerCardComponent implements OnDestroy {
     event.stopPropagation();
     this.colorPickerOpen = !this.colorPickerOpen;
     this.settingsOpen = false;
+    if (this.colorPickerOpen) {
+      this.colorAtOpen = this.timer.color;
+      this.colorPreview.set(null);
+    }
   }
 
   protected toggleSettings(event: Event): void {
@@ -556,6 +644,7 @@ export class TimerCardComponent implements OnDestroy {
       this.draftLongBreak = this.timer.longBreakDuration;
       this.draftSessions = this.timer.sessionsBeforeLongBreak;
       this.draftLinkedListId = this.timer.linkedTaskListId ?? '';
+      this.draftPresetName = this.timer.presetName ?? null;
     }
   }
 
@@ -564,6 +653,7 @@ export class TimerCardComponent implements OnDestroy {
     this.draftShortBreak = preset.shortBreakDuration;
     this.draftLongBreak = preset.longBreakDuration;
     this.draftSessions = preset.sessionsBeforeLongBreak;
+    this.draftPresetName = preset.name;
   }
 
   protected saveSettings(): void {
@@ -593,11 +683,23 @@ export class TimerCardComponent implements OnDestroy {
     this.timerApi.updateTimer(this.timer.id, req).subscribe(updated => {
       this.timerUpdated.emit(updated);
       this.settingsOpen = false;
-      // Reset timer if durations changed
       if (this.phase() !== 'idle') {
         this.reset();
       }
+      localStorage.setItem('hsht_pomodoroDefault', JSON.stringify({
+        focusDuration: this.draftFocus,
+        shortBreakDuration: this.draftShortBreak,
+        longBreakDuration: this.draftLongBreak,
+        sessionsBeforeLongBreak: this.draftSessions,
+        presetName: req.presetName ?? null,
+      }));
     });
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.colorPickerOpen) { this.cancelColor(); return; }
+    if (this.settingsOpen) this.cancelSettings();
   }
 
   protected cancelSettings(): void {
@@ -605,6 +707,18 @@ export class TimerCardComponent implements OnDestroy {
   }
 
   protected onColorChange(color: string): void {
+    this.colorPreview.set(color);
+  }
+
+  protected onColorCommit(color: string): void {
+    this.colorPreview.set(color);
+    this.saveColor();
+  }
+
+  protected saveColor(): void {
+    const color = this.colorPreview() ?? this.timer.color;
+    this.colorPickerOpen = false;
+    this.colorPreview.set(null);
     const req: UpdateTimerRequest = {
       title: this.timer.title,
       color,
@@ -614,8 +728,13 @@ export class TimerCardComponent implements OnDestroy {
     };
     this.timerApi.updateTimer(this.timer.id, req).subscribe(updated => {
       this.timerUpdated.emit(updated);
-      this.colorPickerOpen = false;
+      localStorage.setItem('hsht_timerColorDefault', color);
     });
+  }
+
+  protected cancelColor(): void {
+    this.colorPickerOpen = false;
+    this.colorPreview.set(null);
   }
 
   protected onTitleChanged(title: string): void {
@@ -651,6 +770,7 @@ export class TimerCardComponent implements OnDestroy {
 
   private onPhaseComplete(): void {
     this.clearTick();
+    this.sound.playChime();
     const p = this.phase();
     if (p === 'focus') {
       this.sendNotification('Focus session complete!', 'Time for a break.');
@@ -663,12 +783,12 @@ export class TimerCardComponent implements OnDestroy {
       this.phase.set('idle');
     } else if (p === 'long-break') {
       this.sendNotification('Cycle complete!', 'Great work — take a rest.');
-      this.reportSessionEvent({ studySessionCompleted: true });
+      this.reportSessionEvent({});
       this.phase.set('done');
     }
   }
 
-  private reportSessionEvent(flags: { focusSessionCompleted?: boolean; studySessionCompleted?: boolean }): void {
+  private reportSessionEvent(flags: { focusSessionCompleted?: boolean }): void {
     const req: UpdateTimerRequest = {
       title: this.timer.title,
       color: this.timer.color,

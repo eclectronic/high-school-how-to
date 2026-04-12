@@ -4,6 +4,7 @@ import com.highschoolhowto.shortcut.dto.CreateShortcutRequest;
 import com.highschoolhowto.shortcut.dto.ImportShortcutItem;
 import com.highschoolhowto.shortcut.dto.ImportShortcutsRequest;
 import com.highschoolhowto.shortcut.dto.ImportShortcutsResponse;
+import com.highschoolhowto.shortcut.dto.ReorderShortcutsRequest;
 import com.highschoolhowto.shortcut.dto.ShortcutResponse;
 import com.highschoolhowto.shortcut.dto.UpdateShortcutRequest;
 import com.highschoolhowto.user.User;
@@ -35,7 +36,7 @@ public class ShortcutService {
 
     @Transactional(readOnly = true)
     public List<ShortcutResponse> getShortcuts(UUID userId) {
-        return shortcutRepository.findByUserIdOrderByCreatedAtAsc(userId).stream()
+        return shortcutRepository.findByUserIdOrderBySortOrderAsc(userId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -70,6 +71,7 @@ public class ShortcutService {
         if (StringUtils.hasText(req.iconUrl())) {
             shortcut.setIconUrl(req.iconUrl().trim());
         }
+        shortcut.setSortOrder((int) count); // append after existing shortcuts
 
         return toResponse(shortcutRepository.save(shortcut));
     }
@@ -148,6 +150,21 @@ public class ShortcutService {
     @Transactional(readOnly = true)
     public List<ShortcutResponse> exportShortcuts(UUID userId) {
         return getShortcuts(userId);
+    }
+
+    @Transactional
+    public void reorderShortcuts(UUID userId, ReorderShortcutsRequest req) {
+        List<Shortcut> owned = shortcutRepository.findByUserIdOrderBySortOrderAsc(userId);
+        java.util.Map<UUID, Shortcut> byId = new java.util.HashMap<>();
+        owned.forEach(s -> byId.put(s.getId(), s));
+        int position = 0;
+        for (UUID id : req.ids()) {
+            Shortcut s = byId.get(id);
+            if (s != null) {
+                s.setSortOrder(position++);
+            }
+        }
+        shortcutRepository.saveAll(owned);
     }
 
     private User requireUser(UUID userId) {

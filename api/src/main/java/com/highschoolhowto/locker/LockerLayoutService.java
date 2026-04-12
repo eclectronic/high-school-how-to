@@ -42,6 +42,11 @@ public class LockerLayoutService {
                     entity.setColSpan(req.colSpan());
                     entity.setItemOrder(req.order());
                     entity.setMinimized(req.minimized());
+                    entity.setPosX(req.posX());
+                    entity.setPosY(req.posY());
+                    entity.setMinHeight(req.minHeight());
+                    entity.setWidth(req.width());
+                    entity.setHeight(req.height());
                     return entity;
                 })
                 .toList();
@@ -53,18 +58,17 @@ public class LockerLayoutService {
     }
 
     private void validate(LockerLayoutItemRequest req) {
-        if (req.col() < 1) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "col must be >= 1");
+        if (req.posX() != null && req.posX() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "posX must be >= 0");
         }
-        if (req.colSpan() < 1) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "colSpan must be >= 1");
+        if (req.posY() != null && req.posY() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "posY must be >= 0");
         }
-        if (req.col() > 12) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "col must be <= 12");
+        if (req.width() != null && (req.width() < 1 || req.width() > 4000)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "width must be between 1 and 4000");
         }
-        if (req.col() + req.colSpan() > 13) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "col + colSpan must be <= 13 (item must fit within 12 columns)");
+        if (req.height() != null && (req.height() < 1 || req.height() > 4000)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "height must be between 1 and 4000");
         }
     }
 
@@ -75,6 +79,11 @@ public class LockerLayoutService {
                 item.getGridCol(),
                 item.getColSpan(),
                 item.getItemOrder(),
-                item.isMinimized());
+                item.isMinimized(),
+                item.getPosX(),
+                item.getPosY(),
+                item.getMinHeight(),
+                item.getWidth(),
+                item.getHeight());
     }
 }

@@ -18,52 +18,28 @@ describe('DueDatePopoverComponent', () => {
     fixture.detectChanges();
   });
 
-  it('shows popover with natural language input and picker', () => {
-    expect(fixture.nativeElement.querySelector('.text-input')).toBeTruthy();
+  it('shows only a datetime picker (no natural language input)', () => {
     expect(fixture.nativeElement.querySelector('.datetime-input')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.text-input')).toBeFalsy();
   });
 
-  it('shows parsed preview for valid natural language input', () => {
-    c.naturalText = 'April 10, 2026 at 3pm';
-    c.onNaturalTextChange();
+  it('Apply button is disabled when no date is set', () => {
+    const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--apply');
+    expect(applyBtn.disabled).toBeTrue();
+  });
+
+  it('Apply button is enabled after a picker value is set', () => {
+    c.pickerValue = '2026-04-10T15:00';
     fixture.detectChanges();
-    const preview = fixture.nativeElement.querySelector('.preview');
-    expect(preview).toBeTruthy();
-    expect(preview.textContent).not.toContain("Couldn't parse");
+    const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--apply');
+    expect(applyBtn.disabled).toBeFalse();
   });
 
-  it('shows error message for invalid natural language input', () => {
-    c.naturalText = 'asdfghjkl not a date';
-    c.onNaturalTextChange();
-    fixture.detectChanges();
-    const errorPreview = fixture.nativeElement.querySelector('.preview--error');
-    expect(errorPreview).toBeTruthy();
-  });
-
-  it('shows no preview for empty input', () => {
-    c.naturalText = '';
-    c.onNaturalTextChange();
-    fixture.detectChanges();
-    const preview = fixture.nativeElement.querySelector('.preview');
-    expect(preview).toBeFalsy();
-  });
-
-  it('emits null when Clear button is clicked', () => {
+  it('emits ISO string when Apply is clicked', () => {
     const emitted: Array<string | null> = [];
     component.dueAtChange.subscribe((v: string | null) => emitted.push(v));
 
-    const clearBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--clear');
-    clearBtn.click();
-
-    expect(emitted).toEqual([null]);
-  });
-
-  it('emits ISO string when Apply is clicked after natural language parse', () => {
-    const emitted: Array<string | null> = [];
-    component.dueAtChange.subscribe((v: string | null) => emitted.push(v));
-
-    c.naturalText = 'April 10, 2026 at 3pm';
-    c.onNaturalTextChange();
+    c.pickerValue = '2026-04-10T15:00';
     fixture.detectChanges();
 
     const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--apply');
@@ -73,55 +49,27 @@ describe('DueDatePopoverComponent', () => {
     expect(emitted[0]).toContain('2026-04-10');
   });
 
-  it('Apply button is disabled when no date is set', () => {
-    const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--apply');
-    expect(applyBtn.disabled).toBeTrue();
-  });
-
-  it('Enter key applies when date is parsed', () => {
+  it('emits null when Clear is clicked', () => {
     const emitted: Array<string | null> = [];
     component.dueAtChange.subscribe((v: string | null) => emitted.push(v));
 
-    c.naturalText = 'April 10, 2026 at 3pm';
-    c.onNaturalTextChange();
-    fixture.detectChanges();
-
-    const input: HTMLInputElement = fixture.nativeElement.querySelector('.text-input');
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-
-    expect(emitted.length).toBe(1);
-    expect(emitted[0]).toContain('2026-04-10');
-  });
-
-  it('Enter key does nothing when no date is parsed', () => {
-    const emitted: Array<string | null> = [];
-    component.dueAtChange.subscribe((v: string | null) => emitted.push(v));
-
-    c.naturalText = 'not a date';
-    c.onNaturalTextChange();
-    fixture.detectChanges();
-
-    const input: HTMLInputElement = fixture.nativeElement.querySelector('.text-input');
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-
-    expect(emitted.length).toBe(0);
-  });
-
-  it('Escape key emits null (cancel/clear)', () => {
-    const emitted: Array<string | null> = [];
-    component.dueAtChange.subscribe((v: string | null) => emitted.push(v));
-
-    const input: HTMLInputElement = fixture.nativeElement.querySelector('.text-input');
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    const clearBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--clear');
+    clearBtn.click();
 
     expect(emitted).toEqual([null]);
   });
 
-  it('pre-fills picker and preview when dueAt is provided', () => {
+  it('pre-fills picker when dueAt input is provided', () => {
     component.dueAt = '2026-04-10T15:00:00.000Z';
     component.ngOnChanges({ dueAt: { currentValue: component.dueAt, previousValue: null, firstChange: true, isFirstChange: () => true } });
     fixture.detectChanges();
     expect(c.pickerValue).toContain('2026-04-10');
-    expect(c.parsedDate()).not.toBeNull();
+  });
+
+  it('clear resets the picker value', () => {
+    c.pickerValue = '2026-04-10T15:00';
+    fixture.detectChanges();
+    c.clear();
+    expect(c.pickerValue).toBe('');
   });
 });

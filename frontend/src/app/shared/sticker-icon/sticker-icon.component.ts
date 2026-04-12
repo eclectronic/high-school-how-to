@@ -13,6 +13,7 @@ import { Sticker } from '../../core/models/task.models';
   selector: 'app-sticker-icon',
   standalone: true,
   imports: [CommonModule],
+  host: { '[class.sticker-menu-open]': 'menuOpen()' },
   template: `
     <div
       class="sticker-icon"
@@ -40,21 +41,20 @@ import { Sticker } from '../../core/models/task.models';
         <p class="sticker-icon__label" [title]="sticker().label!">{{ sticker().label }}</p>
       }
 
-      <!-- Edit shortcut shown on hover -->
-      <button
-        type="button"
-        class="sticker-icon__edit-btn"
-        aria-label="Edit sticker"
-        title="Edit sticker"
-        (click)="$event.stopPropagation(); edit.emit()"
-      >✎</button>
+      <!-- Delete button shown on hover -->
+      <div class="sticker-icon__actions">
+        <button
+          type="button"
+          class="sticker-icon__action-btn sticker-icon__action-btn--delete"
+          aria-label="Delete sticker"
+          title="Delete sticker"
+          (click)="$event.stopPropagation(); delete.emit()"
+        >✕</button>
+      </div>
 
       <!-- Context menu (right-click / long-press) -->
       @if (menuOpen()) {
         <div class="sticker-icon__menu" (click)="$event.stopPropagation()">
-          <button type="button" class="sticker-icon__menu-item" (click)="onMenuEdit()">
-            Edit
-          </button>
           <button type="button" class="sticker-icon__menu-item sticker-icon__menu-item--danger" (click)="onMenuDelete()">
             Delete
           </button>
@@ -69,23 +69,27 @@ import { Sticker } from '../../core/models/task.models';
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.35rem;
-        padding: 0.75rem 0.5rem 0.5rem;
-        border-radius: 12px;
+        /* Fill whatever dimensions the parent grid-widget provides.
+           aspect-ratio removed so explicit height from resize is respected. */
+        width: 100%;
+        height: 100%;
+        padding: 0;
         cursor: default;
         user-select: none;
       }
 
       .sticker-icon__icon {
+        container-type: size;
+        width: 100%;
+        flex: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 3.5rem;
-        height: 3.5rem;
+        overflow: hidden;
       }
 
       .sticker-icon__emoji {
-        font-size: 2.5rem;
+        font-size: 80cqi;
         line-height: 1;
       }
 
@@ -93,7 +97,6 @@ import { Sticker } from '../../core/models/task.models';
         width: 100%;
         height: 100%;
         object-fit: contain;
-        border-radius: 8px;
       }
 
       .sticker-icon__label {
@@ -109,33 +112,44 @@ import { Sticker } from '../../core/models/task.models';
         opacity: 0.75;
       }
 
-      /* Edit button — shown on hover */
-      .sticker-icon__edit-btn {
+      /* Edit / delete buttons — shown on hover */
+      .sticker-icon__actions {
         position: absolute;
-        top: 4px;
-        right: 4px;
-        width: 20px;
-        height: 20px;
+        top: 2px;
+        right: 2px;
+        display: flex;
+        gap: 2px;
+        opacity: 0;
+        transition: opacity 150ms ease;
+        pointer-events: none;
+        /* Must sit above the locker's resize handles (z-index: 20) */
+        z-index: 30;
+      }
+
+      .sticker-icon:hover .sticker-icon__actions,
+      .sticker-icon--menu-open .sticker-icon__actions {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .sticker-icon__action-btn {
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
         border: none;
         background: rgba(0, 0, 0, 0.55);
         color: #fff;
-        font-size: 0.65rem;
+        font-size: 0.6rem;
         line-height: 1;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
-        opacity: 0;
-        transition: opacity 150ms ease;
-        pointer-events: none;
       }
 
-      .sticker-icon:hover .sticker-icon__edit-btn,
-      .sticker-icon--menu-open .sticker-icon__edit-btn {
-        opacity: 1;
-        pointer-events: auto;
+      .sticker-icon__action-btn--delete {
+        background: rgba(180, 0, 0, 0.7);
       }
 
       /* Context menu */
@@ -184,7 +198,6 @@ import { Sticker } from '../../core/models/task.models';
 export class StickerIconComponent implements OnDestroy {
   readonly sticker = input.required<Sticker>();
 
-  readonly edit = output<void>();
   readonly delete = output<void>();
 
   protected readonly menuOpen = signal(false);
@@ -226,11 +239,6 @@ export class StickerIconComponent implements OnDestroy {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
-  }
-
-  protected onMenuEdit(): void {
-    this.menuOpen.set(false);
-    this.edit.emit();
   }
 
   protected onMenuDelete(): void {

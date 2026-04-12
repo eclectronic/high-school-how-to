@@ -53,3 +53,21 @@ databaseChangeLog:
       file: db/changelog/v4-badges-0042.sql
   - include:
       file: db/changelog/v4-tasklist-source-0043.sql
+  - include:
+      file: db/changelog/v4-sticker-pos-0044.sql
+  - include:
+      file: db/changelog/v4-shortcut-order-0045.sql
+  - include:
+      file: db/changelog/v4-quote-seed-0046.yaml
+  - include:
+      file: db/changelog/v4-widget-height-0047.sql
+  - include:
+      file: db/changelog/v4-timer-type-0048.sql
+  - include:
+      file: db/changelog/v4-color-palette-0049.sql
+  - include:
+      file: db/changelog/v4-color-palette-locker-0050.sql
+  - include:
+      file: db/changelog/v4-color-palette-reorder-0051.sql
+  - include:
+      file: db/changelog/v4-widget-free-form-0052.sql

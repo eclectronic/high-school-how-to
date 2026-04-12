@@ -18,16 +18,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class ShortcutMetadataService {
 
-    private static final int TIMEOUT_SECONDS = 3;
-    private static final int MAX_BODY_BYTES = 1_048_576; // 1 MB
+    private static final int TIMEOUT_SECONDS = 5;
+    private static final int MAX_BODY_BYTES = 512_000; // 512 KB — enough for <head>
     private static final Pattern TITLE_PATTERN = Pattern.compile(
             "<title[^>]*>([^<]+)</title>", Pattern.CASE_INSENSITIVE);
     private static final Pattern OG_TITLE_PATTERN = Pattern.compile(
             "<meta[^>]+property=[\"']og:title[\"'][^>]+content=[\"']([^\"']+)[\"']",
-            Pattern.CASE_INSENSITIVE);
-    // Matches <link rel="icon|shortcut icon|apple-touch-icon" ... href="...">
-    private static final Pattern FAVICON_PATTERN = Pattern.compile(
-            "<link[^>]+rel=[\"'][^\"']*(?:shortcut icon|apple-touch-icon|icon)[^\"']*[\"'][^>]+href=[\"']([^\"']+)[\"']",
             Pattern.CASE_INSENSITIVE);
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -35,10 +31,39 @@ public class ShortcutMetadataService {
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
+    private record PageResult(URI finalUri, String html) {}
+
     public ShortcutMetadataResponse fetch(String urlStr) {
         validateUrl(urlStr);
+        URI originUri;
         try {
-            URI uri = new URI(urlStr);
+            originUri = new URI(urlStr);
+        } catch (URISyntaxException e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid URL", "The provided URL is invalid");
+        }
+
+        PageResult page = fetchPage(originUri);
+
+        // Favicon: use the final URI's domain after following redirects.
+        // e.g. gmail.com → mail.google.com → Gmail "M" icon, not Google "G".
+        URI faviconSourceUri = (page != null) ? page.finalUri() : originUri;
+        String faviconUrl = googleFaviconUrl(faviconSourceUri);
+
+        // Title: only trust the scraped title when the page didn't redirect us to a
+        // completely different domain (e.g. login pages).
+        String title = null;
+        if (page != null && sameRegistrableDomain(originUri, page.finalUri())) {
+            title = extractTitle(page.html());
+        }
+        if (title == null || title.isBlank()) {
+            title = originUri.getHost();
+        }
+
+        return new ShortcutMetadataResponse(title.trim(), faviconUrl);
+    }
+
+    private PageResult fetchPage(URI uri) {
+        try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
                     .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
@@ -47,33 +72,34 @@ public class ShortcutMetadataService {
                     .build();
 
             HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+
             byte[] rawBody = response.body();
-            // Limit to MAX_BODY_BYTES
             int len = Math.min(rawBody.length, MAX_BODY_BYTES);
             String html = new String(rawBody, 0, len, java.nio.charset.StandardCharsets.UTF_8);
+            return new PageResult(response.uri(), html);
 
-            String title = extractTitle(html);
-            if (title == null || title.isBlank()) {
-                title = uri.getHost();
-            }
-
-            String faviconUrl = extractFavicon(html, uri);
-
-            return new ShortcutMetadataResponse(title.trim(), faviconUrl);
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
-            // Fallback on network error
-            try {
-                URI uri = new URI(urlStr);
-                return new ShortcutMetadataResponse(
-                        uri.getHost(),
-                        uri.getScheme() + "://" + uri.getHost() + "/favicon.ico");
-            } catch (URISyntaxException ex) {
-                return new ShortcutMetadataResponse(urlStr, null);
-            }
-        } catch (URISyntaxException e) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid URL", "The provided URL is invalid");
+            return null;
         }
+    }
+
+    /**
+     * Returns true when two URIs share the same registrable domain (last two labels).
+     * e.g. mail.google.com and accounts.google.com → true (both google.com)
+     *      gmail.com and accounts.google.com       → false
+     */
+    private static boolean sameRegistrableDomain(URI a, URI b) {
+        String ha = a.getHost();
+        String hb = b.getHost();
+        if (ha == null || hb == null) return false;
+        return registrableDomain(ha).equalsIgnoreCase(registrableDomain(hb));
+    }
+
+    private static String registrableDomain(String host) {
+        String[] parts = host.split("\\.");
+        if (parts.length <= 2) return host;
+        return parts[parts.length - 2] + "." + parts[parts.length - 1];
     }
 
     private void validateUrl(String urlStr) {
@@ -97,7 +123,6 @@ public class ShortcutMetadataService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid URL", "Local addresses are not allowed");
         }
 
-        // Block private IP ranges
         try {
             InetAddress addr = InetAddress.getByName(host);
             if (addr.isSiteLocalAddress() || addr.isLoopbackAddress() || addr.isLinkLocalAddress()
@@ -113,31 +138,14 @@ public class ShortcutMetadataService {
     }
 
     private String extractTitle(String html) {
-        // Try og:title first
         Matcher ogMatcher = OG_TITLE_PATTERN.matcher(html);
         if (ogMatcher.find()) return ogMatcher.group(1);
-        // Fall back to <title>
         Matcher titleMatcher = TITLE_PATTERN.matcher(html);
         if (titleMatcher.find()) return titleMatcher.group(1);
         return null;
     }
 
-    private String extractFavicon(String html, URI pageUri) {
-        String base = pageUri.getScheme() + "://" + pageUri.getHost();
-        Matcher m = FAVICON_PATTERN.matcher(html);
-        if (m.find()) {
-            String href = m.group(1).trim();
-            if (href.startsWith("http://") || href.startsWith("https://")) {
-                return href;
-            } else if (href.startsWith("//")) {
-                return pageUri.getScheme() + ":" + href;
-            } else if (href.startsWith("/")) {
-                return base + href;
-            } else {
-                return base + "/" + href;
-            }
-        }
-        // Fall back to /favicon.ico
-        return base + "/favicon.ico";
+    private static String googleFaviconUrl(URI uri) {
+        return "https://www.google.com/s2/favicons?sz=64&domain_url=" + uri.getScheme() + "://" + uri.getHost();
     }
 }

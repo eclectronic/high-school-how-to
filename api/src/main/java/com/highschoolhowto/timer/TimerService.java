@@ -68,6 +68,12 @@ public class TimerService {
         if (StringUtils.hasText(request.textColor())) {
             timer.setTextColor(request.textColor().trim());
         }
+        if (request.timerType() != null) {
+            timer.setTimerType(request.timerType());
+        }
+        if (request.basicDurationSeconds() != null) {
+            timer.setBasicDurationSeconds(request.basicDurationSeconds());
+        }
         if (request.focusDuration() != null) {
             timer.setFocusDuration(request.focusDuration());
         }
@@ -94,6 +100,12 @@ public class TimerService {
         timer.setTitle(request.title().trim());
         timer.setColor(StringUtils.hasText(request.color()) ? request.color().trim() : timer.getColor());
         timer.setTextColor(StringUtils.hasText(request.textColor()) ? request.textColor().trim() : null);
+        if (request.timerType() != null) {
+            timer.setTimerType(request.timerType());
+        }
+        if (request.basicDurationSeconds() != null) {
+            timer.setBasicDurationSeconds(request.basicDurationSeconds());
+        }
         if (request.focusDuration() != null) {
             timer.setFocusDuration(request.focusDuration());
         }
@@ -155,6 +167,8 @@ public class TimerService {
                 timer.getTitle(),
                 timer.getColor(),
                 timer.getTextColor(),
+                timer.getTimerType(),
+                timer.getBasicDurationSeconds(),
                 timer.getFocusDuration(),
                 timer.getShortBreakDuration(),
                 timer.getLongBreakDuration(),
@@ -171,6 +185,8 @@ public class TimerService {
                 timer.getTitle(),
                 timer.getColor(),
                 timer.getTextColor(),
+                timer.getTimerType(),
+                timer.getBasicDurationSeconds(),
                 timer.getFocusDuration(),
                 timer.getShortBreakDuration(),
                 timer.getLongBreakDuration(),

@@ -77,7 +77,7 @@ class TimerServiceTest {
         when(timerRepository.save(any(Timer.class))).thenReturn(saved);
 
         TimerResponse response = service.createTimer(userId,
-                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, null));
+                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, null, null, null));
 
         assertThat(response.title()).isEqualTo("Timer");
         verify(timerRepository).save(any(Timer.class));
@@ -91,7 +91,7 @@ class TimerServiceTest {
         when(timerRepository.countByUserId(userId)).thenReturn((long) TimerService.MAX_TIMERS_PER_USER);
 
         assertThatThrownBy(() -> service.createTimer(userId,
-                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, null)))
+                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, null, null, null)))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY));
 
@@ -109,7 +109,7 @@ class TimerServiceTest {
         when(timerRepository.save(any(Timer.class))).thenReturn(saved);
 
         service.createTimer(userId,
-                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, null));
+                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, null, null, null));
 
         verify(timerRepository).save(any(Timer.class));
     }
@@ -132,7 +132,7 @@ class TimerServiceTest {
         when(timerRepository.save(any(Timer.class))).thenReturn(saved);
 
         service.createTimer(userId,
-                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, listId));
+                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, null, null, listId));
 
         verify(taskListRepository).findByIdAndUserId(listId, userId);
     }
@@ -148,7 +148,7 @@ class TimerServiceTest {
         when(taskListRepository.findByIdAndUserId(listId, userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.createTimer(userId,
-                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, listId)))
+                new CreateTimerRequest("Timer", null, null, null, null, null, null, null, null, null, listId)))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }
@@ -165,7 +165,7 @@ class TimerServiceTest {
         when(timerRepository.save(any(Timer.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateTimerResponse response = service.updateTimer(userId, timerId,
-                new UpdateTimerRequest("New Title", null, null, null, null, null, null, null, null, false, false, false));
+                new UpdateTimerRequest("New Title", null, null, null, null, null, null, null, null, null, null, false, false, false));
 
         assertThat(response.title()).isEqualTo("New Title");
     }
@@ -184,7 +184,7 @@ class TimerServiceTest {
         when(timerRepository.save(any(Timer.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UpdateTimerResponse response = service.updateTimer(userId, timerId,
-                new UpdateTimerRequest("Timer", null, null, null, null, null, null, null, null, true, false, false));
+                new UpdateTimerRequest("Timer", null, null, null, null, null, null, null, null, null, null, true, false, false));
 
         assertThat(response.linkedTaskListId()).isNull();
     }
@@ -197,7 +197,7 @@ class TimerServiceTest {
         when(timerRepository.findByIdAndUserId(timerId, userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.updateTimer(userId, timerId,
-                new UpdateTimerRequest("Timer", null, null, null, null, null, null, null, null, false, false, false)))
+                new UpdateTimerRequest("Timer", null, null, null, null, null, null, null, null, null, null, false, false, false)))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     }

@@ -6,6 +6,7 @@ import { Shortcut } from '../../core/models/task.models';
   selector: 'app-shortcut-icon',
   standalone: true,
   imports: [CommonModule],
+  host: { '[class.shortcut-menu-open]': 'contextMenuOpen' },
   template: `
     <div class="shortcut"
          [title]="shortcut.name"

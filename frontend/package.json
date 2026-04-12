@@ -36,7 +36,6 @@
     "@tiptap/extension-text-align": "^2.11.7",
     "@tiptap/extension-underline": "^2.11.7",
     "@tiptap/starter-kit": "^2.11.7",
-    "chrono-node": "^2.9.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"

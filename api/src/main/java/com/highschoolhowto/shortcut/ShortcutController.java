@@ -4,6 +4,7 @@ import com.highschoolhowto.security.UserPrincipal;
 import com.highschoolhowto.shortcut.dto.CreateShortcutRequest;
 import com.highschoolhowto.shortcut.dto.ImportShortcutsRequest;
 import com.highschoolhowto.shortcut.dto.ImportShortcutsResponse;
+import com.highschoolhowto.shortcut.dto.ReorderShortcutsRequest;
 import com.highschoolhowto.shortcut.dto.ShortcutMetadataResponse;
 import com.highschoolhowto.shortcut.dto.ShortcutResponse;
 import com.highschoolhowto.shortcut.dto.UpdateShortcutRequest;
@@ -70,6 +71,15 @@ public class ShortcutController {
             @PathVariable("id") UUID id) {
         UUID userId = principal.getUser().getId();
         shortcutService.deleteShortcut(userId, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/reorder")
+    public ResponseEntity<Void> reorder(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody ReorderShortcutsRequest request) {
+        UUID userId = principal.getUser().getId();
+        shortcutService.reorderShortcuts(userId, request);
         return ResponseEntity.noContent().build();
     }
 

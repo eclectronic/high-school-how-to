@@ -58,8 +58,10 @@ public class ContentCardService {
     }
 
     @Transactional(readOnly = true)
-    public List<ContentCard> findAll() {
-        return cardRepository.findAllWithTags();
+    public List<ContentCardAdminResponse> findAllForAdmin() {
+        return cardRepository.findAllWithTags().stream()
+                .map(ContentCardAdminResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -96,24 +98,29 @@ public class ContentCardService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Card not found", "No card with id " + id));
     }
 
+    @Transactional(readOnly = true)
+    public ContentCardAdminResponse findAdminResponseById(Long id) {
+        return ContentCardAdminResponse.from(findById(id));
+    }
+
     @Transactional
-    public ContentCard create(SaveCardRequest request) {
+    public ContentCardAdminResponse create(SaveCardRequest request) {
         if (cardRepository.existsBySlug(request.slug())) {
             throw new ApiException(HttpStatus.CONFLICT, "Slug already in use", "A card with slug '" + request.slug() + "' already exists");
         }
         ContentCard card = new ContentCard();
         applyRequest(card, request);
-        return cardRepository.save(card);
+        return ContentCardAdminResponse.from(cardRepository.save(card));
     }
 
     @Transactional
-    public ContentCard update(Long id, SaveCardRequest request) {
+    public ContentCardAdminResponse update(Long id, SaveCardRequest request) {
         ContentCard card = findById(id);
         if (!card.getSlug().equals(request.slug()) && cardRepository.existsBySlug(request.slug())) {
             throw new ApiException(HttpStatus.CONFLICT, "Slug already in use", "A card with slug '" + request.slug() + "' already exists");
         }
         applyRequest(card, request);
-        return cardRepository.save(card);
+        return ContentCardAdminResponse.from(cardRepository.save(card));
     }
 
     @Transactional

@@ -73,4 +73,8 @@ export class ShortcutApiService {
   exportShortcuts(): Observable<Shortcut[]> {
     return this.http.get<Shortcut[]>('/api/shortcuts/export');
   }
+
+  reorderShortcuts(ids: string[]): Observable<void> {
+    return this.http.put<void>('/api/shortcuts/reorder', { ids });
+  }
 }

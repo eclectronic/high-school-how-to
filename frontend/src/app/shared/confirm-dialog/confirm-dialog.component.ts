@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, HostListener, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -79,6 +79,12 @@ export class ConfirmDialogComponent {
   @Input() message?: string;
   @Output() confirmed = new EventEmitter<void>();
   @Output() cancelled = new EventEmitter<void>();
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') { event.preventDefault(); this.onConfirm(); }
+    if (event.key === 'Escape') { this.onCancel(); }
+  }
 
   onConfirm(): void {
     this.confirmed.emit();

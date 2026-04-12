@@ -1,6 +1,7 @@
 package com.highschoolhowto.timer.dto;
 
 import com.highschoolhowto.badge.dto.EarnedBadgeResponse;
+import com.highschoolhowto.timer.TimerType;
 import java.util.UUID;
 
 /**
@@ -12,6 +13,8 @@ public record UpdateTimerResponse(
         String title,
         String color,
         String textColor,
+        TimerType timerType,
+        int basicDurationSeconds,
         int focusDuration,
         int shortBreakDuration,
         int longBreakDuration,

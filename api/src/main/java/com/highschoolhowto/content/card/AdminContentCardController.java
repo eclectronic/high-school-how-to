@@ -28,7 +28,7 @@ public class AdminContentCardController {
 
     @GetMapping
     public List<ContentCardAdminResponse> listAll() {
-        return cardService.findAll().stream().map(ContentCardAdminResponse::from).toList();
+        return cardService.findAllForAdmin();
     }
 
     @GetMapping("/search")
@@ -39,18 +39,18 @@ public class AdminContentCardController {
 
     @GetMapping("/{id}")
     public ContentCardAdminResponse getById(@PathVariable Long id) {
-        return ContentCardAdminResponse.from(cardService.findById(id));
+        return cardService.findAdminResponseById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ContentCardAdminResponse create(@Valid @RequestBody SaveCardRequest request) {
-        return ContentCardAdminResponse.from(cardService.create(request));
+        return cardService.create(request);
     }
 
     @PutMapping("/{id}")
     public ContentCardAdminResponse update(@PathVariable Long id, @Valid @RequestBody SaveCardRequest request) {
-        return ContentCardAdminResponse.from(cardService.update(id, request));
+        return cardService.update(id, request);
     }
 
     @DeleteMapping("/{id}")

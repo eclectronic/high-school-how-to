@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: '0046'
+      author: ron
+      runOnChange: true
+      comment: >
+        Quote seed data. runOnChange: true so adding/editing rows in quotes-seed.csv
+        takes effect on next deploy. Uses loadUpdateData (upsert) so existing rows
+        are updated and new rows are inserted; rows removed from the CSV are NOT
+        deleted — remove them manually if needed.
+      changes:
+        - loadUpdateData:
+            file: db/changelog/quotes-seed.csv
+            tableName: quotes
+            primaryKey: id
+            columns:
+              - column:
+                  name: id
+                  type: NUMERIC
+              - column:
+                  name: quote_text
+                  type: STRING
+              - column:
+                  name: attribution
+                  type: STRING
+      rollback:
+        - sql:
+            sql: DELETE FROM quotes WHERE id >= 10001;

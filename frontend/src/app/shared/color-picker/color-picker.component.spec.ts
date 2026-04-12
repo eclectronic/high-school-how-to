@@ -146,16 +146,25 @@ describe('ColorPickerComponent', () => {
 
   // ── Recent colors ─────────────────────────────────────────────────────────
 
-  it('adds selected color to recent history', () => {
+  it('adds selected color to recent history when picker closes', () => {
     component.selectedColor = '#fffef8';
     fixture.detectChanges();
 
     const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
     nativeInput.value = '#aabbcc';
-    nativeInput.dispatchEvent(new Event('input'));
+    nativeInput.dispatchEvent(new Event('change')); // change fires when picker closes
     fixture.detectChanges();
 
     expect(component['colorHistory']()).toContain('#aabbcc');
+  });
+
+  it('does not add to history on every input event (live preview only)', () => {
+    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
+    nativeInput.value = '#aabbcc';
+    nativeInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(component['colorHistory']()).not.toContain('#aabbcc');
   });
 
   it('moves duplicate color to front of recents', () => {
@@ -165,7 +174,7 @@ describe('ColorPickerComponent', () => {
 
     const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
     nativeInput.value = '#bb0000';
-    nativeInput.dispatchEvent(new Event('input'));
+    nativeInput.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
     const history = component['colorHistory']();
@@ -180,7 +189,7 @@ describe('ColorPickerComponent', () => {
 
     const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
     nativeInput.value = '#aaaaaa';
-    nativeInput.dispatchEvent(new Event('input'));
+    nativeInput.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
     expect(component['colorHistory']().length).toBe(16);
@@ -189,7 +198,7 @@ describe('ColorPickerComponent', () => {
   it('persists recent colors to localStorage', () => {
     const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
     nativeInput.value = '#deadbe';
-    nativeInput.dispatchEvent(new Event('input'));
+    nativeInput.dispatchEvent(new Event('change'));
     fixture.detectChanges();
 
     const stored = JSON.parse(localStorage.getItem('hsht_colorHistory') ?? '[]') as string[];

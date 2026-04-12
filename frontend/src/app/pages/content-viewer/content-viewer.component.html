@@ -4,7 +4,7 @@
   } @else if (error()) {
     <div class="viewer-error">
       <p>{{ error() }}</p>
-      <a routerLink="/">← Back to home</a>
+      <a routerLink="/">Back to home</a>
     </div>
   } @else if (card(); as card) {
 
@@ -13,7 +13,7 @@
         <a class="viewer-nav__logo" routerLink="/">
           <img src="/assets/images/home-logo.png" alt="High School How To" />
         </a>
-        <a class="back-link" routerLink="/">← Home</a>
+        <a class="back-link" routerLink="/">Home</a>
         @if (tagName()) {
           <div class="viewer-nav__tag-header">
             <h2 class="viewer-nav__tag-title">{{ tagName() }}</h2>

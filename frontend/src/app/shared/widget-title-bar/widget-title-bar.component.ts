@@ -28,14 +28,18 @@ import { FormsModule } from '@angular/forms';
           (keydown.enter)="commitEdit()"
           (keydown.escape)="cancelEdit()"
           (blur)="onBlur()"
+          (dblclick)="$event.stopPropagation()"
         />
       } @else {
         <span
           class="title-bar__title"
-          (dblclick)="startEdit()"
-          title="Double-click to rename"
-        >{{ title }}</span>
+          (dblclick)="onTitleDblClick($event)"
+          [title]="editable ? 'Double-click to rename' : ''"
+        >@if (prefix) {<span class="title-bar__prefix">{{ prefix }}</span>}{{ title }}</span>
       }
+
+      <!-- Extra action buttons projected from the host widget -->
+      <ng-content></ng-content>
 
       <!-- Minimize / maximize button -->
       <button
@@ -61,7 +65,7 @@ import { FormsModule } from '@angular/forms';
       display: flex;
       align-items: center;
       gap: 0.25rem;
-      height: 2rem;
+      height: 2em;
       padding: 0 0.35rem;
       border-radius: 8px 8px 0 0;
       background: rgba(0, 0, 0, 0.08);
@@ -79,7 +83,7 @@ import { FormsModule } from '@angular/forms';
     }
 
     .title-bar__drag-handle {
-      font-size: 1rem;
+      font-size: 1em;
       opacity: 0.45;
       flex-shrink: 0;
       line-height: 1;
@@ -91,7 +95,7 @@ import { FormsModule } from '@angular/forms';
     }
 
     .title-bar__title {
-      font-size: 0.875rem;
+      font-size: 0.875em;
       font-weight: 700;
       flex: 1;
       min-width: 0;
@@ -99,6 +103,11 @@ import { FormsModule } from '@angular/forms';
       text-overflow: ellipsis;
       white-space: nowrap;
       cursor: text;
+    }
+
+    .title-bar__prefix {
+      opacity: 0.6;
+      font-weight: 600;
     }
 
     .title-bar--minimized .title-bar__title {
@@ -110,7 +119,7 @@ import { FormsModule } from '@angular/forms';
       flex: 1;
       min-width: 0;
       font: inherit;
-      font-size: 0.875rem;
+      font-size: 0.875em;
       font-weight: 700;
       background: rgba(255, 255, 255, 0.6);
       border: 1px solid rgba(0, 0, 0, 0.2);
@@ -121,13 +130,13 @@ import { FormsModule } from '@angular/forms';
     }
 
     .title-bar__btn {
-      width: 1.5rem;
-      height: 1.5rem;
+      width: 1.5em;
+      height: 1.5em;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       border-radius: 4px;
-      font-size: 0.7rem;
+      font-size: 0.7em;
       line-height: 1;
       padding: 0;
       background: rgba(255, 255, 255, 0.5);
@@ -152,7 +161,9 @@ import { FormsModule } from '@angular/forms';
 })
 export class WidgetTitleBarComponent {
   @Input({ required: true }) title!: string;
+  @Input() prefix = '';
   @Input() minimized = false;
+  @Input() editable = true;
 
   @Output() minimizeToggled = new EventEmitter<void>();
   @Output() closeClicked = new EventEmitter<void>();
@@ -164,6 +175,13 @@ export class WidgetTitleBarComponent {
   protected draft = '';
 
   private commitPending = false;
+
+  protected onTitleDblClick(event: MouseEvent): void {
+    if (this.editable) {
+      event.stopPropagation();
+      this.startEdit();
+    }
+  }
 
   protected startEdit(): void {
     this.draft = this.title;

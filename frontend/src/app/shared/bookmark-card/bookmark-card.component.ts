@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Bookmark, BookmarkList } from '../../core/models/task.models';
 import { BookmarkApiService } from '../../core/services/bookmark-api.service';
-import { ColorPickerComponent } from '../color-picker/color-picker.component';
+import { SwatchPickerComponent } from '../swatch-picker/swatch-picker.component';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { WidgetTitleBarComponent } from '../widget-title-bar/widget-title-bar.component';
 import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-picker/color-utils';
@@ -12,7 +12,7 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
 @Component({
   selector: 'app-bookmark-card',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule, ColorPickerComponent, ConfirmDialogComponent, WidgetTitleBarComponent],
+  imports: [CommonModule, FormsModule, DragDropModule, SwatchPickerComponent, ConfirmDialogComponent, WidgetTitleBarComponent],
   host: { '[class.bookmark-card--elevated]': 'colorPickerOpen || confirmingDelete || !!confirmDeleteBookmark' },
   template: `
     <article class="bookmark-card" [style.background]="list.color"
@@ -40,14 +40,17 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
         </div>
 
       <!-- Color picker -->
-      <div class="color-picker-panel" *ngIf="colorPickerOpen" (click)="$event.stopPropagation()">
-        <app-color-picker
+      <div class="color-picker-panel" *ngIf="colorPickerOpen" (click)="$event.stopPropagation()" (keydown.enter)="saveColor()">
+        <app-swatch-picker
           [selectedColor]="list.color"
-          [selectedTextColor]="list.textColor ?? null"
           (colorChange)="onColorChange($event)"
-          (textColorChange)="onTextColorChange($event)"
-        ></app-color-picker>
-        <button type="button" class="done-btn" (click)="saveColor()">Done</button>
+          (colorCommit)="onColorCommit($event)"
+          (escaped)="cancelColor()"
+        ></app-swatch-picker>
+        <div class="color-picker-actions">
+          <button type="button" class="action-btn action-btn--cancel" (click)="cancelColor()">Cancel</button>
+          <button type="button" class="action-btn action-btn--save" (click)="saveColor()">Save</button>
+        </div>
       </div>
 
       <!-- Bookmark list -->
@@ -188,18 +191,22 @@ import { autoContrastColor, isGradient, firstHexFromGradient } from '../color-pi
       padding: 0.5rem;
       margin: 0 0.75rem;
     }
-    .done-btn {
+    .color-picker-actions {
+      display: flex;
+      gap: 0.4rem;
       margin-top: 0.5rem;
-      border: 1px dashed rgba(45,26,16,0.2);
+    }
+    .action-btn {
+      flex: 1;
       border-radius: 6px;
       padding: 0.3rem 0.6rem;
-      background: rgba(255,255,255,0.5);
-      color: inherit;
       font: inherit;
       font-size: 0.8rem;
       font-weight: 700;
       cursor: pointer;
-      width: 100%;
+      border: 1px solid rgba(45,26,16,0.2);
+      &--cancel { background: rgba(255,255,255,0.5); color: inherit; }
+      &--save { background: rgba(45,26,16,0.15); color: inherit; }
     }
 
     .bookmark-list {
@@ -350,17 +357,15 @@ export class BookmarkCardComponent implements OnChanges {
   protected editTitleDraft = '';
   protected editUrlDraft = '';
   private colorDraft = '';
-  private textColorDraft: string | null = null;
+  private colorAtOpen = '';
 
   constructor(private readonly bookmarkApi: BookmarkApiService) {}
 
   ngOnChanges(): void {
     this.colorDraft = this.list.color;
-    this.textColorDraft = this.list.textColor ?? null;
   }
 
   protected textColor(): string {
-    if (this.list.textColor) return this.list.textColor;
     const bg = this.list.color || '#fffef8';
     if (isGradient(bg)) {
       const first = firstHexFromGradient(bg);
@@ -377,7 +382,7 @@ export class BookmarkCardComponent implements OnChanges {
 
   protected onTitleChanged(title: string): void {
     this.bookmarkApi.updateBookmarkList(this.list.id, {
-      title, color: this.list.color, textColor: this.list.textColor ?? null
+      title, color: this.list.color, textColor: null
     }).subscribe({ next: updated => this.listUpdated.emit(updated) });
   }
 
@@ -386,7 +391,7 @@ export class BookmarkCardComponent implements OnChanges {
   protected toggleColorPicker(): void {
     this.colorPickerOpen = !this.colorPickerOpen;
     this.colorDraft = this.list.color;
-    this.textColorDraft = this.list.textColor ?? null;
+    this.colorAtOpen = this.list.color;
   }
 
   protected onColorChange(color: string): void {
@@ -394,16 +399,24 @@ export class BookmarkCardComponent implements OnChanges {
     this.listUpdated.emit({ ...this.list, color });
   }
 
-  protected onTextColorChange(textColor: string | null): void {
-    this.textColorDraft = textColor;
-    this.listUpdated.emit({ ...this.list, textColor });
+  protected onColorCommit(color: string): void {
+    this.colorDraft = color;
+    this.listUpdated.emit({ ...this.list, color });
+    this.saveColor();
   }
 
   protected saveColor(): void {
     this.colorPickerOpen = false;
     this.bookmarkApi.updateBookmarkList(this.list.id, {
-      title: this.list.title, color: this.colorDraft, textColor: this.textColorDraft
+      title: this.list.title, color: this.colorDraft, textColor: null
     }).subscribe({ next: updated => this.listUpdated.emit(updated) });
+  }
+
+  protected cancelColor(): void {
+    this.colorPickerOpen = false;
+    if (this.colorDraft !== this.colorAtOpen) {
+      this.listUpdated.emit({ ...this.list, color: this.colorAtOpen });
+    }
   }
 
   // ── Delete list ─────────────────────────────────────────────────────────
