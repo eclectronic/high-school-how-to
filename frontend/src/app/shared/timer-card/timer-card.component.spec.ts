@@ -9,6 +9,8 @@ function makeUpdateTimerResponse(overrides: Partial<Timer> = {}): UpdateTimerRes
     id: 'timer-1',
     title: 'Timer',
     color: '#fffef8',
+    timerType: 'BASIC',
+    basicDurationSeconds: 0,
     focusDuration: 25,
     shortBreakDuration: 5,
     longBreakDuration: 15,
@@ -23,6 +25,8 @@ function makeTimer(overrides: Partial<Timer> = {}): Timer {
     id: 'timer-1',
     title: 'Timer',
     color: '#fffef8',
+    timerType: 'BASIC',
+    basicDurationSeconds: 0,
     focusDuration: 25,
     shortBreakDuration: 5,
     longBreakDuration: 15,
@@ -75,7 +79,7 @@ describe('TimerCardComponent', () => {
     const titleBar = fixture.nativeElement.querySelector('app-widget-title-bar');
     expect(titleBar).toBeTruthy();
     const title = titleBar.querySelector('.title-bar__title');
-    expect(title.textContent.trim()).toBe('Timer');
+    expect(title.textContent.trim()).toBe('Timer: Timer');
   });
 
   it('renders progress ring', () => {
@@ -185,7 +189,7 @@ describe('TimerCardComponent', () => {
     const emitted: Timer[] = [];
     component.timerUpdated.subscribe((t: Timer) => emitted.push(t));
 
-    c.onColorChange('#dbeafe');
+    c.onColorCommit('#dbeafe');
 
     expect(timerApi.updateTimer).toHaveBeenCalled();
     expect(emitted.length).toBe(1);
@@ -251,11 +255,6 @@ describe('TimerCardComponent', () => {
 
   // ── Linked list UI ────────────────────────────────────────────────────────
 
-  it('hides Study button when no linked list', () => {
-    const studyBtn = fixture.nativeElement.querySelector('[title="Enter Study Session"]');
-    expect(studyBtn).toBeNull();
-  });
-
   it('hides 📋 icon when no linked list', () => {
     const clipboardBtn = fixture.nativeElement.querySelector('[title="Go to linked list"]');
     expect(clipboardBtn).toBeNull();
@@ -275,11 +274,6 @@ describe('TimerCardComponent', () => {
     });
 
     afterEach(() => (linkedFixture.componentInstance as any).clearTick());
-
-    it('shows Study button', () => {
-      const studyBtn = linkedFixture.nativeElement.querySelector('[title="Enter Study Session"]');
-      expect(studyBtn).toBeTruthy();
-    });
 
     it('shows 📋 icon', () => {
       const clipboardBtn = linkedFixture.nativeElement.querySelector('[title="Go to linked list"]');

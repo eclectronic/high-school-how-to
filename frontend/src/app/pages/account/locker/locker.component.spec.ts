@@ -32,7 +32,7 @@ function makeTask(overrides: Partial<TaskItem> = {}): TaskItem {
 
 function makeTimer(overrides: Partial<Timer> = {}): Timer {
   return {
-    id: 'timer-1', title: 'Timer', color: '#fffef8',
+    id: 'timer-1', title: 'Timer', color: '#fffef8', timerType: 'BASIC', basicDurationSeconds: 0,
     focusDuration: 25, shortBreakDuration: 5, longBreakDuration: 15, sessionsBeforeLongBreak: 4,
     ...overrides,
   };
@@ -156,22 +156,22 @@ describe('LockerComponent', () => {
 
   // ── Auto-naming ──────────────────────────────────────────────────────────
 
-  it('creates first list with title "To-dos"', () => {
-    taskApi.createList.and.returnValue(of(makeList({ id: 'new', title: 'To-dos' })));
+  it('creates first list with title "List #1"', () => {
+    taskApi.createList.and.returnValue(of(makeList({ id: 'new', title: 'List #1' })));
     render([]);
 
     component['createList']();
 
-    expect(taskApi.createList).toHaveBeenCalledWith('To-dos', jasmine.any(String));
+    expect(taskApi.createList).toHaveBeenCalledWith('List #1', jasmine.any(String));
   });
 
-  it('auto-names second list "To-dos #2" when "To-dos" exists', () => {
-    taskApi.createList.and.returnValue(of(makeList({ id: 'new', title: 'To-dos #2' })));
-    render([makeList({ title: 'To-dos' })]);
+  it('auto-names second list "List #2" when "List #1" exists', () => {
+    taskApi.createList.and.returnValue(of(makeList({ id: 'new', title: 'List #2' })));
+    render([makeList({ title: 'List #1' })]);
 
     component['createList']();
 
-    expect(taskApi.createList).toHaveBeenCalledWith('To-dos #2', jasmine.any(String));
+    expect(taskApi.createList).toHaveBeenCalledWith('List #2', jasmine.any(String));
   });
 
   // ── atListLimit ──────────────────────────────────────────────────────────
@@ -200,7 +200,7 @@ describe('LockerComponent', () => {
   // ── Confirm dialogs ──────────────────────────────────────────────────────
 
   it('requestDelete sets confirmDeleteList', () => {
-    const list = makeList();
+    const list = makeList({ tasks: [{ id: 't1', description: 'Do something', completed: false }] });
     render([list]);
 
     component['requestDelete'](list);
@@ -386,22 +386,22 @@ describe('LockerComponent', () => {
 
   // ── Timer creation ────────────────────────────────────────────────────────
 
-  it('createTimer creates first timer with title "Timer"', () => {
-    timerApi.createTimer.and.returnValue(of(makeTimer({ id: 'new', title: 'Timer' })));
+  it('createTimer creates first timer with title "Pomodoro Timer"', () => {
+    timerApi.createTimer.and.returnValue(of(makeTimer({ id: 'new', title: 'Pomodoro Timer' })));
     render([]);
 
     component['createTimer']();
 
-    expect(timerApi.createTimer).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Timer' }));
+    expect(timerApi.createTimer).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Pomodoro Timer' }));
   });
 
-  it('createTimer auto-names second timer "Timer #2"', () => {
-    timerApi.createTimer.and.returnValue(of(makeTimer({ id: 'new', title: 'Timer #2' })));
-    render([], [makeTimer({ title: 'Timer' })]);
+  it('createTimer auto-names second timer "Pomodoro Timer #2"', () => {
+    timerApi.createTimer.and.returnValue(of(makeTimer({ id: 'new', title: 'Pomodoro Timer #2' })));
+    render([], [makeTimer({ title: 'Pomodoro Timer' })]);
 
     component['createTimer']();
 
-    expect(timerApi.createTimer).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Timer #2' }));
+    expect(timerApi.createTimer).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Pomodoro Timer #2' }));
   });
 
   it('atTimerLimit is true at 10 timers', () => {

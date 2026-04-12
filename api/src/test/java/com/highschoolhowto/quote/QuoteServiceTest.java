@@ -63,7 +63,7 @@ class QuoteServiceTest {
         Quote q2 = makeQuote(2L, "Quote Two", null);
         when(quoteRepository.findAllByOrderByIdAsc()).thenReturn(List.of(q1, q2));
 
-        long index = LocalDate.now().toEpochDay() % 2;
+        int index = Math.min(LocalDate.now().getDayOfYear() - 1, 1);
         QuoteResponse response = quoteService.getQuoteOfTheDay();
 
         String expected = index == 0 ? "Quote One" : "Quote Two";

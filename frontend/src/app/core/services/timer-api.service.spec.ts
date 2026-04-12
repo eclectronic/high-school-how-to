@@ -9,6 +9,8 @@ function makeTimer(overrides: Partial<Timer> = {}): Timer {
     id: 'timer-1',
     title: 'Timer',
     color: '#fffef8',
+    timerType: 'BASIC',
+    basicDurationSeconds: 0,
     focusDuration: 25,
     shortBreakDuration: 5,
     longBreakDuration: 15,

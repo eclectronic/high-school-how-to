@@ -24,14 +24,16 @@ describe('DueDatePopoverComponent', () => {
   });
 
   it('Apply button is disabled when no date is set', () => {
-    const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--apply');
+    c.pickerValue = '';
+    fixture.detectChanges();
+    const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--save');
     expect(applyBtn.disabled).toBeTrue();
   });
 
   it('Apply button is enabled after a picker value is set', () => {
     c.pickerValue = '2026-04-10T15:00';
     fixture.detectChanges();
-    const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--apply');
+    const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--save');
     expect(applyBtn.disabled).toBeFalse();
   });
 
@@ -42,7 +44,7 @@ describe('DueDatePopoverComponent', () => {
     c.pickerValue = '2026-04-10T15:00';
     fixture.detectChanges();
 
-    const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--apply');
+    const applyBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.btn--save');
     applyBtn.click();
 
     expect(emitted.length).toBe(1);

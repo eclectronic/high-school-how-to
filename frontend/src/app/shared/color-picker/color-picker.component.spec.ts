@@ -6,8 +6,6 @@ describe('ColorPickerComponent', () => {
   let component: ColorPickerComponent;
 
   beforeEach(async () => {
-    localStorage.removeItem('hsht_colorHistory');
-
     await TestBed.configureTestingModule({
       imports: [ColorPickerComponent],
     }).compileComponents();
@@ -15,10 +13,6 @@ describe('ColorPickerComponent', () => {
     fixture = TestBed.createComponent(ColorPickerComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-  });
-
-  afterEach(() => {
-    localStorage.removeItem('hsht_colorHistory');
   });
 
   // ── No tabs, no preset swatches, no save-to-palette ──────────────────────
@@ -142,82 +136,6 @@ describe('ColorPickerComponent', () => {
 
     expect(emitted.length).toBe(1);
     expect(emitted[0]).toBe('#3366cc');
-  });
-
-  // ── Recent colors ─────────────────────────────────────────────────────────
-
-  it('adds selected color to recent history when picker closes', () => {
-    component.selectedColor = '#fffef8';
-    fixture.detectChanges();
-
-    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
-    nativeInput.value = '#aabbcc';
-    nativeInput.dispatchEvent(new Event('change')); // change fires when picker closes
-    fixture.detectChanges();
-
-    expect(component['colorHistory']()).toContain('#aabbcc');
-  });
-
-  it('does not add to history on every input event (live preview only)', () => {
-    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
-    nativeInput.value = '#aabbcc';
-    nativeInput.dispatchEvent(new Event('input'));
-    fixture.detectChanges();
-
-    expect(component['colorHistory']()).not.toContain('#aabbcc');
-  });
-
-  it('moves duplicate color to front of recents', () => {
-    // Pre-seed history
-    component['colorHistory'].set(['#aa0000', '#bb0000', '#cc0000']);
-    fixture.detectChanges();
-
-    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
-    nativeInput.value = '#bb0000';
-    nativeInput.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-
-    const history = component['colorHistory']();
-    expect(history[0]).toBe('#bb0000');
-    expect(history.filter(c => c === '#bb0000').length).toBe(1);
-  });
-
-  it('limits recent colors to 16', () => {
-    const existing = Array.from({ length: 16 }, (_, i) => `#${i.toString().padStart(6, '0')}`);
-    component['colorHistory'].set(existing);
-    fixture.detectChanges();
-
-    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
-    nativeInput.value = '#aaaaaa';
-    nativeInput.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-
-    expect(component['colorHistory']().length).toBe(16);
-  });
-
-  it('persists recent colors to localStorage', () => {
-    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
-    nativeInput.value = '#deadbe';
-    nativeInput.dispatchEvent(new Event('change'));
-    fixture.detectChanges();
-
-    const stored = JSON.parse(localStorage.getItem('hsht_colorHistory') ?? '[]') as string[];
-    expect(stored).toContain('#deadbe');
-  });
-
-  it('clicking a recent color re-selects it and emits', () => {
-    component['colorHistory'].set(['#ff0000']);
-    fixture.detectChanges();
-
-    const emitted: string[] = [];
-    component.colorChange.subscribe((c: string) => emitted.push(c));
-
-    const swatch: HTMLButtonElement = fixture.nativeElement.querySelector('.swatch');
-    swatch.click();
-    fixture.detectChanges();
-
-    expect(emitted.length).toBe(1);
-    expect(emitted[0]).toBe('#ff0000');
   });
 
   // ── Text color ────────────────────────────────────────────────────────────

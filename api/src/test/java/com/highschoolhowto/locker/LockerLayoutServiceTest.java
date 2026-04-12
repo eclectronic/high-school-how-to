@@ -190,9 +190,9 @@ class LockerLayoutServiceTest {
         UUID cardA = UUID.randomUUID();
 
         assertThatThrownBy(() -> service.saveLayout(
-                        userId, List.of(new LockerLayoutItemRequest("TASK_LIST", cardA, 1, 4, 0, false, 0, 0, null, 50, 220))))
+                        userId, List.of(new LockerLayoutItemRequest("TASK_LIST", cardA, 1, 4, 0, false, 0, 0, null, 0, 220))))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("width must be between 120 and 4000");
+                .hasMessageContaining("width must be between 1 and 4000");
     }
 
     @Test
@@ -201,9 +201,9 @@ class LockerLayoutServiceTest {
         UUID cardA = UUID.randomUUID();
 
         assertThatThrownBy(() -> service.saveLayout(
-                        userId, List.of(new LockerLayoutItemRequest("TASK_LIST", cardA, 1, 4, 0, false, 0, 0, null, 320, 30))))
+                        userId, List.of(new LockerLayoutItemRequest("TASK_LIST", cardA, 1, 4, 0, false, 0, 0, null, 320, 0))))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("height must be between 60 and 4000");
+                .hasMessageContaining("height must be between 1 and 4000");
     }
 
     @Test
@@ -214,7 +214,7 @@ class LockerLayoutServiceTest {
         assertThatThrownBy(() -> service.saveLayout(
                         userId, List.of(new LockerLayoutItemRequest("TASK_LIST", cardA, 1, 4, 0, false, 0, 0, null, 5000, 220))))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("width must be between 120 and 4000");
+                .hasMessageContaining("width must be between 1 and 4000");
     }
 
     private LockerLayoutItemRequest req(
