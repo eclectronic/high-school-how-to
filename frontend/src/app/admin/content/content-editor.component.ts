@@ -1,10 +1,31 @@
-import { Component, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { ContentApiService } from '../../core/services/content-api.service';
-import { Tag, CardType, CardStatus, SaveCardRequest } from '../../core/models/content.models';
+import {
+  Tag,
+  CardType,
+  CardStatus,
+  SaveCardRequest,
+  ContentCardLinkRequest,
+  ContentCardSummary,
+  cardTypeIcon,
+} from '../../core/models/content.models';
 import { TiptapEditorComponent } from './tiptap-editor.component';
+
+interface LinkDraft {
+  targetCardId: number;
+  targetTitle: string;
+  targetCardType: CardType;
+  linkText: string;
+}
+
+interface TemplateTaskForm {
+  description: string;
+}
 
 interface CardForm {
   title: string;
@@ -29,7 +50,7 @@ interface CardForm {
   templateUrl: './content-editor.component.html',
   styleUrl: './content-editor.component.scss',
 })
-export class ContentEditorComponent implements OnInit {
+export class ContentEditorComponent implements OnInit, OnDestroy {
   @ViewChild(TiptapEditorComponent) tiptapEditor?: TiptapEditorComponent;
 
   protected editId = signal<number | null>(null);
@@ -58,8 +79,18 @@ export class ContentEditorComponent implements OnInit {
   protected bodyHtml: string | null = null;
   protected previewMode = signal(false);
   protected uploadingImage = signal(false);
+  protected templateTasks = signal<TemplateTaskForm[]>([]);
+  protected newTaskDescription = '';
 
-  readonly cardTypes: CardType[] = ['VIDEO', 'INFOGRAPHIC', 'ARTICLE'];
+  // Related content links
+  protected links: LinkDraft[] = [];
+  protected linkSearchQuery = '';
+  protected linkSearchResults = signal<ContentCardSummary[]>([]);
+  protected showLinkDropdown = signal(false);
+  private readonly linkSearch$ = new Subject<string>();
+  private readonly subs = new Subscription();
+
+  readonly cardTypes: CardType[] = ['VIDEO', 'INFOGRAPHIC', 'ARTICLE', 'TODO_LIST'];
   readonly statuses: CardStatus[] = ['DRAFT', 'PUBLISHED'];
 
   constructor(
@@ -77,6 +108,30 @@ export class ContentEditorComponent implements OnInit {
     this.api.adminListTags().subscribe({
       next: (tags) => this.allTags.set(tags.sort((a, b) => a.name.localeCompare(b.name))),
     });
+
+    // Wire up typeahead search with debounce
+    this.subs.add(
+      this.linkSearch$
+        .pipe(
+          debounceTime(250),
+          distinctUntilChanged(),
+          switchMap((q) => {
+            if (!q.trim()) {
+              this.linkSearchResults.set([]);
+              this.showLinkDropdown.set(false);
+              return [];
+            }
+            return this.api.searchCards(q, this.editId() ?? undefined);
+          }),
+        )
+        .subscribe({
+          next: (results) => {
+            const linkedIds = new Set(this.links.map((l) => l.targetCardId));
+            this.linkSearchResults.set(results.filter((r) => !linkedIds.has(r.id)));
+            this.showLinkDropdown.set(true);
+          },
+        }),
+    );
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -102,6 +157,14 @@ export class ContentEditorComponent implements OnInit {
           };
           this.bodyJson = card.bodyJson;
           this.bodyHtml = card.bodyHtml;
+          // Load existing links
+          this.links = (card.links ?? []).map((l) => ({
+            targetCardId: l.targetCardId,
+            targetTitle: l.targetTitle,
+            targetCardType: l.targetCardType,
+            linkText: l.linkText === l.targetTitle ? '' : l.linkText,
+          }));
+          this.templateTasks.set((card.templateTasks ?? []).map((t) => ({ description: t.description })));
           this.loading.set(false);
         },
         error: () => {
@@ -110,6 +173,49 @@ export class ContentEditorComponent implements OnInit {
         },
       });
     }
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+  }
+
+  protected onLinkSearchInput() {
+    this.linkSearch$.next(this.linkSearchQuery);
+  }
+
+  protected addLink(card: ContentCardSummary) {
+    this.links.push({
+      targetCardId: card.id,
+      targetTitle: card.title,
+      targetCardType: card.cardType,
+      linkText: '',
+    });
+    this.linkSearchQuery = '';
+    this.linkSearchResults.set([]);
+    this.showLinkDropdown.set(false);
+  }
+
+  protected removeLink(index: number) {
+    this.links.splice(index, 1);
+  }
+
+  protected moveLinkUp(index: number) {
+    if (index > 0) {
+      [this.links[index - 1], this.links[index]] = [this.links[index], this.links[index - 1]];
+    }
+  }
+
+  protected moveLinkDown(index: number) {
+    if (index < this.links.length - 1) {
+      [this.links[index], this.links[index + 1]] = [this.links[index + 1], this.links[index]];
+    }
+  }
+
+  protected readonly cardTypeIcon = cardTypeIcon;
+
+  protected hideLinkDropdown() {
+    // Delay to allow click on dropdown items to fire first
+    setTimeout(() => this.showLinkDropdown.set(false), 150);
   }
 
   protected onTitleInput() {
@@ -126,6 +232,32 @@ export class ContentEditorComponent implements OnInit {
   protected onEditorChange(event: { json: string; html: string }) {
     this.bodyJson = event.json;
     this.bodyHtml = event.html;
+  }
+
+  protected addTemplateTask() {
+    const desc = this.newTaskDescription.trim();
+    if (!desc) return;
+    this.templateTasks.update((tasks) => [...tasks, { description: desc }]);
+    this.newTaskDescription = '';
+  }
+
+  protected removeTemplateTask(index: number) {
+    this.templateTasks.update((tasks) => tasks.filter((_, i) => i !== index));
+  }
+
+  protected updateTemplateTask(index: number, description: string) {
+    this.templateTasks.update((tasks) =>
+      tasks.map((t, i) => (i === index ? { description } : t)),
+    );
+  }
+
+  protected moveTemplateTask(index: number, direction: -1 | 1) {
+    const tasks = this.templateTasks();
+    const target = index + direction;
+    if (target < 0 || target >= tasks.length) return;
+    const updated = [...tasks];
+    [updated[index], updated[target]] = [updated[target], updated[index]];
+    this.templateTasks.set(updated);
   }
 
   protected toggleTag(tagId: number) {
@@ -164,22 +296,35 @@ export class ContentEditorComponent implements OnInit {
       return;
     }
 
+    const linkRequests: ContentCardLinkRequest[] = this.links.map((l, i) => ({
+      targetCardId: l.targetCardId,
+      linkText: l.linkText.trim() || null,
+      sortOrder: i,
+    }));
+
+    if (this.form.cardType === 'TODO_LIST' && this.templateTasks().length === 0) {
+      this.error.set('TODO_LIST cards require at least one template task');
+      return;
+    }
+
     const req: SaveCardRequest = {
       title: this.form.title,
       slug: this.form.slug,
       description: this.form.description || null,
       cardType: this.form.cardType,
-      mediaUrl: this.form.mediaUrl || null,
-      printMediaUrl: this.form.printMediaUrl || null,
+      mediaUrl: this.form.cardType === 'TODO_LIST' ? null : this.form.mediaUrl || null,
+      printMediaUrl: this.form.cardType === 'TODO_LIST' ? null : this.form.printMediaUrl || null,
       thumbnailUrl: this.form.thumbnailUrl || null,
       coverImageUrl: this.form.coverImageUrl || null,
-      bodyJson: this.bodyJson,
-      bodyHtml: this.bodyHtml,
+      bodyJson: this.form.cardType === 'TODO_LIST' ? null : this.bodyJson,
+      bodyHtml: this.form.cardType === 'TODO_LIST' ? null : this.bodyHtml,
       backgroundColor: this.form.backgroundColor || null,
       textColor: this.form.textColor || null,
       simpleLayout: this.form.simpleLayout,
       status: this.form.status,
       tagIds: Array.from(this.form.tagIds),
+      links: linkRequests,
+      templateTasks: this.form.cardType === 'TODO_LIST' ? this.templateTasks() : null,
     };
 
     this.saving.set(true);

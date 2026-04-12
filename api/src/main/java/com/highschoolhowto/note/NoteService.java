@@ -1,6 +1,9 @@
 package com.highschoolhowto.note;
 
+import com.highschoolhowto.badge.BadgeService;
+import com.highschoolhowto.badge.BadgeTriggerType;
 import com.highschoolhowto.note.dto.CreateNoteRequest;
+import com.highschoolhowto.note.dto.CreateNoteResponse;
 import com.highschoolhowto.note.dto.NoteResponse;
 import com.highschoolhowto.note.dto.UpdateNoteRequest;
 import com.highschoolhowto.user.User;
@@ -20,10 +23,12 @@ public class NoteService {
 
     private final NoteRepository noteRepository;
     private final UserRepository userRepository;
+    private final BadgeService badgeService;
 
-    public NoteService(NoteRepository noteRepository, UserRepository userRepository) {
+    public NoteService(NoteRepository noteRepository, UserRepository userRepository, BadgeService badgeService) {
         this.noteRepository = noteRepository;
         this.userRepository = userRepository;
+        this.badgeService = badgeService;
     }
 
     @Transactional(readOnly = true)
@@ -34,7 +39,7 @@ public class NoteService {
     }
 
     @Transactional
-    public NoteResponse createNote(UUID userId, CreateNoteRequest request) {
+    public CreateNoteResponse createNote(UUID userId, CreateNoteRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found", "User not found"));
         long count = noteRepository.countByUserId(userId);
@@ -44,10 +49,23 @@ public class NoteService {
                     "Limit reached",
                     "Maximum of " + MAX_NOTES_PER_USER + " notes per user reached");
         }
+        NoteType noteType = request.noteType() != null ? request.noteType() : NoteType.REGULAR;
+        if (noteType == NoteType.QUOTE) {
+            long quoteCount = noteRepository.countByUserIdAndNoteType(userId, NoteType.QUOTE);
+            if (quoteCount >= 1) {
+                throw new ApiException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "Limit reached",
+                        "You can only have one Quote of the Day note");
+            }
+        }
         Note note = new Note();
         note.setUser(user);
         note.setTitle(request.title().trim());
-        note.setContent(request.content());
+        note.setNoteType(noteType);
+        if (noteType != NoteType.QUOTE) {
+            note.setContent(request.content());
+        }
         if (StringUtils.hasText(request.color())) {
             note.setColor(request.color().trim());
         }
@@ -57,7 +75,9 @@ public class NoteService {
         if (StringUtils.hasText(request.fontSize())) {
             note.setFontSize(request.fontSize().trim());
         }
-        return toResponse(noteRepository.save(note));
+        Note saved = noteRepository.save(note);
+        var earnedBadge = badgeService.checkFeatureBadge(user, BadgeTriggerType.FIRST_NOTE);
+        return toCreateResponse(saved, earnedBadge.orElse(null));
     }
 
     @Transactional
@@ -89,7 +109,21 @@ public class NoteService {
                 note.getContent(),
                 note.getColor(),
                 note.getTextColor(),
-                note.getFontSize()
+                note.getFontSize(),
+                note.getNoteType()
+        );
+    }
+
+    private CreateNoteResponse toCreateResponse(Note note, com.highschoolhowto.badge.dto.EarnedBadgeResponse earnedBadge) {
+        return new CreateNoteResponse(
+                note.getId(),
+                note.getTitle(),
+                note.getContent(),
+                note.getColor(),
+                note.getTextColor(),
+                note.getFontSize(),
+                note.getNoteType(),
+                earnedBadge
         );
     }
 }

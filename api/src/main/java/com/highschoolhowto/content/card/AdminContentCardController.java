@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,23 +28,29 @@ public class AdminContentCardController {
 
     @GetMapping
     public List<ContentCardAdminResponse> listAll() {
-        return cardService.findAll().stream().map(ContentCardAdminResponse::from).toList();
+        return cardService.findAllForAdmin();
+    }
+
+    @GetMapping("/search")
+    public List<ContentCardSummary> search(
+            @RequestParam String q, @RequestParam(required = false) Long exclude) {
+        return cardService.searchCards(q, exclude);
     }
 
     @GetMapping("/{id}")
     public ContentCardAdminResponse getById(@PathVariable Long id) {
-        return ContentCardAdminResponse.from(cardService.findById(id));
+        return cardService.findAdminResponseById(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ContentCardAdminResponse create(@Valid @RequestBody SaveCardRequest request) {
-        return ContentCardAdminResponse.from(cardService.create(request));
+        return cardService.create(request);
     }
 
     @PutMapping("/{id}")
     public ContentCardAdminResponse update(@PathVariable Long id, @Valid @RequestBody SaveCardRequest request) {
-        return ContentCardAdminResponse.from(cardService.update(id, request));
+        return cardService.update(id, request);
     }
 
     @DeleteMapping("/{id}")

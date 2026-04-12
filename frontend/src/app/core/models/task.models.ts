@@ -11,19 +11,38 @@ export interface TaskList {
   color: string;
   textColor?: string | null;
   tasks: TaskItem[];
+  sourceContentCardId?: number | null;
 }
 
 export interface LockerLayoutItem {
-  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST'
+  cardType: string; // 'TASK_LIST' | 'TIMER' | 'NOTE' | 'SHORTCUT' | 'STICKER'
   cardId: string;
-  sortOrder: number;
+  col: number;
+  colSpan: number;
+  order: number;
+  row?: number;
+  minimized: boolean;
+  /** Free-position pixel offsets within the grid container. */
+  posX?: number | null;
+  posY?: number | null;
+  /** Legacy minimum height in px (kept for rollback compat). */
+  minHeight?: number | null;
+  /** Widget width in pixels (free-form layout). */
+  width?: number | null;
+  /** Widget height in pixels (free-form layout). */
+  height?: number | null;
 }
+
+export type TimerType = 'POMODORO' | 'BASIC';
 
 export interface Timer {
   id: string;
   title: string;
   color: string;
   textColor?: string | null;
+  timerType: TimerType;
+  /** Configured duration (in seconds) for a BASIC timer. Ignored for POMODORO. */
+  basicDurationSeconds: number;
   focusDuration: number;
   shortBreakDuration: number;
   longBreakDuration: number;
@@ -32,6 +51,8 @@ export interface Timer {
   linkedTaskListId?: string | null;
 }
 
+export type NoteType = 'REGULAR' | 'QUOTE';
+
 export interface Note {
   id: string;
   title: string;
@@ -39,6 +60,22 @@ export interface Note {
   color: string;
   textColor?: string | null;
   fontSize?: string | null; // 'small' | 'medium' | 'large'
+  noteType?: NoteType;
+}
+
+export interface Quote {
+  id: number;
+  quoteText: string;
+  attribution?: string | null;
+}
+
+export interface Shortcut {
+  id: string;
+  url: string;
+  name: string;
+  faviconUrl?: string | null;
+  emoji?: string | null;
+  iconUrl?: string | null;
 }
 
 export interface Bookmark {
@@ -57,12 +94,45 @@ export interface BookmarkList {
   bookmarks: Bookmark[];
 }
 
+export interface Shortcut {
+  id: string;
+  url: string;
+  name: string;
+  faviconUrl?: string | null;
+  emoji?: string | null;
+  iconUrl?: string | null;
+}
+
 export interface Sticker {
   id: string;
-  type: string; // 'EMOJI' | 'IMAGE'
   emoji: string | null;
-  imageUrl: string | null;
-  positionX: number;
-  positionY: number;
-  size: string; // 'small' | 'medium' | 'large'
+  iconUrl: string | null;
+  label: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BadgeTriggerType =
+  | 'CHECKLIST_COMPLETE'
+  | 'FIRST_TODO_LIST'
+  | 'FIRST_SHORTCUT'
+  | 'FIRST_TIMER'
+  | 'FIRST_NOTE'
+  | 'FIRST_STICKER'
+  | 'FIRST_STUDY_SESSION';
+
+export interface Badge {
+  id: number;
+  name: string;
+  description: string | null;
+  emoji: string | null;
+  iconUrl: string | null;
+  triggerType: BadgeTriggerType;
+  triggerParam: string | null;
+}
+
+export interface EarnedBadge {
+  id: number;
+  badge: Badge;
+  earnedAt: string; // ISO 8601
 }

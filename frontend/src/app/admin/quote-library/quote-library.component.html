@@ -1,0 +1,55 @@
+<div class="admin-page">
+  <div class="admin-page__header">
+    <h1>Quote Library</h1>
+    <button class="btn btn--primary" (click)="openNew()">+ Add Quote</button>
+  </div>
+
+  @if (error()) {
+    <div class="admin-error">{{ error() }}</div>
+  }
+
+  @if (showForm()) {
+    <div class="admin-card form-card">
+      <h2>{{ editingQuote() ? 'Edit Quote' : 'New Quote' }}</h2>
+      <div class="form-row">
+        <label>Quote Text</label>
+        <textarea [(ngModel)]="form.quoteText" rows="3"
+                  placeholder="Enter the quote text…"></textarea>
+      </div>
+      <div class="form-row">
+        <label>Attribution (optional)</label>
+        <input [(ngModel)]="form.attribution"
+               placeholder="e.g. Steve Jobs" />
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn--primary" [disabled]="!form.quoteText.trim()"
+                (click)="save()">Save</button>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <p>Loading...</p>
+  } @else {
+    <div class="quote-list">
+      @for (quote of quotes(); track quote.id) {
+        <div class="admin-card quote-card">
+          <div class="quote-card__content">
+            <p class="quote-card__text">"{{ quote.quoteText }}"</p>
+            @if (quote.attribution) {
+              <p class="quote-card__attribution">— {{ quote.attribution }}</p>
+            }
+          </div>
+          <div class="quote-card__actions">
+            <button class="btn btn--secondary btn--sm" (click)="openEdit(quote)">Edit</button>
+            <button class="btn btn--danger btn--sm" (click)="delete(quote)">Delete</button>
+          </div>
+        </div>
+      }
+      @if (quotes().length === 0) {
+        <p class="empty-state">No quotes yet. Add one to get started.</p>
+      }
+    </div>
+  }
+</div>

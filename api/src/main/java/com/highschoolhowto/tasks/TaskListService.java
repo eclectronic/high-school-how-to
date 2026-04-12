@@ -1,15 +1,20 @@
 package com.highschoolhowto.tasks;
 
+import com.highschoolhowto.badge.BadgeService;
+import com.highschoolhowto.badge.BadgeTriggerType;
+import com.highschoolhowto.badge.dto.EarnedBadgeResponse;
 import com.highschoolhowto.tasks.dto.CreateTaskListRequest;
 import com.highschoolhowto.tasks.dto.CreateTaskRequest;
 import com.highschoolhowto.tasks.dto.TaskItemResponse;
 import com.highschoolhowto.tasks.dto.TaskListResponse;
 import com.highschoolhowto.tasks.dto.UpdateTaskRequest;
+import com.highschoolhowto.tasks.dto.UpdateTaskResponse;
 import com.highschoolhowto.user.User;
 import com.highschoolhowto.user.UserRepository;
 import com.highschoolhowto.web.ApiException;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,12 +27,17 @@ public class TaskListService {
     private final TaskListRepository taskListRepository;
     private final TaskItemRepository taskItemRepository;
     private final UserRepository userRepository;
+    private final BadgeService badgeService;
 
     public TaskListService(
-            TaskListRepository taskListRepository, TaskItemRepository taskItemRepository, UserRepository userRepository) {
+            TaskListRepository taskListRepository,
+            TaskItemRepository taskItemRepository,
+            UserRepository userRepository,
+            BadgeService badgeService) {
         this.taskListRepository = taskListRepository;
         this.taskItemRepository = taskItemRepository;
         this.userRepository = userRepository;
+        this.badgeService = badgeService;
     }
 
     @Transactional(readOnly = true)
@@ -37,7 +47,7 @@ public class TaskListService {
                 .toList();
     }
 
-    static final int MAX_LISTS_PER_USER = 20;
+    public static final int MAX_LISTS_PER_USER = 20;
     static final int MAX_TASKS_PER_LIST = 50;
 
     @Transactional
@@ -109,7 +119,7 @@ public class TaskListService {
     }
 
     @Transactional
-    public TaskItemResponse updateTask(UUID userId, UUID listId, UUID taskId, UpdateTaskRequest request) {
+    public UpdateTaskResponse updateTask(UUID userId, UUID listId, UUID taskId, UpdateTaskRequest request) {
         TaskItem task = taskItemRepository
                 .findByIdAndTaskListIdAndTaskListUserId(taskId, listId, userId)
                 .orElseThrow(() ->
@@ -126,7 +136,27 @@ public class TaskListService {
             task.setDueAt(request.dueAt());
         }
         TaskItem saved = taskItemRepository.save(task);
-        return toResponse(saved);
+
+        // Check for badge awards when a task is marked complete.
+        Optional<EarnedBadgeResponse> earnedBadge = Optional.empty();
+        if (Boolean.TRUE.equals(request.completed())) {
+            User user = userRepository
+                    .findById(userId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found", "User not found"));
+            // FIRST_TODO_LIST: award on the user's first ever completed task.
+            earnedBadge = badgeService.checkFeatureBadge(user, BadgeTriggerType.FIRST_TODO_LIST);
+
+            // CHECKLIST_COMPLETE: award when all tasks in a content-linked list are done.
+            if (earnedBadge.isEmpty()) {
+                TaskList list = requireList(listId, userId);
+                boolean allDone = list.getTasks().stream().allMatch(TaskItem::isCompleted);
+                if (allDone && list.getSourceContentCardId() != null) {
+                    earnedBadge = badgeService.checkChecklistBadge(user, list.getSourceContentCardId());
+                }
+            }
+        }
+
+        return toUpdateResponse(saved, earnedBadge.orElse(null));
     }
 
     @Transactional
@@ -182,6 +212,11 @@ public class TaskListService {
 
     private TaskItemResponse toResponse(TaskItem task) {
         return new TaskItemResponse(task.getId(), task.getDescription(), task.isCompleted(), task.getDueAt());
+    }
+
+    private UpdateTaskResponse toUpdateResponse(TaskItem task, EarnedBadgeResponse earnedBadge) {
+        return new UpdateTaskResponse(
+                task.getId(), task.getDescription(), task.isCompleted(), task.getDueAt(), earnedBadge);
     }
 
     private int nextSortOrder(TaskList list) {

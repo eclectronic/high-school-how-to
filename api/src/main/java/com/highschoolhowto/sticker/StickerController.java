@@ -2,11 +2,13 @@ package com.highschoolhowto.sticker;
 
 import com.highschoolhowto.security.UserPrincipal;
 import com.highschoolhowto.sticker.dto.CreateStickerRequest;
+import com.highschoolhowto.sticker.dto.CreateStickerResponse;
 import com.highschoolhowto.sticker.dto.StickerResponse;
 import com.highschoolhowto.sticker.dto.UpdateStickerRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -37,11 +39,11 @@ public class StickerController {
     }
 
     @PostMapping
-    public ResponseEntity<StickerResponse> create(
+    public ResponseEntity<CreateStickerResponse> create(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateStickerRequest request) {
         UUID userId = principal.getUser().getId();
-        return ResponseEntity.ok(stickerService.createSticker(userId, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(stickerService.createSticker(userId, request));
     }
 
     @PutMapping("/{id}")

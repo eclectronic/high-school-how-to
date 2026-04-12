@@ -3,12 +3,15 @@ import { Injectable, inject } from '@angular/core';
 import {
   ContentCard,
   ContentCardAdmin,
+  ContentCardSummary,
   HomeLayoutResponse,
   ImageUploadResponse,
+  LockerStatusResponse,
   SaveCardRequest,
   SaveTagRequest,
   Tag,
 } from '../models/content.models';
+import { TaskList } from '../models/task.models';
 
 @Injectable({ providedIn: 'root' })
 export class ContentApiService {
@@ -21,6 +24,14 @@ export class ContentApiService {
 
   getCardBySlug(slug: string) {
     return this.http.get<ContentCard>(`/api/content/cards/${slug}`);
+  }
+
+  addToLocker(slug: string) {
+    return this.http.post<TaskList>(`/api/content/cards/${slug}/add-to-locker`, {});
+  }
+
+  getLockerStatus(slug: string) {
+    return this.http.get<LockerStatusResponse>(`/api/content/cards/${slug}/locker-status`);
   }
 
   getAllTags() {
@@ -78,6 +89,15 @@ export class ContentApiService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<ImageUploadResponse>('/api/admin/images/upload', formData);
+  }
+
+  // Admin — content search (for link picker typeahead)
+  searchCards(query: string, exclude?: number) {
+    const params: Record<string, string | number> = { q: query };
+    if (exclude !== undefined) {
+      params['exclude'] = exclude;
+    }
+    return this.http.get<ContentCardSummary[]>('/api/admin/content/search', { params });
   }
 
 }

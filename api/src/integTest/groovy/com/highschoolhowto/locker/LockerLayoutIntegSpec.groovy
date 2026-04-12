@@ -60,8 +60,8 @@ class LockerLayoutIntegSpec extends BaseIntegrationSpec {
         def cardB = UUID.randomUUID().toString()
 
         def layout = [items: [
-                [cardType: "TASK_LIST", cardId: cardA, sortOrder: 0],
-                [cardType: "TASK_LIST", cardId: cardB, sortOrder: 1]
+                [cardType: "TASK_LIST", cardId: cardA, col: 1, colSpan: 4, order: 0, minimized: false],
+                [cardType: "TASK_LIST", cardId: cardB, col: 5, colSpan: 4, order: 1, minimized: false]
         ]]
 
         when: "save layout"
@@ -72,9 +72,9 @@ class LockerLayoutIntegSpec extends BaseIntegrationSpec {
         def savedItems = objectMapper.readValue(saveResp.contentAsString, List)
         savedItems.size() == 2
         savedItems[0].cardId == cardA
-        savedItems[0].sortOrder == 0
+        savedItems[0].order == 0
         savedItems[1].cardId == cardB
-        savedItems[1].sortOrder == 1
+        savedItems[1].order == 1
 
         when: "retrieve layout"
         def getResp = getWithAuth("/api/locker/layout", token).andReturn().response
@@ -97,12 +97,12 @@ class LockerLayoutIntegSpec extends BaseIntegrationSpec {
 
         // Save initial layout
         postJsonWithAuth("/api/locker/layout",
-                [items: [[cardType: "TASK_LIST", cardId: cardA, sortOrder: 0],
-                         [cardType: "TASK_LIST", cardId: cardB, sortOrder: 1]]],
+                [items: [[cardType: "TASK_LIST", cardId: cardA, col: 1, colSpan: 4, order: 0, minimized: false],
+                         [cardType: "TASK_LIST", cardId: cardB, col: 5, colSpan: 4, order: 1, minimized: false]]],
                 token).andReturn().response
 
         when: "save a new layout"
-        def newLayout = [items: [[cardType: "TASK_LIST", cardId: cardC, sortOrder: 0]]]
+        def newLayout = [items: [[cardType: "TASK_LIST", cardId: cardC, col: 1, colSpan: 4, order: 0, minimized: false]]]
         def saveResp = postJsonWithAuth("/api/locker/layout", newLayout, token).andReturn().response
 
         then: "new layout returned"
@@ -130,7 +130,7 @@ class LockerLayoutIntegSpec extends BaseIntegrationSpec {
 
         when: "user A saves layout"
         postJsonWithAuth("/api/locker/layout",
-                [items: [[cardType: "TASK_LIST", cardId: cardA, sortOrder: 0]]],
+                [items: [[cardType: "TASK_LIST", cardId: cardA, col: 1, colSpan: 4, order: 0, minimized: false]]],
                 tokenA).andReturn().response
 
         and: "user B retrieves layout"

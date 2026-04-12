@@ -3,7 +3,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription, switchMap } from 'rxjs';
 import { ContentApiService } from '../../core/services/content-api.service';
-import { ContentCard } from '../../core/models/content.models';
+import { CardType, ContentCard, LockerStatusResponse, cardTypeIcon } from '../../core/models/content.models';
+import { SessionStore } from '../../core/session/session.store';
 
 @Component({
   selector: 'app-content-viewer',
@@ -17,13 +18,18 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly sessionStore = inject(SessionStore);
   private readonly subs = new Subscription();
+
+  protected readonly isAuthenticated = this.sessionStore.isAuthenticated;
 
   protected card = signal<ContentCard | null>(null);
   protected loading = signal(true);
   protected error = signal<string | null>(null);
   protected safeEmbed = signal<SafeResourceUrl | null>(null);
   protected safeHtml = signal<SafeHtml | null>(null);
+  protected lockerStatus = signal<LockerStatusResponse | null>(null);
+  protected lockerActionPending = signal(false);
 
   /** True when the card should render without nav arrows, back link, or tag header. */
   protected simpleLayout = computed(() => {
@@ -88,6 +94,7 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (card) => {
             this.card.set(card);
+            this.lockerStatus.set(null);
             if (card.cardType === 'VIDEO' && card.mediaUrl) {
               this.safeEmbed.set(
                 this.sanitizer.bypassSecurityTrustResourceUrl(this.buildEmbedUrl(card.mediaUrl)),
@@ -97,6 +104,11 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
               // bodyHtml is already server-side sanitized by OWASP
               this.safeHtml.set(this.sanitizer.bypassSecurityTrustHtml(card.bodyHtml));
             }
+            if (card.cardType === 'TODO_LIST' && this.isAuthenticated()) {
+              this.api.getLockerStatus(card.slug).subscribe({
+                next: (status) => this.lockerStatus.set(status),
+              });
+            }
             this.loading.set(false);
           },
           error: () => {
@@ -105,6 +117,27 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
           },
         }),
     );
+  }
+
+  protected handleAddToLocker(): void {
+    const card = this.card();
+    if (!card) return;
+    if (!this.isAuthenticated()) {
+      this.router.navigate(['/auth/login'], {
+        queryParams: { returnUrl: `/content/${card.slug}` },
+      });
+      return;
+    }
+    this.lockerActionPending.set(true);
+    this.api.addToLocker(card.slug).subscribe({
+      next: (list) => {
+        this.lockerStatus.set({ added: true, taskListId: list.id });
+        this.lockerActionPending.set(false);
+      },
+      error: () => {
+        this.lockerActionPending.set(false);
+      },
+    });
   }
 
   ngOnDestroy(): void {
@@ -123,6 +156,8 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
       queryParams: { tag: this.tagSlug() ?? null },
     });
   }
+
+  protected readonly cardTypeIcon = cardTypeIcon;
 
   private buildEmbedUrl(url: string): string {
     const match = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);

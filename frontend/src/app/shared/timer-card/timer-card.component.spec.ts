@@ -1,18 +1,46 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { TimerCardComponent, TIMER_PRESETS } from './timer-card.component';
-import { TimerApiService } from '../../core/services/timer-api.service';
-import { Timer } from '../../core/models/task.models';
+import { TimerApiService, UpdateTimerResponse } from '../../core/services/timer-api.service';
+import { Timer, TaskList } from '../../core/models/task.models';
+
+function makeUpdateTimerResponse(overrides: Partial<Timer> = {}): UpdateTimerResponse {
+  return {
+    id: 'timer-1',
+    title: 'Timer',
+    color: '#fffef8',
+    timerType: 'BASIC',
+    basicDurationSeconds: 0,
+    focusDuration: 25,
+    shortBreakDuration: 5,
+    longBreakDuration: 15,
+    sessionsBeforeLongBreak: 4,
+    earnedBadge: null,
+    ...overrides,
+  };
+}
 
 function makeTimer(overrides: Partial<Timer> = {}): Timer {
   return {
     id: 'timer-1',
     title: 'Timer',
     color: '#fffef8',
+    timerType: 'BASIC',
+    basicDurationSeconds: 0,
     focusDuration: 25,
     shortBreakDuration: 5,
     longBreakDuration: 15,
     sessionsBeforeLongBreak: 4,
+    ...overrides,
+  };
+}
+
+function makeTaskList(overrides: Partial<TaskList> = {}): TaskList {
+  return {
+    id: 'list-1',
+    title: 'My Tasks',
+    color: '#fffef8',
+    tasks: [],
     ...overrides,
   };
 }
@@ -28,6 +56,8 @@ describe('TimerCardComponent', () => {
     timerApi = jasmine.createSpyObj<TimerApiService>('TimerApiService', [
       'getTimers', 'createTimer', 'updateTimer', 'deleteTimer',
     ]);
+    // Default return value for updateTimer — individual tests can override.
+    timerApi.updateTimer.and.returnValue(of(makeUpdateTimerResponse()));
 
     await TestBed.configureTestingModule({
       imports: [TimerCardComponent],
@@ -46,8 +76,10 @@ describe('TimerCardComponent', () => {
   // ── Rendering ────────────────────────────────────────────────────────────
 
   it('renders timer title', () => {
-    const title = fixture.nativeElement.querySelector('.timer-card__title');
-    expect(title.textContent.trim()).toBe('Timer');
+    const titleBar = fixture.nativeElement.querySelector('app-widget-title-bar');
+    expect(titleBar).toBeTruthy();
+    const title = titleBar.querySelector('.title-bar__title');
+    expect(title.textContent.trim()).toBe('Timer: Timer');
   });
 
   it('renders progress ring', () => {
@@ -56,6 +88,12 @@ describe('TimerCardComponent', () => {
 
   it('shows 25:00 for idle 25-minute timer', () => {
     expect(fixture.nativeElement.querySelector('.timer-display__time').textContent.trim()).toBe('00:00');
+  });
+
+  it('does not render inline task list or checkboxes', () => {
+    expect(fixture.nativeElement.querySelector('.linked-list')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.linked-list__tasks')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.linked-task input[type="checkbox"]')).toBeNull();
   });
 
   // ── Phase state machine ───────────────────────────────────────────────────
@@ -151,7 +189,7 @@ describe('TimerCardComponent', () => {
     const emitted: Timer[] = [];
     component.timerUpdated.subscribe((t: Timer) => emitted.push(t));
 
-    c.onColorChange('#dbeafe');
+    c.onColorCommit('#dbeafe');
 
     expect(timerApi.updateTimer).toHaveBeenCalled();
     expect(emitted.length).toBe(1);
@@ -173,20 +211,11 @@ describe('TimerCardComponent', () => {
 
   // ── Title editing ─────────────────────────────────────────────────────────
 
-  it('saveTitle calls updateTimer with new title', () => {
+  it('onTitleChanged calls updateTimer with new title', () => {
     const updated = makeTimer({ title: 'New Name' });
     timerApi.updateTimer.and.returnValue(of(updated));
-    c.startTitleEdit();
-    c.titleDraft = 'New Name';
-    c.saveTitle();
+    c.onTitleChanged('New Name');
     expect(timerApi.updateTimer).toHaveBeenCalledWith('timer-1', jasmine.objectContaining({ title: 'New Name' }));
-  });
-
-  it('saveTitle does nothing when title unchanged', () => {
-    c.startTitleEdit();
-    c.titleDraft = 'Timer';
-    c.saveTitle();
-    expect(timerApi.updateTimer).not.toHaveBeenCalled();
   });
 
   // ── Formatted time ────────────────────────────────────────────────────────
@@ -222,5 +251,40 @@ describe('TimerCardComponent', () => {
     c.toggleStartPause(); // starts focus
     c.skipPhase(); // completedSessions=2, 2%2=0 → long break
     expect(c.phase()).toBe('long-break');
+  });
+
+  // ── Linked list UI ────────────────────────────────────────────────────────
+
+  it('hides 📋 icon when no linked list', () => {
+    const clipboardBtn = fixture.nativeElement.querySelector('[title="Go to linked list"]');
+    expect(clipboardBtn).toBeNull();
+  });
+
+  describe('with a linked list', () => {
+    let linkedFixture: ComponentFixture<TimerCardComponent>;
+    let linkedComponent: TimerCardComponent;
+    const linkedList = makeTaskList();
+
+    beforeEach(async () => {
+      linkedFixture = TestBed.createComponent(TimerCardComponent);
+      linkedComponent = linkedFixture.componentInstance;
+      linkedComponent.timer = makeTimer({ linkedTaskListId: linkedList.id });
+      linkedFixture.componentRef.setInput('taskLists', [linkedList]);
+      linkedFixture.detectChanges();
+    });
+
+    afterEach(() => (linkedFixture.componentInstance as any).clearTick());
+
+    it('shows 📋 icon', () => {
+      const clipboardBtn = linkedFixture.nativeElement.querySelector('[title="Go to linked list"]');
+      expect(clipboardBtn).toBeTruthy();
+    });
+
+    it('emits scrollToLinkedListRequested', () => {
+      let emitCount = 0;
+      linkedComponent.scrollToLinkedListRequested.subscribe(() => emitCount++);
+      linkedComponent.scrollToLinkedListRequested.emit();
+      expect(emitCount).toBe(1);
+    });
   });
 });

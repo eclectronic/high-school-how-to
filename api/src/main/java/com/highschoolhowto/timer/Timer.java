@@ -4,6 +4,8 @@ import com.highschoolhowto.tasks.TaskList;
 import com.highschoolhowto.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -36,6 +38,14 @@ public class Timer {
 
     @Column(name = "text_color", length = 255)
     private String textColor;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "timer_type", nullable = false, length = 16)
+    private TimerType timerType = TimerType.POMODORO;
+
+    /** Configured duration (in seconds) for a BASIC timer. Ignored for POMODORO. */
+    @Column(name = "basic_duration_seconds", nullable = false)
+    private int basicDurationSeconds = 300;
 
     @Column(name = "focus_duration", nullable = false)
     private int focusDuration = 25;
@@ -87,6 +97,12 @@ public class Timer {
 
     public String getTextColor() { return textColor; }
     public void setTextColor(String textColor) { this.textColor = textColor; }
+
+    public TimerType getTimerType() { return timerType; }
+    public void setTimerType(TimerType timerType) { this.timerType = timerType; }
+
+    public int getBasicDurationSeconds() { return basicDurationSeconds; }
+    public void setBasicDurationSeconds(int basicDurationSeconds) { this.basicDurationSeconds = basicDurationSeconds; }
 
     public int getFocusDuration() { return focusDuration; }
     public void setFocusDuration(int focusDuration) { this.focusDuration = focusDuration; }

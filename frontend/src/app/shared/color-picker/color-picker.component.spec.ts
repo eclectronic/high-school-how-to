@@ -1,17 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ColorPickerComponent } from './color-picker.component';
-import { DEFAULT_PALETTE } from './color-utils';
 
 describe('ColorPickerComponent', () => {
   let fixture: ComponentFixture<ColorPickerComponent>;
   let component: ColorPickerComponent;
 
   beforeEach(async () => {
-    localStorage.removeItem('hsht_customPalette');
-    localStorage.removeItem('hsht_colorHistory');
-
     await TestBed.configureTestingModule({
-      imports: [ColorPickerComponent]
+      imports: [ColorPickerComponent],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ColorPickerComponent);
@@ -19,62 +15,141 @@ describe('ColorPickerComponent', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => {
-    localStorage.removeItem('hsht_customPalette');
-    localStorage.removeItem('hsht_colorHistory');
+  // ── No tabs, no preset swatches, no save-to-palette ──────────────────────
+
+  it('has no tab buttons', () => {
+    const tabs = fixture.nativeElement.querySelector('.picker-tabs');
+    expect(tabs).toBeFalsy();
   });
 
-  it('shows 16 preset swatches', () => {
-    const swatches = fixture.nativeElement.querySelectorAll('.swatch-grid .swatch');
-    expect(swatches.length).toBe(16);
+  it('has no swatch grid (preset swatches)', () => {
+    const grid = fixture.nativeElement.querySelector('.swatch-grid');
+    expect(grid).toBeFalsy();
   });
 
-  it('emits colorChange when preset swatch is clicked', () => {
+  it('has no save-to-palette button', () => {
+    const btn = fixture.nativeElement.querySelector('.save-to-palette');
+    expect(btn).toBeFalsy();
+  });
+
+  // ── Color input emits on change ───────────────────────────────────────────
+
+  it('emits colorChange when native color input changes', () => {
     const emitted: string[] = [];
     component.colorChange.subscribe((c: string) => emitted.push(c));
 
-    const swatch: HTMLButtonElement = fixture.nativeElement.querySelector('.swatch');
-    swatch.click();
+    const input: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
+    input.value = '#ff0000';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
 
     expect(emitted.length).toBe(1);
-    expect(DEFAULT_PALETTE).toContain(emitted[0]);
+    expect(emitted[0]).toBe('#ff0000');
   });
 
-  it('adds color to history when selected', () => {
-    component.selectPreset(DEFAULT_PALETTE[3]);
-    expect(component['colorHistory']()).toContain(DEFAULT_PALETTE[3]);
-  });
+  // ── Hex text input emits valid hex values ─────────────────────────────────
 
-  it('saves color to palette at given index', () => {
-    component['stagedColor'].set('#abcdef');
-    component.saveToPalette(0);
-    expect(component['palette']()[0]).toBe('#abcdef');
-  });
+  it('emits colorChange on hex input blur with valid hex', () => {
+    const emitted: string[] = [];
+    component.colorChange.subscribe((c: string) => emitted.push(c));
 
-  it('resets palette to defaults', () => {
-    component['palette'].set(['#111111', ...DEFAULT_PALETTE.slice(1)]);
-    component.resetPalette();
-    expect(component['palette']()).toEqual(DEFAULT_PALETTE);
-  });
-
-  it('switches to gradient mode on tab click', () => {
-    const tabs = fixture.nativeElement.querySelectorAll('.picker-tabs button');
-    tabs[1].click();
+    const hexInput: HTMLInputElement = fixture.nativeElement.querySelector('input.hex-input');
+    hexInput.value = '#aabbcc';
+    hexInput.dispatchEvent(new Event('blur'));
     fixture.detectChanges();
-    expect(component['mode']()).toBe('gradient');
-    expect(fixture.nativeElement.querySelector('.gradient-builder')).toBeTruthy();
+
+    expect(emitted.length).toBe(1);
+    expect(emitted[0]).toBe('#aabbcc');
   });
 
-  it('emits textColorChange with null when Auto is clicked', () => {
+  it('does not emit colorChange on hex input blur with invalid value', () => {
+    const emitted: string[] = [];
+    component.colorChange.subscribe((c: string) => emitted.push(c));
+
+    const hexInput: HTMLInputElement = fixture.nativeElement.querySelector('input.hex-input');
+    hexInput.value = 'notahex';
+    hexInput.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+
+    expect(emitted.length).toBe(0);
+  });
+
+  it('emits colorChange on hex input Enter with valid hex', () => {
+    const emitted: string[] = [];
+    component.colorChange.subscribe((c: string) => emitted.push(c));
+
+    const hexInput: HTMLInputElement = fixture.nativeElement.querySelector('input.hex-input');
+    hexInput.value = '#123456';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (component as any).applyHexValue({ target: hexInput } as unknown as Event);
+    fixture.detectChanges();
+
+    expect(emitted.length).toBe(1);
+    expect(emitted[0]).toBe('#123456');
+  });
+
+  // ── Gradient checkbox ─────────────────────────────────────────────────────
+
+  it('gradient checkbox: checked → emits linear-gradient', () => {
+    const emitted: string[] = [];
+    component.colorChange.subscribe((c: string) => emitted.push(c));
+
+    // Set solid color first via the native picker so selectedColor is updated internally
+    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
+    nativeInput.value = '#3366cc';
+    nativeInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    emitted.length = 0; // clear the initial emission
+
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type=checkbox]');
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(emitted.length).toBe(1);
+    expect(emitted[0]).toContain('linear-gradient');
+    expect(emitted[0]).toContain('#ffffff');
+    expect(emitted[0]).toContain('#3366cc');
+  });
+
+  it('gradient checkbox: unchecked → emits solid color', () => {
+    const emitted: string[] = [];
+    component.colorChange.subscribe((c: string) => emitted.push(c));
+
+    // First select a solid color via native picker
+    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
+    nativeInput.value = '#3366cc';
+    nativeInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    // Then enable gradient
+    const checkbox: HTMLInputElement = fixture.nativeElement.querySelector('input[type=checkbox]');
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    emitted.length = 0; // clear prior emissions
+
+    // Now uncheck to revert to solid
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(emitted.length).toBe(1);
+    expect(emitted[0]).toBe('#3366cc');
+  });
+
+  // ── Text color ────────────────────────────────────────────────────────────
+
+  it('auto mode emits null for textColorChange', () => {
     const emitted: Array<string | null> = [];
     component.textColorChange.subscribe((v: string | null) => emitted.push(v));
     component.selectedTextColor = '#ff0000';
-    component.clearTextColor();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (component as any).clearTextColor();
     expect(emitted).toEqual([null]);
   });
 
   it('shows low-contrast badge when contrast is below 4.5:1', () => {
-    // Light grey text on white background — low contrast
     component.selectedColor = '#ffffff';
     component.selectedTextColor = '#cccccc';
     fixture.detectChanges();
@@ -88,5 +163,22 @@ describe('ColorPickerComponent', () => {
     fixture.detectChanges();
     const badge = fixture.nativeElement.querySelector('.low-contrast-badge');
     expect(badge).toBeFalsy();
+  });
+
+  it('auto text color returns correct contrast color for dark background', () => {
+    // Select a dark color via native picker so selectedColor is updated via signal path
+    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
+    nativeInput.value = '#000000';
+    nativeInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(component['autoTextColor']()).toBe('#ffffff');
+  });
+
+  it('auto text color returns black for light background', () => {
+    const nativeInput: HTMLInputElement = fixture.nativeElement.querySelector('input[type=color]');
+    nativeInput.value = '#ffffff';
+    nativeInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(component['autoTextColor']()).toBe('#000000');
   });
 });

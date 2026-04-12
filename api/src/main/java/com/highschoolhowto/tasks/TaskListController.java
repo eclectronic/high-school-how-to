@@ -9,6 +9,7 @@ import com.highschoolhowto.tasks.dto.UpdateTaskRequest;
 import com.highschoolhowto.tasks.dto.UpdateTaskListColorRequest;
 import com.highschoolhowto.tasks.dto.UpdateTaskListTitleRequest;
 import com.highschoolhowto.tasks.dto.ReorderTasksRequest;
+import com.highschoolhowto.tasks.dto.UpdateTaskResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -91,7 +92,7 @@ public class TaskListController {
     }
 
     @PutMapping("/{listId}/tasks/{taskId}")
-    public ResponseEntity<TaskItemResponse> updateTask(
+    public ResponseEntity<UpdateTaskResponse> updateTask(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable("listId") UUID listId,
             @PathVariable("taskId") UUID taskId,

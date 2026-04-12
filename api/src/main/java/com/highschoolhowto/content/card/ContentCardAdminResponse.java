@@ -23,9 +23,12 @@ public record ContentCardAdminResponse(
         boolean simpleLayout,
         CardStatus status,
         List<TagResponse> tags,
+        List<ContentCardLinkResponse> links,
+        List<ContentCardTaskResponse> templateTasks,
         Instant createdAt,
         Instant updatedAt) {
 
+    /** Builds an admin response — all target links included regardless of status. */
     public static ContentCardAdminResponse from(ContentCard card) {
         return new ContentCardAdminResponse(
                 card.getId(),
@@ -45,7 +48,10 @@ public record ContentCardAdminResponse(
                 card.getStatus(),
                 card.getTags().stream()
                         .sorted(Comparator.comparing(Tag::getName))
-                        .map(TagResponse::from).toList(),
+                        .map(TagResponse::from)
+                        .toList(),
+                card.getLinks().stream().map(ContentCardLinkResponse::from).toList(),
+                card.getTemplateTasks().stream().map(ContentCardTaskResponse::from).toList(),
                 card.getCreatedAt(),
                 card.getUpdatedAt());
     }

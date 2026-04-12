@@ -130,6 +130,69 @@
         }
       </div>
 
+      <!-- Template Tasks (TODO_LIST only) -->
+      @if (form.cardType === 'TODO_LIST') {
+        <div class="admin-card editor-section">
+          <h2>Template Tasks <small>(required — at least 1, max 50)</small></h2>
+
+          <div class="color-pickers-row">
+            <div class="form-row form-row--color">
+              <label>List Color</label>
+              <div class="color-picker-row">
+                <input type="color" [(ngModel)]="form.backgroundColor" [value]="form.backgroundColor || '#fffef8'" />
+                <input type="text" [(ngModel)]="form.backgroundColor" placeholder="#fffef8" class="color-hex-input" />
+                @if (form.backgroundColor) {
+                  <button type="button" class="btn btn--secondary btn--sm" (click)="form.backgroundColor = ''">Clear</button>
+                }
+                <span class="color-preview" [style.background]="form.backgroundColor || 'transparent'"></span>
+              </div>
+            </div>
+            <div class="form-row form-row--color">
+              <label>Text Color</label>
+              <div class="color-picker-row">
+                <input type="color" [(ngModel)]="form.textColor" [value]="form.textColor || '#2d1a10'" />
+                <input type="text" [(ngModel)]="form.textColor" placeholder="#2d1a10 (auto-contrast if empty)" class="color-hex-input" />
+                @if (form.textColor) {
+                  <button type="button" class="btn btn--secondary btn--sm" (click)="form.textColor = ''">Clear</button>
+                }
+                <span class="color-preview" [style.background]="form.textColor || 'transparent'"></span>
+              </div>
+            </div>
+          </div>
+
+          <ul class="template-task-list">
+            @for (task of templateTasks(); track $index) {
+              <li class="template-task-list__item">
+                <span class="template-task-list__order">{{ $index + 1 }}.</span>
+                <input
+                  class="template-task-list__input"
+                  type="text"
+                  [value]="task.description"
+                  (change)="updateTemplateTask($index, $any($event.target).value)"
+                  placeholder="Task description"
+                />
+                <div class="template-task-list__actions">
+                  <button type="button" class="btn btn--secondary btn--sm" [disabled]="$index === 0" (click)="moveTemplateTask($index, -1)" title="Move up">↑</button>
+                  <button type="button" class="btn btn--secondary btn--sm" [disabled]="$index === templateTasks().length - 1" (click)="moveTemplateTask($index, 1)" title="Move down">↓</button>
+                  <button type="button" class="btn btn--danger btn--sm" (click)="removeTemplateTask($index)" title="Remove">🗑</button>
+                </div>
+              </li>
+            }
+          </ul>
+
+          <div class="template-task-add">
+            <input
+              type="text"
+              [(ngModel)]="newTaskDescription"
+              placeholder="New task description"
+              class="template-task-add__input"
+              (keyup.enter)="addTemplateTask()"
+            />
+            <button type="button" class="btn btn--secondary" (click)="addTemplateTask()">+ Add task</button>
+          </div>
+        </div>
+      }
+
       <!-- Article body -->
       @if (form.cardType === 'ARTICLE') {
         <div class="admin-card editor-section">
@@ -195,6 +258,61 @@
           }
         </div>
       }
+
+      <!-- Related Content links -->
+      <div class="admin-card editor-section">
+        <h2>Related Content <small>(max 10 links)</small></h2>
+
+        @if (links.length > 0) {
+          <div class="links-list">
+            @for (link of links; track link.targetCardId; let i = $index) {
+              <div class="link-item">
+                <div class="link-item__header">
+                  <span class="link-item__icon">{{ cardTypeIcon(link.targetCardType) }}</span>
+                  <span class="link-item__title">{{ link.targetTitle }}</span>
+                  <div class="link-item__actions">
+                    <button type="button" class="btn btn--secondary btn--sm" (click)="moveLinkUp(i)" [disabled]="i === 0" title="Move up">↑</button>
+                    <button type="button" class="btn btn--secondary btn--sm" (click)="moveLinkDown(i)" [disabled]="i === links.length - 1" title="Move down">↓</button>
+                    <button type="button" class="btn btn--danger btn--sm" (click)="removeLink(i)" title="Remove">🗑</button>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label>Link text</label>
+                  <input
+                    [(ngModel)]="link.linkText"
+                    [placeholder]="link.targetTitle"
+                    [name]="'linkText' + i"
+                  />
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (links.length < 10) {
+          <div class="link-search">
+            <div class="link-search__input-wrap">
+              <input
+                [(ngModel)]="linkSearchQuery"
+                (input)="onLinkSearchInput()"
+                (blur)="hideLinkDropdown()"
+                placeholder="Search content to link..."
+                class="link-search__input"
+              />
+              @if (showLinkDropdown() && linkSearchResults().length > 0) {
+                <div class="link-search__dropdown">
+                  @for (result of linkSearchResults(); track result.id) {
+                    <button type="button" class="link-search__result" (click)="addLink(result)">
+                      {{ cardTypeIcon(result.cardType) }} {{ result.title }}
+                      <span class="link-search__status">{{ result.status }}</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
 
       <!-- Actions -->
       <div class="editor-actions">

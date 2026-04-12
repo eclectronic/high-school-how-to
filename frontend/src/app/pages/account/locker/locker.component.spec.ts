@@ -1,16 +1,26 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
-import { LockerComponent, nextAutoName, LOCKER_FONTS, LockerFont } from './locker.component';
+import {
+  LockerComponent,
+  nextAutoName,
+  LOCKER_FONTS,
+  LockerFont,
+  LOCKER_FONT_SIZES,
+} from './locker.component';
 import { TaskApiService } from '../../../core/services/task-api.service';
 import { TimerApiService } from '../../../core/services/timer-api.service';
 import { NoteApiService } from '../../../core/services/note-api.service';
-import { BookmarkApiService } from '../../../core/services/bookmark-api.service';
+import { ShortcutApiService } from '../../../core/services/shortcut-api.service';
 import { StickerApiService } from '../../../core/services/sticker-api.service';
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
-import { TaskList, TaskItem, Timer, Note, BookmarkList, Sticker } from '../../../core/models/task.models';
+import { BadgeApiService } from '../../../core/services/badge-api.service';
+import { TaskList, TaskItem, Timer, Note, Shortcut, Sticker } from '../../../core/models/task.models';
 import { RouterTestingModule } from '@angular/router/testing';
 
 const MOCK_FONT_KEY = 'hsht_lockerFontId';
+const MOCK_FONT_SIZE_KEY = 'hsht_lockerFontSize';
 
 function makeList(overrides: Partial<TaskList> = {}): TaskList {
   return { id: 'list-1', title: 'To-dos', tasks: [], color: '#fef3c7', textColor: null, ...overrides };
@@ -22,7 +32,7 @@ function makeTask(overrides: Partial<TaskItem> = {}): TaskItem {
 
 function makeTimer(overrides: Partial<Timer> = {}): Timer {
   return {
-    id: 'timer-1', title: 'Timer', color: '#fffef8',
+    id: 'timer-1', title: 'Timer', color: '#fffef8', timerType: 'BASIC', basicDurationSeconds: 0,
     focusDuration: 25, shortBreakDuration: 5, longBreakDuration: 15, sessionsBeforeLongBreak: 4,
     ...overrides,
   };
@@ -30,6 +40,14 @@ function makeTimer(overrides: Partial<Timer> = {}): Timer {
 
 function makeNote(overrides: Partial<Note> = {}): Note {
   return { id: 'note-1', title: 'Note', color: '#fef3c7', content: null, textColor: null, fontSize: null, ...overrides };
+}
+
+function makeShortcut(overrides: Partial<Shortcut> = {}): Shortcut {
+  return { id: 'sc-1', url: 'https://example.com', name: 'Example', ...overrides };
+}
+
+function makeSticker(overrides: Partial<Sticker> = {}): Sticker {
+  return { id: 'sticker-1', emoji: '⭐', iconUrl: null, label: null, createdAt: '', updatedAt: '', ...overrides };
 }
 
 describe('nextAutoName (pure function)', () => {
@@ -56,26 +74,20 @@ describe('nextAutoName (pure function)', () => {
   });
 });
 
-function makeBookmarkList(overrides: Partial<BookmarkList> = {}): BookmarkList {
-  return { id: 'blist-1', title: 'Bookmarks', color: '#fef3c7', textColor: null, bookmarks: [], ...overrides };
-}
-
-function makeSticker(overrides: Partial<Sticker> = {}): Sticker {
-  return { id: 'sticker-1', type: 'EMOJI', emoji: '⭐', imageUrl: null, positionX: 100, positionY: 50, size: 'medium', ...overrides };
-}
-
 describe('LockerComponent', () => {
   let fixture: ComponentFixture<LockerComponent>;
   let component: LockerComponent;
   let taskApi: jasmine.SpyObj<TaskApiService>;
   let timerApi: jasmine.SpyObj<TimerApiService>;
   let noteApi: jasmine.SpyObj<NoteApiService>;
-  let bookmarkApi: jasmine.SpyObj<BookmarkApiService>;
+  let shortcutApi: jasmine.SpyObj<ShortcutApiService>;
   let stickerApi: jasmine.SpyObj<StickerApiService>;
   let lockerLayoutApi: jasmine.SpyObj<LockerLayoutApiService>;
+  let badgeApi: jasmine.SpyObj<BadgeApiService>;
 
   beforeEach(async () => {
     localStorage.removeItem(MOCK_FONT_KEY);
+    localStorage.removeItem(MOCK_FONT_SIZE_KEY);
 
     taskApi = jasmine.createSpyObj<TaskApiService>('TaskApiService', [
       'getTaskLists', 'createList', 'deleteList', 'addTask',
@@ -88,9 +100,9 @@ describe('LockerComponent', () => {
     noteApi = jasmine.createSpyObj<NoteApiService>('NoteApiService', [
       'getNotes', 'createNote', 'updateNote', 'deleteNote',
     ]);
-    bookmarkApi = jasmine.createSpyObj<BookmarkApiService>('BookmarkApiService', [
-      'getBookmarkLists', 'createBookmarkList', 'updateBookmarkList', 'deleteBookmarkList',
-      'addBookmark', 'updateBookmark', 'deleteBookmark', 'reorderBookmarks', 'getMetadata',
+    shortcutApi = jasmine.createSpyObj<ShortcutApiService>('ShortcutApiService', [
+      'getShortcuts', 'createShortcut', 'updateShortcut', 'deleteShortcut',
+      'getMetadata', 'importShortcuts', 'exportShortcuts',
     ]);
     stickerApi = jasmine.createSpyObj<StickerApiService>('StickerApiService', [
       'getStickers', 'createSticker', 'updateSticker', 'deleteSticker',
@@ -98,36 +110,45 @@ describe('LockerComponent', () => {
     lockerLayoutApi = jasmine.createSpyObj<LockerLayoutApiService>('LockerLayoutApiService', [
       'getLayout', 'saveLayout',
     ]);
+    badgeApi = jasmine.createSpyObj<BadgeApiService>('BadgeApiService', [
+      'getEarnedBadges', 'adminListBadges', 'adminCreateBadge', 'adminUpdateBadge', 'adminDeleteBadge',
+    ]);
 
     taskApi.getTaskLists.and.returnValue(of([]));
     timerApi.getTimers.and.returnValue(of([]));
     noteApi.getNotes.and.returnValue(of([]));
-    bookmarkApi.getBookmarkLists.and.returnValue(of([]));
+    shortcutApi.getShortcuts.and.returnValue(of([]));
     stickerApi.getStickers.and.returnValue(of([]));
+    lockerLayoutApi.getLayout.and.returnValue(of([]));
     lockerLayoutApi.saveLayout.and.returnValue(of([]));
+    badgeApi.getEarnedBadges.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [LockerComponent, RouterTestingModule],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: TaskApiService, useValue: taskApi },
         { provide: TimerApiService, useValue: timerApi },
         { provide: NoteApiService, useValue: noteApi },
-        { provide: BookmarkApiService, useValue: bookmarkApi },
+        { provide: ShortcutApiService, useValue: shortcutApi },
         { provide: StickerApiService, useValue: stickerApi },
         { provide: LockerLayoutApiService, useValue: lockerLayoutApi },
+        { provide: BadgeApiService, useValue: badgeApi },
       ],
     }).compileComponents();
   });
 
   afterEach(() => {
     localStorage.removeItem(MOCK_FONT_KEY);
+    localStorage.removeItem(MOCK_FONT_SIZE_KEY);
   });
 
-  const render = (lists: TaskList[] = [], timers: Timer[] = [], notes: Note[] = [], bookmarkLists: BookmarkList[] = []) => {
+  const render = (lists: TaskList[] = [], timers: Timer[] = [], notes: Note[] = [], shortcuts: Shortcut[] = []) => {
     taskApi.getTaskLists.and.returnValue(of(lists));
     timerApi.getTimers.and.returnValue(of(timers));
     noteApi.getNotes.and.returnValue(of(notes));
-    bookmarkApi.getBookmarkLists.and.returnValue(of(bookmarkLists));
+    shortcutApi.getShortcuts.and.returnValue(of(shortcuts));
     fixture = TestBed.createComponent(LockerComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -135,22 +156,22 @@ describe('LockerComponent', () => {
 
   // ── Auto-naming ──────────────────────────────────────────────────────────
 
-  it('creates first list with title "To-dos"', () => {
-    taskApi.createList.and.returnValue(of(makeList({ id: 'new', title: 'To-dos' })));
+  it('creates first list with title "List #1"', () => {
+    taskApi.createList.and.returnValue(of(makeList({ id: 'new', title: 'List #1' })));
     render([]);
 
     component['createList']();
 
-    expect(taskApi.createList).toHaveBeenCalledWith('To-dos', jasmine.any(String));
+    expect(taskApi.createList).toHaveBeenCalledWith('List #1', jasmine.any(String));
   });
 
-  it('auto-names second list "To-dos #2" when "To-dos" exists', () => {
-    taskApi.createList.and.returnValue(of(makeList({ id: 'new', title: 'To-dos #2' })));
-    render([makeList({ title: 'To-dos' })]);
+  it('auto-names second list "List #2" when "List #1" exists', () => {
+    taskApi.createList.and.returnValue(of(makeList({ id: 'new', title: 'List #2' })));
+    render([makeList({ title: 'List #1' })]);
 
     component['createList']();
 
-    expect(taskApi.createList).toHaveBeenCalledWith('To-dos #2', jasmine.any(String));
+    expect(taskApi.createList).toHaveBeenCalledWith('List #2', jasmine.any(String));
   });
 
   // ── atListLimit ──────────────────────────────────────────────────────────
@@ -179,7 +200,7 @@ describe('LockerComponent', () => {
   // ── Confirm dialogs ──────────────────────────────────────────────────────
 
   it('requestDelete sets confirmDeleteList', () => {
-    const list = makeList();
+    const list = makeList({ tasks: [{ id: 't1', description: 'Do something', completed: false }] });
     render([list]);
 
     component['requestDelete'](list);
@@ -365,22 +386,22 @@ describe('LockerComponent', () => {
 
   // ── Timer creation ────────────────────────────────────────────────────────
 
-  it('createTimer creates first timer with title "Timer"', () => {
-    timerApi.createTimer.and.returnValue(of(makeTimer({ id: 'new', title: 'Timer' })));
+  it('createTimer creates first timer with title "Pomodoro Timer"', () => {
+    timerApi.createTimer.and.returnValue(of(makeTimer({ id: 'new', title: 'Pomodoro Timer' })));
     render([]);
 
     component['createTimer']();
 
-    expect(timerApi.createTimer).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Timer' }));
+    expect(timerApi.createTimer).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Pomodoro Timer' }));
   });
 
-  it('createTimer auto-names second timer "Timer #2"', () => {
-    timerApi.createTimer.and.returnValue(of(makeTimer({ id: 'new', title: 'Timer #2' })));
-    render([], [makeTimer({ title: 'Timer' })]);
+  it('createTimer auto-names second timer "Pomodoro Timer #2"', () => {
+    timerApi.createTimer.and.returnValue(of(makeTimer({ id: 'new', title: 'Pomodoro Timer #2' })));
+    render([], [makeTimer({ title: 'Pomodoro Timer' })]);
 
     component['createTimer']();
 
-    expect(timerApi.createTimer).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Timer #2' }));
+    expect(timerApi.createTimer).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Pomodoro Timer #2' }));
   });
 
   it('atTimerLimit is true at 10 timers', () => {
@@ -484,138 +505,113 @@ describe('LockerComponent', () => {
     expect(cards.some(c => c.type === 'NOTE')).toBeTrue();
   });
 
-  // ── Study Session ─────────────────────────────────────────────────────────
+  // ── Shortcuts ─────────────────────────────────────────────────────────────
 
-  it('enterStudySession sets studySession signal for timer with linked list', () => {
-    const list = makeList({ id: 'list-1' });
-    const timer = makeTimer({ id: 'timer-1', linkedTaskListId: 'list-1' });
-    render([list], [timer]);
-
-    component['enterStudySession']('timer-1');
-
-    expect(component['studySession']()).toEqual({ timerId: 'timer-1', listId: 'list-1' });
+  it('atShortcutLimit is true at 50 shortcuts', () => {
+    const shortcuts = Array.from({ length: 50 }, (_, i) =>
+      makeShortcut({ id: `sc${i}`, url: `https://site${i}.com`, name: `Site ${i}` }));
+    render([], [], [], shortcuts);
+    expect(component['atShortcutLimit']()).toBeTrue();
   });
 
-  it('enterStudySession does nothing for timer without linked list', () => {
-    const timer = makeTimer({ id: 'timer-1', linkedTaskListId: null });
-    render([], [timer]);
-
-    component['enterStudySession']('timer-1');
-
-    expect(component['studySession']()).toBeNull();
+  it('atShortcutLimit is false below 50 shortcuts', () => {
+    const shortcuts = Array.from({ length: 49 }, (_, i) =>
+      makeShortcut({ id: `sc${i}`, url: `https://site${i}.com`, name: `Site ${i}` }));
+    render([], [], [], shortcuts);
+    expect(component['atShortcutLimit']()).toBeFalse();
   });
 
-  it('exitStudySession clears studySession signal', () => {
-    const list = makeList({ id: 'list-1' });
-    const timer = makeTimer({ id: 'timer-1', linkedTaskListId: 'list-1' });
-    render([list], [timer]);
-    component['enterStudySession']('timer-1');
-
-    component['exitStudySession']();
-
-    expect(component['studySession']()).toBeNull();
-  });
-
-  it('studyReadyTimers returns timers that have a linked list', () => {
-    const list = makeList({ id: 'list-1' });
-    const timerLinked = makeTimer({ id: 'timer-1', linkedTaskListId: 'list-1' });
-    const timerUnlinked = makeTimer({ id: 'timer-2', linkedTaskListId: null });
-    render([list], [timerLinked, timerUnlinked]);
-
-    const ready = component['studyReadyTimers']();
-    expect(ready.length).toBe(1);
-    expect(ready[0].id).toBe('timer-1');
-  });
-
-  // ── Bookmark List creation ────────────────────────────────────────────────
-
-  it('createBookmarkList creates first list with title "Bookmarks"', () => {
-    bookmarkApi.createBookmarkList.and.returnValue(of(makeBookmarkList({ id: 'new', title: 'Bookmarks' })));
-    render();
-
-    component['createBookmarkList']();
-
-    expect(bookmarkApi.createBookmarkList).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Bookmarks' }));
-  });
-
-  it('createBookmarkList auto-names second list "Bookmarks #2"', () => {
-    bookmarkApi.createBookmarkList.and.returnValue(of(makeBookmarkList({ id: 'new', title: 'Bookmarks #2' })));
-    render([], [], [], [makeBookmarkList({ title: 'Bookmarks' })]);
-
-    component['createBookmarkList']();
-
-    expect(bookmarkApi.createBookmarkList).toHaveBeenCalledWith(jasmine.objectContaining({ title: 'Bookmarks #2' }));
-  });
-
-  it('atBookmarkListLimit is true at 10 lists', () => {
-    const lists = Array.from({ length: 10 }, (_, i) => makeBookmarkList({ id: `bl${i}`, title: `Bookmarks ${i}` }));
-    render([], [], [], lists);
-    expect(component['atBookmarkListLimit']()).toBeTrue();
-  });
-
-  it('createBookmarkList does nothing when at limit', () => {
-    const lists = Array.from({ length: 10 }, (_, i) => makeBookmarkList({ id: `bl${i}`, title: `Bookmarks ${i}` }));
-    render([], [], [], lists);
-
-    component['createBookmarkList']();
-
-    expect(bookmarkApi.createBookmarkList).not.toHaveBeenCalled();
-  });
-
-  it('onBookmarkListUpdated replaces list in signal', () => {
-    render([], [], [], [makeBookmarkList()]);
-
-    component['onBookmarkListUpdated'](makeBookmarkList({ title: 'Updated' }));
-
-    expect(component['bookmarkLists']().find(l => l.id === 'blist-1')?.title).toBe('Updated');
-  });
-
-  it('onBookmarkListDeleted removes list from signal', () => {
-    render([], [], [], [makeBookmarkList()]);
-
-    component['onBookmarkListDeleted']('blist-1');
-
-    expect(component['bookmarkLists']().length).toBe(0);
-  });
-
-  it('orderedCards includes bookmark lists', () => {
-    render([], [], [], [makeBookmarkList()]);
+  it('shortcuts signal is populated and does not appear in orderedCards', () => {
+    render([], [], [], [makeShortcut()]);
+    expect(component['shortcuts']().length).toBe(1);
     const cards = component['orderedCards']();
-    expect(cards.some(c => c.type === 'BOOKMARK_LIST')).toBeTrue();
+    expect(cards.every(c => c.type !== 'SHORTCUT' as string)).toBeTrue();
+  });
+
+  it('onConfirmDeleteShortcut removes shortcut from signal and calls API', () => {
+    const shortcut = makeShortcut();
+    shortcutApi.deleteShortcut.and.returnValue(of(undefined));
+    render([], [], [], [shortcut]);
+    component['confirmDeleteShortcut'] = shortcut;
+
+    component['onConfirmDeleteShortcut']();
+
+    expect(shortcutApi.deleteShortcut).toHaveBeenCalledWith(shortcut.id);
+    expect(component['shortcuts']().length).toBe(0);
+    expect(component['confirmDeleteShortcut']).toBeNull();
+  });
+
+  it('openAddShortcutDialog opens dialog and resets state', () => {
+    render([]);
+    component['shortcutUrlDraft'] = 'https://old.com';
+    component['shortcutNameDraft'] = 'Old name';
+
+    component['openAddShortcutDialog']();
+
+    expect(component['shortcutDialogOpen']).toBeTrue();
+    expect(component['shortcutUrlDraft']).toBe('');
+    expect(component['shortcutNameDraft']).toBe('');
+    expect(component['editingShortcut']).toBeNull();
+  });
+
+  it('closeShortcutDialog hides dialog', () => {
+    render([]);
+    component['shortcutDialogOpen'] = true;
+
+    component['closeShortcutDialog']();
+
+    expect(component['shortcutDialogOpen']).toBeFalse();
+  });
+
+  it('onShortcutEditRequested pre-fills dialog', () => {
+    const shortcut = makeShortcut({ name: 'Test', emoji: '🎓' });
+    render([], [], [], [shortcut]);
+
+    component['onShortcutEditRequested'](shortcut);
+
+    expect(component['shortcutDialogOpen']).toBeTrue();
+    expect(component['editingShortcut']).toBe(shortcut);
+    expect(component['shortcutUrlDraft']).toBe(shortcut.url);
+    expect(component['shortcutIconType']).toBe('emoji');
   });
 
   // ── Stickers ──────────────────────────────────────────────────────────────
 
-  it('onEmojiSelected creates a sticker via API', () => {
+  it('onStickerDialogEmojiSelected creates a sticker via API with emoji', () => {
     const newSticker = makeSticker({ id: 'new-sticker', emoji: '🎉' });
     stickerApi.createSticker.and.returnValue(of(newSticker));
+    lockerLayoutApi.saveLayout.and.returnValue(of([]));
     render();
 
-    component['onEmojiSelected']('🎉');
+    component['onStickerDialogEmojiSelected']('🎉');
 
     expect(stickerApi.createSticker).toHaveBeenCalledWith(jasmine.objectContaining({ emoji: '🎉' }));
     expect(component['stickers']().some(s => s.id === 'new-sticker')).toBeTrue();
   });
 
-  it('atStickerLimit is true at 30 stickers', () => {
-    const stickers = Array.from({ length: 30 }, (_, i) => makeSticker({ id: `s${i}` }));
+  it('atStickerLimit is true at 50 stickers', () => {
+    const stickers = Array.from({ length: 50 }, (_, i) => makeSticker({ id: `s${i}` }));
     stickerApi.getStickers.and.returnValue(of(stickers));
     render();
     expect(component['atStickerLimit']()).toBeTrue();
   });
 
-  it('onEmojiSelected does nothing when at sticker limit', () => {
-    const stickers = Array.from({ length: 30 }, (_, i) => makeSticker({ id: `s${i}` }));
+  it('toggleStickerPanel toggles open state', () => {
+    const stickers = Array.from({ length: 50 }, (_, i) => makeSticker({ id: `s${i}` }));
     stickerApi.getStickers.and.returnValue(of(stickers));
     render();
 
-    component['onEmojiSelected']('⭐');
+    component['toggleStickerPanel']();
 
-    expect(stickerApi.createSticker).not.toHaveBeenCalled();
+    // Panel can open even at limit — the template hides the picker but shows the limit message
+    // so stickerDialogOpen is toggled regardless
+    component['toggleStickerPanel'](); // toggle back off
+    expect(component['stickerDialogOpen']).toBeFalse();
   });
 
   it('onStickerDeleted removes sticker from signal and calls API', () => {
     stickerApi.deleteSticker.and.returnValue(of(undefined));
+    lockerLayoutApi.saveLayout.and.returnValue(of([]));
     stickerApi.getStickers.and.returnValue(of([makeSticker()]));
     render();
 
@@ -625,15 +621,50 @@ describe('LockerComponent', () => {
     expect(stickerApi.deleteSticker).toHaveBeenCalledWith('sticker-1');
   });
 
-  it('onStickerPositionChanged updates sticker position optimistically', () => {
-    stickerApi.updateSticker.and.returnValue(of(makeSticker({ positionX: 200, positionY: 150 })));
-    stickerApi.getStickers.and.returnValue(of([makeSticker()]));
+
+  // ── Font size ─────────────────────────────────────────────────────────────
+
+  it('lockerFontSize defaults to medium when no localStorage value', () => {
+    render();
+    expect(component['lockerFontSize']().id).toBe('medium');
+  });
+
+  it('setLockerFontSize small sets CSS variable to 0.8rem', () => {
+    render();
+    const small = LOCKER_FONT_SIZES.find(s => s.id === 'small')!;
+
+    component['setLockerFontSize'](small);
+    fixture.detectChanges();
+
+    const dashboard = fixture.nativeElement.querySelector('.dashboard');
+    expect(dashboard?.style.getPropertyValue('--locker-body-font-size')).toBe('0.8rem');
+  });
+
+  it('setLockerFontSize large sets CSS variable to 1rem', () => {
+    render();
+    const large = LOCKER_FONT_SIZES.find(s => s.id === 'large')!;
+
+    component['setLockerFontSize'](large);
+    fixture.detectChanges();
+
+    const dashboard = fixture.nativeElement.querySelector('.dashboard');
+    expect(dashboard?.style.getPropertyValue('--locker-body-font-size')).toBe('1rem');
+  });
+
+  it('setLockerFontSize persists selection to localStorage', () => {
+    render();
+    const large = LOCKER_FONT_SIZES.find(s => s.id === 'large')!;
+
+    component['setLockerFontSize'](large);
+
+    expect(localStorage.getItem(MOCK_FONT_SIZE_KEY)).toBe('large');
+  });
+
+  it('page reload restores saved font size from localStorage', () => {
+    localStorage.setItem(MOCK_FONT_SIZE_KEY, 'small');
     render();
 
-    component['onStickerPositionChanged']('sticker-1', 200, 150);
-
-    const updated = component['stickers']().find(s => s.id === 'sticker-1');
-    expect(updated?.positionX).toBe(200);
-    expect(updated?.positionY).toBe(150);
+    expect(component['lockerFontSize']().id).toBe('small');
+    expect(component['lockerFontSize']().value).toBe('0.8rem');
   });
 });

@@ -1,7 +1,6 @@
 import {
   autoContrastColor, relativeLuminance, contrastRatio, isHexColor, isGradient,
-  firstHexFromGradient, addToColorHistory, loadCustomPalette, saveCustomPalette,
-  DEFAULT_PALETTE
+  firstHexFromGradient, addToColorHistory,
 } from './color-utils';
 
 describe('color-utils', () => {
@@ -96,26 +95,18 @@ describe('color-utils', () => {
       const result = addToColorHistory('#aaaaaa', existing);
       expect(result.length).toBe(16);
     });
-  });
 
-  describe('loadCustomPalette / saveCustomPalette', () => {
-    beforeEach(() => {
-      localStorage.removeItem('hsht_customPalette');
+    it('removes pre-existing duplicates from history', () => {
+      const result = addToColorHistory('#new', ['#a', '#b', '#a', '#c', '#b']);
+      expect(result).toEqual(['#new', '#a', '#b', '#c']);
     });
 
-    it('returns defaults when nothing stored', () => {
-      expect(loadCustomPalette()).toEqual(DEFAULT_PALETTE);
-    });
-
-    it('returns stored palette after save', () => {
-      const custom = [...DEFAULT_PALETTE];
-      custom[0] = '#123456';
-      saveCustomPalette(custom);
-      expect(loadCustomPalette()[0]).toBe('#123456');
-    });
-
-    afterEach(() => {
-      localStorage.removeItem('hsht_customPalette');
+    it('compares hex colors case-insensitively', () => {
+      const result = addToColorHistory('#ABCDEF', ['#abcdef', '#123456']);
+      expect(result.length).toBe(2);
+      expect(result[0]).toBe('#ABCDEF');
+      expect(result[1]).toBe('#123456');
     });
   });
+
 });

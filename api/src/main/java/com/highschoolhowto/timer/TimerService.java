@@ -1,14 +1,19 @@
 package com.highschoolhowto.timer;
 
+import com.highschoolhowto.badge.BadgeService;
+import com.highschoolhowto.badge.BadgeTriggerType;
+import com.highschoolhowto.badge.dto.EarnedBadgeResponse;
 import com.highschoolhowto.tasks.TaskList;
 import com.highschoolhowto.tasks.TaskListRepository;
 import com.highschoolhowto.timer.dto.CreateTimerRequest;
 import com.highschoolhowto.timer.dto.TimerResponse;
 import com.highschoolhowto.timer.dto.UpdateTimerRequest;
+import com.highschoolhowto.timer.dto.UpdateTimerResponse;
 import com.highschoolhowto.user.User;
 import com.highschoolhowto.user.UserRepository;
 import com.highschoolhowto.web.ApiException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -23,14 +28,17 @@ public class TimerService {
     private final TimerRepository timerRepository;
     private final UserRepository userRepository;
     private final TaskListRepository taskListRepository;
+    private final BadgeService badgeService;
 
     public TimerService(
             TimerRepository timerRepository,
             UserRepository userRepository,
-            TaskListRepository taskListRepository) {
+            TaskListRepository taskListRepository,
+            BadgeService badgeService) {
         this.timerRepository = timerRepository;
         this.userRepository = userRepository;
         this.taskListRepository = taskListRepository;
+        this.badgeService = badgeService;
     }
 
     @Transactional(readOnly = true)
@@ -60,6 +68,12 @@ public class TimerService {
         if (StringUtils.hasText(request.textColor())) {
             timer.setTextColor(request.textColor().trim());
         }
+        if (request.timerType() != null) {
+            timer.setTimerType(request.timerType());
+        }
+        if (request.basicDurationSeconds() != null) {
+            timer.setBasicDurationSeconds(request.basicDurationSeconds());
+        }
         if (request.focusDuration() != null) {
             timer.setFocusDuration(request.focusDuration());
         }
@@ -81,11 +95,17 @@ public class TimerService {
     }
 
     @Transactional
-    public TimerResponse updateTimer(UUID userId, UUID timerId, UpdateTimerRequest request) {
+    public UpdateTimerResponse updateTimer(UUID userId, UUID timerId, UpdateTimerRequest request) {
         Timer timer = requireTimer(timerId, userId);
         timer.setTitle(request.title().trim());
         timer.setColor(StringUtils.hasText(request.color()) ? request.color().trim() : timer.getColor());
         timer.setTextColor(StringUtils.hasText(request.textColor()) ? request.textColor().trim() : null);
+        if (request.timerType() != null) {
+            timer.setTimerType(request.timerType());
+        }
+        if (request.basicDurationSeconds() != null) {
+            timer.setBasicDurationSeconds(request.basicDurationSeconds());
+        }
         if (request.focusDuration() != null) {
             timer.setFocusDuration(request.focusDuration());
         }
@@ -105,7 +125,23 @@ public class TimerService {
             TaskList taskList = requireTaskList(request.linkedTaskListId(), userId);
             timer.setLinkedTaskList(taskList);
         }
-        return toResponse(timerRepository.save(timer));
+        timerRepository.save(timer);
+
+        // Check for badge awards when a focus or study session completes.
+        Optional<EarnedBadgeResponse> earnedBadge = Optional.empty();
+        if (request.focusSessionCompleted() || request.studySessionCompleted()) {
+            User user = userRepository
+                    .findById(userId)
+                    .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "User not found", "User not found"));
+            if (request.studySessionCompleted()) {
+                earnedBadge = badgeService.checkFeatureBadge(user, BadgeTriggerType.FIRST_STUDY_SESSION);
+            }
+            if (earnedBadge.isEmpty() && request.focusSessionCompleted()) {
+                earnedBadge = badgeService.checkFeatureBadge(user, BadgeTriggerType.FIRST_TIMER);
+            }
+        }
+
+        return toUpdateResponse(timer, earnedBadge.orElse(null));
     }
 
     @Transactional
@@ -131,12 +167,33 @@ public class TimerService {
                 timer.getTitle(),
                 timer.getColor(),
                 timer.getTextColor(),
+                timer.getTimerType(),
+                timer.getBasicDurationSeconds(),
                 timer.getFocusDuration(),
                 timer.getShortBreakDuration(),
                 timer.getLongBreakDuration(),
                 timer.getSessionsBeforeLongBreak(),
                 timer.getPresetName(),
                 linkedListId
+        );
+    }
+
+    private UpdateTimerResponse toUpdateResponse(Timer timer, EarnedBadgeResponse earnedBadge) {
+        UUID linkedListId = timer.getLinkedTaskList() != null ? timer.getLinkedTaskList().getId() : null;
+        return new UpdateTimerResponse(
+                timer.getId(),
+                timer.getTitle(),
+                timer.getColor(),
+                timer.getTextColor(),
+                timer.getTimerType(),
+                timer.getBasicDurationSeconds(),
+                timer.getFocusDuration(),
+                timer.getShortBreakDuration(),
+                timer.getLongBreakDuration(),
+                timer.getSessionsBeforeLongBreak(),
+                timer.getPresetName(),
+                linkedListId,
+                earnedBadge
         );
     }
 }

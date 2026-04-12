@@ -1,33 +1,100 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnInit, QueryList, ViewChildren, computed, effect, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  OnInit,
+  QueryList,
+  ViewChild,
+  ViewChildren,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { forkJoin } from 'rxjs';
 import { TaskApiService } from '../../../core/services/task-api.service';
-import { TimerApiService } from '../../../core/services/timer-api.service';
+import { TimerApiService, CreateTimerRequest, UpdateTimerResponse } from '../../../core/services/timer-api.service';
 import { NoteApiService } from '../../../core/services/note-api.service';
-import { BookmarkApiService } from '../../../core/services/bookmark-api.service';
 import { LockerLayoutApiService } from '../../../core/services/locker-layout-api.service';
+import { ShortcutApiService } from '../../../core/services/shortcut-api.service';
+import { BadgeApiService } from '../../../core/services/badge-api.service';
+import { QuoteApiService } from '../../../core/services/quote-api.service';
+import { BadgeCelebrationService } from '../../../shared/badge-celebration/badge-celebration.service';
+import { BadgeCelebrationComponent } from '../../../shared/badge-celebration/badge-celebration.component';
+import { BadgeShelfComponent } from '../../../shared/badge-shelf/badge-shelf.component';
+import { LockerGridEngineService, FreeItem, MINIMIZED_HEIGHT_PX } from '../../../core/services/locker-grid-engine.service';
 import { SessionStore } from '../../../core/session/session.store';
-import { TaskItem, TaskList, Timer, Note, BookmarkList, Sticker } from '../../../core/models/task.models';
+import { TaskItem, TaskList, Timer, Note, Shortcut, Sticker, EarnedBadge, NoteType, Quote } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { InlineTitleEditComponent } from '../../../shared/inline-title-edit/inline-title-edit.component';
-import { ColorPickerComponent } from '../../../shared/color-picker/color-picker.component';
+import { SwatchPickerComponent } from '../../../shared/swatch-picker/swatch-picker.component';
 import { DueDatePopoverComponent } from '../../../shared/due-date-popover/due-date-popover.component';
 import { TimerCardComponent } from '../../../shared/timer-card/timer-card.component';
+import { BasicTimerCardComponent } from '../../../shared/basic-timer-card/basic-timer-card.component';
 import { NoteCardComponent } from '../../../shared/note-card/note-card.component';
-import { BookmarkCardComponent } from '../../../shared/bookmark-card/bookmark-card.component';
-import { StickerComponent } from '../../../shared/sticker/sticker.component';
+import { ShortcutIconComponent } from '../../../shared/shortcut-icon/shortcut-icon.component';
 import { EmojiPickerComponent } from '../../../shared/sticker/emoji-picker.component';
-import { StickerApiService } from '../../../core/services/sticker-api.service';
+import { StickerIconComponent } from '../../../shared/sticker-icon/sticker-icon.component';
+import { StickerApiService, CreateStickerRequest } from '../../../core/services/sticker-api.service';
 import { DEFAULT_PALETTE, autoContrastColor, isGradient, firstHexFromGradient } from '../../../shared/color-picker/color-utils';
+import { WidgetTitleBarComponent } from '../../../shared/widget-title-bar/widget-title-bar.component';
 
 type LockerCard =
   | { type: 'TASK_LIST'; data: TaskList }
   | { type: 'TIMER'; data: Timer }
   | { type: 'NOTE'; data: Note }
-  | { type: 'BOOKMARK_LIST'; data: BookmarkList };
+  | { type: 'STICKER'; data: Sticker };
+
+interface CardLayout {
+  posX: number;
+  posY: number;
+  width: number;
+  height: number;
+  order: number;
+  minimized: boolean;
+}
+
+/** Default sticker dimensions in pixels (used when computing fallbacks). */
+const STICKER_DEFAULT_PX = 80;
+/** Default widget dimensions in pixels. */
+const DEFAULT_WIDGET_WIDTH = 320;
+const DEFAULT_WIDGET_HEIGHT = 220;
+/** Minimum widget dimensions in pixels. */
+const MIN_WIDGET_WIDTH = 200;
+const MIN_WIDGET_HEIGHT = 120;
+/** Minimum sticker dimension. */
+const MIN_STICKER_SIZE = 32;
+/** Drag and resize snap grid in pixels. */
+const GRID_SNAP_PX = 8;
+/** Viewport width below which single-column reflow activates. */
+const NARROW_VIEWPORT_PX = 640;
+
+/** Legacy grid constants kept for migration backfill only. */
+const LEGACY_COL_WIDTH_PX = 40;
+const LEGACY_DESKTOP_COLS = 24;
+
+/** Bump this when the layout data format changes to trigger a one-time migration. */
+const GRID_VERSION = 3;
+const GRID_VERSION_KEY = 'hsht_gridVersion';
+
+/**
+ * Hardcoded favicon overrides for popular sites where auto-detection fails.
+ * Google's favicon service returns the "G" for gmail.com because it's served
+ * from a Google login page when not logged in. For these sites we serve the
+ * actual brand icon via the Simple Icons CDN (https://simpleicons.org).
+ *
+ * To add more: find the brand slug at simpleicons.org and add both the bare
+ * domain and any subdomains users might enter.
+ */
+const KNOWN_FAVICONS: Record<string, string> = {
+  'gmail.com': 'https://cdn.simpleicons.org/gmail',
+  'mail.google.com': 'https://cdn.simpleicons.org/gmail',
+};
 
 interface LockerColor {
   id: string;
@@ -82,12 +149,29 @@ const LOCKER_COLORS: LockerColor[] = [
 
 const LOCKER_COLOR_KEY = 'hsht_lockerColorId';
 const LOCKER_FONT_KEY = 'hsht_lockerFontId';
+const LOCKER_FONT_SIZE_KEY = 'hsht_lockerFontSize';
+
+export type LockerFontSizeId = 'small' | 'medium' | 'large';
+
+export interface LockerFontSize {
+  id: LockerFontSizeId;
+  label: string;
+  value: string;
+}
+
+export const LOCKER_FONT_SIZES: LockerFontSize[] = [
+  { id: 'small', label: 'Small', value: '0.8rem' },
+  { id: 'medium', label: 'Medium', value: '0.875rem' },
+  { id: 'large', label: 'Large', value: '1rem' },
+];
 
 export interface LockerFont {
   id: string;
   name: string;
   family: string;
   googleFont?: boolean;
+  /** Optional external stylesheet URL (used when the font isn't on Google Fonts). */
+  cssUrl?: string;
 }
 
 export const LOCKER_FONTS: LockerFont[] = [
@@ -101,9 +185,35 @@ export const LOCKER_FONTS: LockerFont[] = [
   { id: 'bubblegum-sans', name: 'Bubblegum Sans', family: "'Bubblegum Sans', cursive", googleFont: true },
   { id: 'poppins', name: 'Poppins', family: "'Poppins', sans-serif", googleFont: true },
   { id: 'quicksand', name: 'Quicksand', family: "'Quicksand', sans-serif", googleFont: true },
+  {
+    id: 'opendyslexic',
+    name: 'OpenDyslexic',
+    family: "'OpenDyslexic', sans-serif",
+    cssUrl: 'https://fonts.cdnfonts.com/css/opendyslexic',
+  },
+  {
+    id: 'lexend',
+    name: 'Lexend',
+    family: "'Lexend', sans-serif",
+    googleFont: true,
+  },
 ];
 
 /** Auto-naming convention: "To-dos", "To-dos #2", "To-dos #3", gap-filling */
+export function nextListName(existingTitles: string[]): string {
+  const pattern = /^List #(\d+)$/;
+  const used = new Set(
+    existingTitles
+      .map(t => t.match(pattern))
+      .filter((m): m is RegExpMatchArray => m !== null)
+      .map(m => parseInt(m[1], 10))
+  );
+  for (let n = 1; n <= used.size + 1; n++) {
+    if (!used.has(n)) return `List #${n}`;
+  }
+  return `List #${used.size + 1}`;
+}
+
 export function nextAutoName(existingTitles: string[], baseName: string): string {
   if (!existingTitles.includes(baseName)) return baseName;
   const pattern = new RegExp(`^${escapeRegex(baseName)} #(\\d+)$`);
@@ -154,8 +264,9 @@ const LOCKER_ZONES = [
   selector: 'app-locker',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, DragDropModule,
-    ConfirmDialogComponent, InlineTitleEditComponent, ColorPickerComponent, DueDatePopoverComponent,
-    TimerCardComponent, NoteCardComponent, BookmarkCardComponent, StickerComponent, EmojiPickerComponent],
+    ConfirmDialogComponent, InlineTitleEditComponent, SwatchPickerComponent, DueDatePopoverComponent,
+    TimerCardComponent, BasicTimerCardComponent, NoteCardComponent, ShortcutIconComponent, EmojiPickerComponent,
+    StickerIconComponent, BadgeShelfComponent, BadgeCelebrationComponent, WidgetTitleBarComponent],
   template: `
     <!-- ── Locker row animation overlay ── -->
     <div class="locker-overlay"
@@ -226,7 +337,8 @@ const LOCKER_ZONES = [
       class="dashboard"
       [ngStyle]="{
         '--lc-accent': lockerColor().doorSolid,
-        '--lc-shelf-text': lockerColor().shelfText
+        '--lc-shelf-text': lockerColor().shelfText,
+        '--locker-body-font-size': lockerFontSize().value
       }"
       (click)="closeConfig()"
     >
@@ -267,58 +379,226 @@ const LOCKER_ZONES = [
                   [disabled]="atListLimit()"
                   [title]="atListLimit() ? 'Maximum of 20 lists reached' : 'Create a to-do list'"
                   (click)="createList()" aria-label="Create new to-do list">
-            📋
+            <span class="app-icon-btn__icon">📋</span>
+            <span class="app-icon-btn__label">To-do</span>
           </button>
-          <button type="button" class="app-icon-btn"
-                  [disabled]="atTimerLimit()"
-                  [title]="atTimerLimit() ? 'Maximum of 10 timers reached' : 'Create a Pomodoro timer'"
-                  (click)="createTimer()" aria-label="Create new timer">
-            ⏱
-          </button>
+          <div style="position:relative;display:inline-block">
+            <button type="button" class="app-icon-btn"
+                    [disabled]="atTimerLimit()"
+                    [title]="atTimerLimit() ? 'Maximum of 10 timers reached' : 'Create a timer'"
+                    (click)="toggleTimerMenu(); $event.stopPropagation()" aria-label="Create new timer">
+              <span class="app-icon-btn__icon">⏱</span>
+              <span class="app-icon-btn__label">Timer</span>
+            </button>
+            <div *ngIf="timerMenuOpen" class="note-submenu" (click)="$event.stopPropagation()">
+              <button type="button" class="note-submenu__item"
+                      [disabled]="hasIndependentBasicTimer()"
+                      [title]="hasIndependentBasicTimer() ? 'A Basic Timer already exists' : ''"
+                      (click)="createTimer('BASIC')">
+                ⏱ Basic Timer
+              </button>
+              <button type="button" class="note-submenu__item"
+                      [disabled]="hasIndependentPomodoro()"
+                      [title]="hasIndependentPomodoro() ? 'A Pomodoro Timer already exists' : ''"
+                      (click)="createTimer('POMODORO')">
+                🍅 Pomodoro Timer
+              </button>
+            </div>
+          </div>
           <button type="button" class="app-icon-btn"
                   [disabled]="atNoteLimit()"
-                  [title]="atNoteLimit() ? 'Maximum of 20 notes reached' : 'Create a sticky note'"
-                  (click)="createNote()" aria-label="Create new sticky note">
-            📝
+                  [title]="atNoteLimit() ? 'Maximum of 20 notes reached' : 'Create a note'"
+                  (click)="createNote('REGULAR'); $event.stopPropagation()" aria-label="Create new note">
+            <span class="app-icon-btn__icon">📝</span>
+            <span class="app-icon-btn__label">Note</span>
           </button>
           <button type="button" class="app-icon-btn"
-                  [disabled]="atBookmarkListLimit()"
-                  [title]="atBookmarkListLimit() ? 'Maximum of 10 bookmark lists reached' : 'Create a bookmark list'"
-                  (click)="createBookmarkList()" aria-label="Create new bookmark list">
-            🔗
+                  title="Shortcuts"
+                  (click)="toggleShortcutsPanel(); $event.stopPropagation()" aria-label="Shortcuts">
+            <span class="app-icon-btn__icon">🚀</span>
+            <span class="app-icon-btn__label">Shortcuts</span>
           </button>
           <button type="button" class="app-icon-btn"
-                  *ngIf="studyReadyTimers().length > 0"
-                  title="Enter Study Session"
-                  (click)="enterStudySessionFromBar()" aria-label="Enter Study Session">
-            📚
+                  title="Quote of the day"
+                  (click)="toggleQuotePanel(); $event.stopPropagation()" aria-label="Quote of the day">
+            <span class="app-icon-btn__icon">💬</span>
+            <span class="app-icon-btn__label">Quote</span>
           </button>
           <button type="button" class="app-icon-btn"
-                  [disabled]="atStickerLimit()"
-                  [title]="atStickerLimit() ? 'Maximum of 30 stickers reached' : 'Add a sticker'"
-                  (click)="toggleStickerPicker(); $event.stopPropagation()" aria-label="Add sticker">
-            🌈
+                  [title]="atStickerLimit() ? 'Maximum of 50 stickers reached' : 'Add a sticker'"
+                  (click)="toggleStickerPanel(); $event.stopPropagation()" aria-label="Add sticker">
+            <span class="app-icon-btn__icon">🏷️</span>
+            <span class="app-icon-btn__label">Stickers</span>
           </button>
           <button type="button" class="app-icon-btn app-icon-btn--font"
                   [title]="'Locker font: ' + lockerFont().name"
                   (click)="toggleFontPicker(); $event.stopPropagation()" aria-label="Change locker font">
-            Aa
+            <span class="app-icon-btn__icon">Aa</span>
+            <span class="app-icon-btn__label">Fonts</span>
           </button>
+          <button type="button" class="app-icon-btn"
+                  title="My Badges"
+                  (click)="toggleBadgeShelf(); $event.stopPropagation()" aria-label="My Badges">
+            <span class="app-icon-btn__icon">🏅</span>
+            <span class="app-icon-btn__label">Badges</span>
+          </button>
+          <button type="button" class="app-icon-btn"
+                  title="Auto-arrange widgets"
+                  (click)="autoArrange(); $event.stopPropagation()" aria-label="Auto-arrange widgets">
+            <span class="app-icon-btn__icon">⊞</span>
+            <span class="app-icon-btn__label">Arrange</span>
+          </button>
+        </div>
+        <div class="header-panel" *ngIf="badgeShelfOpen" (click)="$event.stopPropagation()">
+          <app-badge-shelf [badges]="earnedBadges()"></app-badge-shelf>
+        </div>
+        <div class="shortcuts-panel" *ngIf="shortcutsPanelOpen" (click)="$event.stopPropagation()">
+          <div class="shortcuts-panel__list"
+               cdkDropList
+               cdkDropListOrientation="horizontal"
+               (cdkDropListDropped)="reorderShortcuts($event)">
+            <app-shortcut-icon
+              *ngFor="let s of shortcuts()"
+              cdkDrag
+              cdkDragLockAxis="x"
+              [cdkDragData]="s"
+              [shortcut]="s"
+              (editRequested)="onShortcutEditRequested($event)"
+              (deleteRequested)="onShortcutDeleteRequested($event)"
+            ></app-shortcut-icon>
+          </div>
+          <button type="button" class="shortcuts-panel__add"
+                  [disabled]="atShortcutLimit()"
+                  [title]="atShortcutLimit() ? 'Maximum of 50 shortcuts reached' : 'Add a shortcut'"
+                  (click)="openAddShortcutDialog()"
+                  aria-label="Add a shortcut">+</button>
+        </div>
+        <div class="quote-panel" *ngIf="quotePanelOpen" (click)="$event.stopPropagation()">
+          <ng-container *ngIf="todayQuote(); else quoteLoading">
+            <blockquote class="quote-panel__quote">
+              <p class="quote-panel__text">"{{ todayQuote()!.quoteText }}"</p>
+              <footer *ngIf="todayQuote()!.attribution" class="quote-panel__attribution">— {{ todayQuote()!.attribution }}</footer>
+            </blockquote>
+          </ng-container>
+          <ng-template #quoteLoading>
+            <span class="quote-panel__loading">Loading quote…</span>
+          </ng-template>
         </div>
         <div class="font-picker-panel" *ngIf="fontPickerOpen" (click)="$event.stopPropagation()">
           <button *ngFor="let f of LOCKER_FONTS" type="button" class="font-option"
                   [class.font-option--active]="lockerFont().id === f.id"
                   [style.fontFamily]="f.family"
                   (click)="setLockerFont(f)">{{ f.name }}</button>
+          <div class="font-size-row">
+            <span class="font-size-label">Size</span>
+            <div class="font-size-stops">
+              <button *ngFor="let s of LOCKER_FONT_SIZES" type="button" class="font-size-stop"
+                      [class.font-size-stop--active]="lockerFontSize().id === s.id"
+                      (click)="setLockerFontSize(s)">{{ s.label }}</button>
+            </div>
+          </div>
         </div>
-        <app-emoji-picker
-          *ngIf="stickerPickerOpen"
-          class="sticker-picker-panel"
-          (emojiSelected)="onEmojiSelected($event)"
-          (click)="$event.stopPropagation()"
-        ></app-emoji-picker>
+        <!-- Sticker picker panel (full-width, below icon row) -->
+        <div *ngIf="stickerDialogOpen" class="sticker-panel" (click)="$event.stopPropagation()">
+          <p *ngIf="atStickerLimit()" class="sticker-panel__limit">Sticker limit reached (50)</p>
+          <app-emoji-picker
+            *ngIf="!atStickerLimit()"
+            [inline]="true"
+            (emojiSelected)="onStickerDialogEmojiSelected($event)"
+          ></app-emoji-picker>
+        </div>
         <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
       </header>
+
+      <!-- Add / Edit Shortcut dialog -->
+      <div *ngIf="shortcutDialogOpen"
+           class="shortcut-dialog-backdrop"
+           (click)="closeShortcutDialog()"
+           (keydown.escape)="closeShortcutDialog()">
+        <div class="shortcut-dialog" (click)="$event.stopPropagation()" (keydown.enter)="onShortcutDialogEnter($any($event))">
+          <h3 class="shortcut-dialog__title">{{ editingShortcut ? 'Edit Shortcut' : 'Add Shortcut' }}</h3>
+
+          <label class="shortcut-dialog__label">URL</label>
+          <input class="shortcut-dialog__input"
+                 type="url"
+                 [(ngModel)]="shortcutUrlDraft"
+                 placeholder="google.com"
+                 (blur)="onShortcutUrlBlur()"
+                 (keydown.enter)="onShortcutUrlBlur()" />
+
+          <div class="shortcut-dialog__label-row">
+            <label class="shortcut-dialog__label">Name</label>
+            <button type="button"
+                    class="shortcut-dialog__refetch-btn"
+                    [disabled]="!shortcutUrlDraft.trim() || shortcutMetadataFetching"
+                    (click)="refetchShortcutMetadata()"
+                    title="Re-fetch title and favicon from URL">
+              {{ shortcutMetadataFetching ? '…' : '↻ Refresh' }}
+            </button>
+          </div>
+          <input class="shortcut-dialog__input"
+                 type="text"
+                 [(ngModel)]="shortcutNameDraft"
+                 placeholder="Auto-filled from page title"
+                 maxlength="255" />
+
+          <label class="shortcut-dialog__label">Icon</label>
+          <div class="shortcut-dialog__icon-opts">
+            <label class="shortcut-dialog__radio">
+              <input type="radio" name="iconType" value="favicon"
+                     [(ngModel)]="shortcutIconType" />
+              Favicon (default)
+              <img *ngIf="shortcutFaviconPreview"
+                   class="shortcut-dialog__favicon-preview"
+                   [src]="shortcutFaviconPreview" alt="favicon preview" />
+            </label>
+            <label class="shortcut-dialog__radio">
+              <input type="radio" name="iconType" value="emoji"
+                     [(ngModel)]="shortcutIconType" />
+              Emoji
+              <span *ngIf="shortcutIconType === 'emoji' && shortcutEmojiDraft"
+                    class="shortcut-dialog__emoji-preview">{{ shortcutEmojiDraft }}</span>
+            </label>
+          </div>
+          <app-emoji-picker
+            *ngIf="shortcutIconType === 'emoji' && !shortcutEmojiDraft"
+            (emojiSelected)="shortcutEmojiDraft = $event"
+          ></app-emoji-picker>
+          <button *ngIf="shortcutIconType === 'emoji' && shortcutEmojiDraft"
+                  type="button"
+                  class="ghost shortcut-dialog__change-emoji"
+                  (click)="shortcutEmojiDraft = ''">Choose a different emoji</button>
+
+          <div class="shortcut-dialog__actions">
+            <button type="button" class="ghost" (click)="closeShortcutDialog()">Cancel</button>
+            <button type="button"
+                    [disabled]="!shortcutUrlDraft.trim()"
+                    (click)="saveShortcut()">
+              {{ editingShortcut ? 'Save' : 'Add' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Confirm delete shortcut dialog -->
+      <app-confirm-dialog
+        *ngIf="confirmDeleteShortcut"
+        [itemName]="confirmDeleteShortcut.name"
+        [message]="'Delete ' + confirmDeleteShortcut.name + '? This can\\'t be undone.'"
+        (confirmed)="onConfirmDeleteShortcut()"
+        (cancelled)="confirmDeleteShortcut = null"
+      ></app-confirm-dialog>
+
+      <!-- Confirm delete card dialog (from title bar close button) -->
+      <app-confirm-dialog
+        *ngIf="confirmDeleteCard"
+        [itemName]="getCardTitle(confirmDeleteCard)"
+        (confirmed)="onConfirmDeleteCard()"
+        (cancelled)="confirmDeleteCard = null"
+      ></app-confirm-dialog>
+
+      <!-- Badge celebration modal -->
+      <app-badge-celebration></app-badge-celebration>
 
       <!-- Confirm delete dialog (shown outside of grid to avoid z-index issues) -->
       <app-confirm-dialog
@@ -336,234 +616,294 @@ const LOCKER_ZONES = [
         (cancelled)="onCancelClean()"
       ></app-confirm-dialog>
 
-      <!-- ── Study Session View ── -->
-      <div class="study-session" *ngIf="studySession() && studySessionTimer() && studySessionList()" (click)="$event.stopPropagation()">
-        <div class="study-session__header">
-          <button type="button" class="study-session__back" (click)="exitStudySession()">← Back to Locker</button>
-          <h2 class="study-session__title">Study Session</h2>
+      <!-- ── Normal grid ── -->
+      <div class="lists"
+           #gridContainer
+           *ngIf="orderedCards().length"
+           [class.lists--sticker-mode]="stickerDialogOpen"
+           [style.min-height.px]="gridHeight()"
+           (mousemove)="onGridMouseMove($event)"
+           (mouseleave)="hoveredWidgetIds.set(emptySet)"
+           (dragover)="onGridDragOver($event)"
+           (drop)="onGridDrop($event)">
+        <!-- Sticker layer: always beneath widget layer. Interactive (drag/resize) only
+             in sticker edit mode (stickerDialogOpen). -->
+        <div
+          *ngFor="let card of stickerCards(); trackBy: trackByCardId"
+          class="grid-widget grid-widget--sticker"
+          [class.grid-widget--dragging]="dragCardId === card.data.id"
+          [style.top.px]="getCardTop(card)"
+          [style.left]="getCardLeft(card)"
+          [style.width]="getCardWidth(card)"
+          [style.height.px]="getCardHeight(card)"
+          [style.z-index]="getCardZIndex(card)"
+          (mousedown)="onDragStart($event, card)"
+        >
+          <app-sticker-icon
+            [sticker]="asSticker(card)!"
+            (delete)="onStickerDeleted(asSticker(card)!.id)"
+          ></app-sticker-icon>
+
+          <!-- Resize handles only visible in sticker edit mode -->
+          <ng-container *ngIf="stickerDialogOpen">
+            <div class="widget-rh widget-rh--e"  (mousedown)="onResizeStart($event, card, 'e')"></div>
+            <div class="widget-rh widget-rh--n"  (mousedown)="onResizeStart($event, card, 'n')"></div>
+            <div class="widget-rh widget-rh--s"  (mousedown)="onResizeStart($event, card, 's')"></div>
+            <div class="widget-rh widget-rh--w"  (mousedown)="onResizeStart($event, card, 'w')"></div>
+            <div class="widget-rh widget-rh--nw" (mousedown)="onResizeStart($event, card, 'nw')"></div>
+            <div class="widget-rh widget-rh--ne" (mousedown)="onResizeStart($event, card, 'ne')"></div>
+            <div class="widget-rh widget-rh--sw" (mousedown)="onResizeStart($event, card, 'sw')"></div>
+            <div class="widget-rh widget-rh--se" (mousedown)="onResizeStart($event, card, 'se')"></div>
+          </ng-container>
         </div>
-        <div class="study-session__panels">
-          <!-- Left: task list -->
-          <div class="study-panel study-panel--list"
-               [style.background]="studySessionList()!.color || '#fffef8'"
-               [style.color]="cardTextColor(studySessionList()!)">
-            <h3 class="study-panel__title">{{ studySessionList()!.title }}</h3>
-            <ul class="study-task-list">
-              <li *ngFor="let task of studySessionList()!.tasks"
-                  class="study-task"
-                  [class.study-task--done]="task.completed">
-                <input type="checkbox"
-                       [checked]="task.completed"
-                       (change)="toggleTask(studySessionList()!, task, $any($event.target).checked)" />
-                <span class="study-task__text" [class.study-task__text--done]="task.completed">{{ task.description }}</span>
+
+        <!-- Widget layer: stacked above stickers -->
+        <div
+          *ngFor="let card of widgetCards(); trackBy: trackByCardId"
+          #widgetEl
+          [attr.data-card-id]="card.data.id"
+          class="grid-widget"
+          [class.grid-widget--minimized]="isCardMinimized(card)"
+          [class.grid-widget--dragging]="dragCardId === card.data.id"
+          [class.grid-widget--note]="card.type === 'NOTE'"
+          [class.grid-widget--task-list]="card.type === 'TASK_LIST'"
+          [class.grid-widget--timer]="card.type === 'TIMER'"
+          [style.top.px]="getCardTop(card)"
+          [style.left]="getCardLeft(card)"
+          [style.width]="getCardWidth(card)"
+          [style.height.px]="getCardHeight(card)"
+          [style.z-index]="getCardZIndex(card)"
+          [style.font-size]="getWidgetFontSize(card)"
+          (mousedown)="onDragStart($event, card)"
+          [style.background]="getCardColor(card)"
+        >
+          <!-- Widget title bar (drag handle) — only for types without their own title bar -->
+          <app-widget-title-bar
+            *ngIf="card.type !== 'TIMER' && card.type !== 'NOTE'"
+            [title]="getCardTitle(card)"
+            [minimized]="isCardMinimized(card)"
+            (minimizeToggled)="toggleMinimize(card)"
+            (closeClicked)="requestDeleteCard(card)"
+          >
+            <ng-container *ngIf="card.type === 'TASK_LIST' && asTaskList(card) as list">
+              <button type="button" class="title-bar-icon-btn" aria-label="List color" (click)="toggleColorPicker(list, $event)">🌈</button>
+            </ng-container>
+          </app-widget-title-bar>
+
+          <!-- Widget body: hidden when minimized for cards with an outer title bar.
+               NOTE and TIMER cards own their title bar internally, so the body is
+               always rendered and the component handles its own collapsed state. -->
+          <div class="widget-body" *ngIf="card.type === 'NOTE' || card.type === 'TIMER' || !isCardMinimized(card)">
+
+          <!-- Timer card (Pomodoro) -->
+          <app-timer-card
+            *ngIf="card.type === 'TIMER' && asTimer(card)!.timerType !== 'BASIC'"
+            [attr.id]="'timer-' + card.data.id"
+            [timer]="asTimer(card)!"
+            [taskLists]="taskLists()"
+            [startInConfigMode]="shouldStartTimerInConfig(card.data.id)"
+            (timerUpdated)="onTimerUpdated($event); clearTimerConfigFlag(card.data.id)"
+            (timerDeleted)="onTimerDeleted($event); clearTimerConfigFlag(card.data.id)"
+            (taskCheckChange)="onTimerTaskCheckChange($event)"
+          ></app-timer-card>
+
+          <!-- Timer card (Basic) -->
+          <app-basic-timer-card
+            *ngIf="card.type === 'TIMER' && asTimer(card)!.timerType === 'BASIC'"
+            [attr.id]="'timer-' + card.data.id"
+            [timer]="asTimer(card)!"
+            [startInConfigMode]="shouldStartTimerInConfig(card.data.id)"
+            (timerUpdated)="onTimerUpdated($event); clearTimerConfigFlag(card.data.id)"
+            (timerDeleted)="onTimerDeleted($event); clearTimerConfigFlag(card.data.id)"
+          ></app-basic-timer-card>
+
+          <!-- Note card -->
+          <app-note-card
+            *ngIf="card.type === 'NOTE'"
+            [note]="asNote(card)!"
+            [minimized]="isCardMinimized(card)"
+            (minimizeToggled)="toggleMinimize(card)"
+            (noteUpdated)="onNoteUpdated($event)"
+            (noteDeleted)="onNoteDeleted($event)"
+          ></app-note-card>
+
+          <!-- Task list card -->
+          <ng-container *ngIf="asTaskList(card) as list">
+          <article
+            class="list-card"
+            tabindex="0"
+            [style.background]="list.color || '#fffef8'"
+            [style.color]="cardTextColor(list)"
+            [class.list-card--elevated]="dueDatePopoverListId === list.id || colorPickerListId === list.id"
+            (click)="$event.stopPropagation()"
+            (mouseenter)="$any($event.currentTarget).focus()"
+            (keydown)="onListKeydown($event, list)"
+          >
+            <header class="list-card__header">
+              <app-inline-title-edit
+                *ngIf="isListEditMode(list)"
+                [title]="list.title"
+                (titleChange)="onListTitleChange(list, $event)"
+              ></app-inline-title-edit>
+              <div class="list-actions">
+                <ng-container *ngIf="isListEditMode(list); else viewModeActions">
+                  <button
+                    type="button"
+                    class="icon-button icon-button--save"
+                    title="Done editing"
+                    aria-label="Done editing list"
+                    (click)="commitListEditMode(list); $event.stopPropagation()"
+                  >✓</button>
+                </ng-container>
+                <ng-template #viewModeActions>
+                  <button
+                    type="button"
+                    class="icon-button palette"
+                    title="Edit list"
+                    aria-label="Edit list"
+                    (click)="enterListEditMode(list); $event.stopPropagation()"
+                  >✏️</button>
+                </ng-template>
+              </div>
+              <div
+                class="color-picker-panel floating"
+                *ngIf="colorPickerListId === list.id"
+                (click)="$event.stopPropagation()"
+                (keydown.enter)="saveCardColor(list)"
+              >
+                <app-swatch-picker
+                  [selectedColor]="list.color"
+                  (colorChange)="onCardColorChange(list, $event)"
+                  (colorCommit)="onCardColorCommit(list, $event)"
+                  (escaped)="cancelCardColor(list)"
+                ></app-swatch-picker>
+                <div class="color-picker-actions">
+                  <button type="button" class="ghost color-picker-cancel" (click)="cancelCardColor(list)">Cancel</button>
+                  <button type="button" class="ghost color-picker-save" (click)="saveCardColor(list)">Save</button>
+                </div>
+              </div>
+            </header>
+
+
+            <ul class="task-list" [class.task-list--view-mode]="!isListEditMode(list)"
+                cdkDropList [cdkDropListDisabled]="!isListEditMode(list)"
+                (cdkDropListDropped)="reorderTasks(list, $event)">
+              <li *ngFor="let task of list.tasks" cdkDrag cdkDragLockAxis="y"
+                  [cdkDragDisabled]="!isListEditMode(list)">
+                <span *ngIf="isListEditMode(list)"
+                      class="drag-handle" cdkDragHandle aria-label="Drag to reorder">☰</span>
+                <div class="task-row"
+                     [class.task-row--clickable]="!isListEditMode(list)"
+                     *ngIf="!isEditing(task.id); else editRow"
+                     (click)="!isListEditMode(list) && toggleTask(list, task, !task.completed)">
+                  <input
+                    type="checkbox"
+                    [checked]="task.completed"
+                    (click)="$event.stopPropagation()"
+                    (change)="toggleTask(list, task, $any($event.target).checked)"
+                    aria-label="Mark task complete"
+                  />
+                  <div class="task-content">
+                    <div class="task-main-row">
+                      <button
+                        *ngIf="isListEditMode(list); else taskTextReadOnly"
+                        type="button"
+                        class="task-text"
+                        [class.completed]="task.completed"
+                        (click)="startEdit(task)"
+                      >
+                        {{ task.description }}
+                      </button>
+                      <ng-template #taskTextReadOnly>
+                        <span class="task-text task-text--readonly"
+                              [class.completed]="task.completed">
+                          {{ task.description }}
+                        </span>
+                      </ng-template>
+                      <button *ngIf="isListEditMode(list)"
+                              type="button" class="calendar-icon-btn"
+                              (click)="openDueDatePopover(list, task, $event)"
+                              title="Set due date" aria-label="Set due date">🗓</button>
+                    </div>
+                    <div class="task-due" *ngIf="task.dueAt">
+                      <button type="button"
+                              class="due-date-btn"
+                              [class.due-date-btn--overdue]="isOverdue(task)"
+                              [disabled]="!isListEditMode(list)"
+                              (click)="isListEditMode(list) && openDueDatePopover(list, task, $event)">
+                        Due: {{ formatDueDate(task.dueAt) }}
+                      </button>
+                    </div>
+                  </div>
+                  <button *ngIf="isListEditMode(list)"
+                          type="button" class="icon-button danger"
+                          (click)="removeTask(list, task)" aria-label="Remove task">
+                    ×
+                  </button>
+                </div>
+
+                <!-- Due date popover -->
+                <div class="due-date-popover-wrap"
+                     *ngIf="isListEditMode(list) && dueDatePopoverTaskId === task.id"
+                     (click)="$event.stopPropagation()">
+                  <app-due-date-popover
+                    [dueAt]="task.dueAt ?? null"
+                    (dueAtChange)="onDueDateChange(list, task, $event)"
+                    (cancelled)="dueDatePopoverTaskId = null"
+                  ></app-due-date-popover>
+                </div>
+
+                <ng-template #editRow>
+                  <div class="task-row editing">
+                    <input
+                      #editInput
+                      class="edit-input"
+                      [attr.data-task-id]="task.id"
+                      [(ngModel)]="editDrafts[task.id]"
+                      [ngModelOptions]="{ standalone: true }"
+                      (keydown.enter)="saveEdit(list, task)"
+                      (keydown.escape)="cancelEdit(task)"
+                      (keydown.tab)="$event.preventDefault(); openDueDatePopover(list, task, $event)"
+                      (blur)="saveEdit(list, task)"
+                    />
+                    <button type="button" class="ghost" (click)="removeTask(list, task)">Remove</button>
+                  </div>
+                </ng-template>
               </li>
             </ul>
-            <form class="study-new-task" (ngSubmit)="addTask(studySessionList()!)">
-              <input #taskInput
-                     [attr.data-list-id]="studySessionList()!.id"
-                     [name]="'task-study-' + studySessionList()!.id"
-                     [(ngModel)]="taskDrafts[studySessionList()!.id]"
-                     placeholder="Add a to-do…"
-                     required />
-              <button type="submit" [disabled]="!taskDrafts[studySessionList()!.id]?.trim()">Add</button>
+
+            <form *ngIf="isListEditMode(list)"
+                  class="new-task" (ngSubmit)="addTask(list)" #taskForm="ngForm">
+              <input
+                #taskInput
+                [attr.data-list-id]="list.id"
+                name="task-{{ list.id }}"
+                [(ngModel)]="taskDrafts[list.id]"
+                placeholder="Add a to-do…"
+                required
+                (keydown.enter)="onAddInputEnter($event, list)"
+              />
+              <button type="submit" [disabled]="!taskDrafts[list.id]?.trim()">Add</button>
             </form>
-          </div>
-          <!-- Right: timer -->
-          <div class="study-panel study-panel--timer">
-            <app-timer-card
-              [timer]="studySessionTimer()!"
-              [taskLists]="taskLists()"
-              (timerUpdated)="onTimerUpdated($event)"
-              (timerDeleted)="onTimerDeleted($event); exitStudySession()"
-              (taskCheckChange)="onTimerTaskCheckChange($event)"
-            ></app-timer-card>
-          </div>
+          </article>
+          </ng-container>
+
+          </div><!-- /widget-body -->
+
+          <!-- All-sides resize handles (shown on hover) -->
+          <div class="widget-rh widget-rh--e"  (mousedown)="onResizeStart($event, card, 'e')"></div>
+          <div class="widget-rh widget-rh--n"  (mousedown)="onResizeStart($event, card, 'n')"></div>
+          <div class="widget-rh widget-rh--s"  (mousedown)="onResizeStart($event, card, 's')"></div>
+          <div class="widget-rh widget-rh--w"  (mousedown)="onResizeStart($event, card, 'w')"></div>
+          <div class="widget-rh widget-rh--nw" (mousedown)="onResizeStart($event, card, 'nw')"></div>
+          <div class="widget-rh widget-rh--ne" (mousedown)="onResizeStart($event, card, 'ne')"></div>
+          <div class="widget-rh widget-rh--sw" (mousedown)="onResizeStart($event, card, 'sw')"></div>
+          <div class="widget-rh widget-rh--se" (mousedown)="onResizeStart($event, card, 'se')"></div>
         </div>
-      </div>
-
-      <!-- ── Normal grid ── -->
-      <div class="lists" *ngIf="!studySession() && orderedCards().length"
-           cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="reorderCards($event)">
-        <ng-container *ngFor="let card of orderedCards(); trackBy: trackByCardId">
-
-        <!-- Timer card -->
-        <app-timer-card
-          *ngIf="card.type === 'TIMER'"
-          cdkDrag
-          [attr.id]="'timer-' + card.data.id"
-          [timer]="card.data"
-          [taskLists]="taskLists()"
-          (timerUpdated)="onTimerUpdated($event)"
-          (timerDeleted)="onTimerDeleted($event)"
-          (taskCheckChange)="onTimerTaskCheckChange($event)"
-          (studySessionRequested)="enterStudySession(card.data.id)"
-        ></app-timer-card>
-
-        <!-- Note card -->
-        <app-note-card
-          *ngIf="card.type === 'NOTE'"
-          cdkDrag
-          [note]="asNote(card)!"
-          (noteUpdated)="onNoteUpdated($event)"
-          (noteDeleted)="onNoteDeleted($event)"
-        ></app-note-card>
-
-        <!-- Bookmark list card -->
-        <app-bookmark-card
-          *ngIf="card.type === 'BOOKMARK_LIST'"
-          cdkDrag
-          [list]="asBookmarkList(card)!"
-          (listUpdated)="onBookmarkListUpdated($event)"
-          (listDeleted)="onBookmarkListDeleted($event)"
-        ></app-bookmark-card>
-
-        <!-- Task list card -->
-        <ng-container *ngIf="asTaskList(card) as list">
-        <article
-          class="list-card"
-          [style.background]="list.color || '#fffef8'"
-          [style.color]="cardTextColor(list)"
-          [class.list-card--elevated]="dueDatePopoverListId === list.id || colorPickerListId === list.id"
-          cdkDrag
-          (click)="$event.stopPropagation()"
-        >
-          <div class="list-card__drag-handle" cdkDragHandle aria-label="Drag to reorder">⠿</div>
-          <header class="list-card__header">
-            <app-inline-title-edit
-              [title]="list.title"
-              (titleChange)="onListTitleChange(list, $event)"
-            ></app-inline-title-edit>
-            <div class="list-actions">
-              <button type="button" class="ghost clean" (click)="requestClean(list)"><span class="clean__label">Clean</span></button>
-              <button type="button" class="ghost danger" (click)="requestDelete(list)">Delete</button>
-              <button
-                type="button"
-                class="icon-button"
-                [class.palette]="!hasLinkedTimer(list)"
-                [disabled]="!hasLinkedTimer(list) && atTimerLimit()"
-                [title]="hasLinkedTimer(list) ? 'Go to linked timer' : atTimerLimit() ? 'Timer limit reached' : 'Start a Pomodoro timer for this list'"
-                aria-label="Launch Pomodoro timer for this list"
-                (click)="launchTimerFromList(list); $event.stopPropagation()"
-              >⏱</button>
-              <button
-                type="button"
-                class="icon-button palette"
-                aria-label="List color settings"
-                (click)="toggleColorPicker(list, $event)"
-              >
-                <span aria-hidden="true">🎨</span>
-              </button>
-            </div>
-            <div
-              class="color-picker-panel floating"
-              *ngIf="colorPickerListId === list.id"
-              (click)="$event.stopPropagation()"
-            >
-              <app-color-picker
-                [selectedColor]="list.color"
-                [selectedTextColor]="list.textColor ?? null"
-                (colorChange)="onCardColorChange(list, $event)"
-                (textColorChange)="onCardTextColorChange(list, $event)"
-              ></app-color-picker>
-              <button type="button" class="ghost" style="margin-top:0.5rem" (click)="saveCardColor(list)">Done</button>
-            </div>
-          </header>
-
-          <ul class="task-list" cdkDropList (cdkDropListDropped)="reorderTasks(list, $event)">
-            <li *ngFor="let task of list.tasks" cdkDrag cdkDragLockAxis="y">
-              <span class="drag-handle" cdkDragHandle aria-label="Drag to reorder">☰</span>
-              <div class="task-row" *ngIf="!isEditing(task.id); else editRow">
-                <input
-                  type="checkbox"
-                  [checked]="task.completed"
-                  (change)="toggleTask(list, task, $any($event.target).checked)"
-                  aria-label="Mark task complete"
-                />
-                <div class="task-content">
-                  <div class="task-main-row">
-                    <button
-                      type="button"
-                      class="task-text"
-                      [class.completed]="task.completed"
-                      (click)="startEdit(task)"
-                    >
-                      {{ task.description }}
-                    </button>
-                    <button type="button" class="calendar-icon-btn"
-                            (click)="openDueDatePopover(list, task, $event)"
-                            title="Set due date" aria-label="Set due date">🗓</button>
-                  </div>
-                  <div class="task-due" *ngIf="task.dueAt">
-                    <button type="button"
-                            class="due-date-btn"
-                            [class.due-date-btn--overdue]="isOverdue(task)"
-                            (click)="openDueDatePopover(list, task, $event)">
-                      Due: {{ formatDueDate(task.dueAt) }}
-                    </button>
-                  </div>
-                </div>
-                <button type="button" class="icon-button danger" (click)="removeTask(list, task)" aria-label="Remove task">
-                  ×
-                </button>
-              </div>
-
-              <!-- Due date popover -->
-              <div class="due-date-popover-wrap" *ngIf="dueDatePopoverTaskId === task.id"
-                   (click)="$event.stopPropagation()">
-                <app-due-date-popover
-                  [dueAt]="task.dueAt ?? null"
-                  (dueAtChange)="onDueDateChange(list, task, $event)"
-                ></app-due-date-popover>
-              </div>
-
-              <ng-template #editRow>
-                <div class="task-row editing">
-                  <input
-                    #editInput
-                    class="edit-input"
-                    [attr.data-task-id]="task.id"
-                    [(ngModel)]="editDrafts[task.id]"
-                    [ngModelOptions]="{ standalone: true }"
-                    (keydown.enter)="saveEdit(list, task)"
-                    (keydown.escape)="cancelEdit(task)"
-                    (blur)="saveEdit(list, task)"
-                  />
-                  <button type="button" class="ghost" (click)="removeTask(list, task)">Remove</button>
-                </div>
-              </ng-template>
-            </li>
-          </ul>
-
-          <form class="new-task" (ngSubmit)="addTask(list)" #taskForm="ngForm">
-            <input
-              #taskInput
-              [attr.data-list-id]="list.id"
-              name="task-{{ list.id }}"
-              [(ngModel)]="taskDrafts[list.id]"
-              placeholder="Add a to-do…"
-              required
-            />
-            <button type="submit" [disabled]="!taskDrafts[list.id]?.trim()">Add</button>
-          </form>
-        </article>
-        </ng-container>
-
-        </ng-container>
-      </div>
-
-      <!-- Sticker overlay layer -->
-      <div class="sticker-layer" *ngIf="stickers().length > 0">
-        <app-sticker
-          *ngFor="let sticker of stickers(); trackBy: trackByStickerId"
-          [sticker]="sticker"
-          (positionChanged)="onStickerPositionChanged(sticker.id, $event.x, $event.y)"
-          (sizeChanged)="onStickerSizeChanged(sticker.id, $event)"
-          (deleted)="onStickerDeleted(sticker.id)"
-        ></app-sticker>
       </div>
 
       <!-- Empty state -->
-      <div class="empty-card" *ngIf="!studySession() && !orderedCards().length">
+      <div class="empty-card" *ngIf="!orderedCards().length">
         <div class="empty-card__icon" aria-hidden="true">🔓</div>
         <h2>Your locker is empty</h2>
         <p class="empty-card__lead">
@@ -577,1076 +917,21 @@ const LOCKER_ZONES = [
       </div>
     </section>
   `,
-  styles: [
-    `
-      /* ══════════════════════════════════════════════════════════
-         LOCKER DOOR ANIMATION
-         ══════════════════════════════════════════════════════════ */
-
-      .locker-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 200;
-        display: flex;
-        align-items: stretch;
-        overflow: hidden;
-      }
-
-      /* One bay per locker — 5 equal columns */
-      .locker-bay {
-        flex: 1;
-        position: relative;
-        border-right: 3px solid rgba(0,0,0,0.32);
-        box-shadow: inset -1px 0 0 rgba(255,255,255,0.08);
-      }
-      .locker-bay:last-child { border-right: none; }
-
-      /* Center bay provides the perspective for the swinging door */
-      .locker-bay--center {
-        perspective: 600px;
-        perspective-origin: 0% 50%;
-      }
-
-      /* ── Locker interior (center bay only, revealed as door opens) ── */
-      .locker-interior {
-        position: absolute;
-        inset: 0;
-        background:
-          radial-gradient(ellipse 90% 18% at 50% 0%, rgba(255,255,255,0.09) 0%, transparent 100%),
-          linear-gradient(180deg, #2c3540 0%, #1e2830 55%, #141c22 100%);
-        overflow: hidden;
-      }
-      .locker-shelf {
-        position: absolute;
-        left: 0; right: 0;
-        height: 8px;
-        background: linear-gradient(180deg, #6a7480 0%, #3a444c 100%);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.16);
-      }
-      .locker-shelf::after {
-        content: '';
-        position: absolute;
-        top: 100%;
-        left: 0; right: 0;
-        height: 18px;
-        background: linear-gradient(to bottom, rgba(0,0,0,0.35), transparent);
-      }
-      .locker-shelf--top  { top: 30%; }
-      .locker-shelf--bottom { bottom: 22%; }
-
-      .locker-item {
-        position: absolute;
-        line-height: 1;
-        filter: drop-shadow(0 4px 10px rgba(0,0,0,0.65));
-        user-select: none;
-      }
-      /* Books row sitting on the bottom shelf */
-      .locker-books {
-        position: absolute;
-        bottom: 22%;
-        left: 50%;
-        transform: translate(-50%, -100%);
-        font-size: clamp(1.8rem, 3.5vw, 3rem);
-        line-height: 1;
-        white-space: nowrap;
-        letter-spacing: 0.08em;
-        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
-        user-select: none;
-      }
-
-      /* All doors fill their bay */
-      .locker-door {
-        position: absolute;
-        inset: 0;
-        background-image: repeating-linear-gradient(
-          90deg,
-          transparent 0px, transparent 49px,
-          rgba(255,255,255,0.05) 49px, rgba(255,255,255,0.05) 50px
-        );
-        box-shadow: inset -6px 0 20px rgba(0,0,0,0.35), inset 4px 0 10px rgba(255,255,255,0.07);
-      }
-
-      /* Inset panel bevel on all doors */
-      .locker-door::before {
-        content: '';
-        position: absolute;
-        inset: 14px;
-        border-top: 2px solid rgba(255,255,255,0.25);
-        border-left: 2px solid rgba(255,255,255,0.25);
-        border-right: 2px solid rgba(0,0,0,0.2);
-        border-bottom: 2px solid rgba(0,0,0,0.2);
-        border-radius: 3px;
-        pointer-events: none;
-        z-index: 0;
-      }
-
-      /* The animated (center) door */
-      .locker-door--animated {
-        transform-origin: left center;
-        transform-style: preserve-3d;
-        will-change: transform;
-      }
-
-      /* Right-edge depth strip — only needed on the swinging door */
-      .locker-door__edge {
-        position: absolute;
-        right: -18px;
-        top: 0;
-        width: 18px;
-        height: 100%;
-        background: linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.2) 70%, transparent 100%);
-        pointer-events: none;
-      }
-
-      /* Door swing animation */
-      .locker-overlay--opening .locker-door--animated {
-        animation: doorSwing 0.9s cubic-bezier(0.55, 0, 0.15, 1) forwards;
-      }
-      @keyframes doorSwing {
-        0%   { transform: rotateY(0deg); }
-        78%  { transform: rotateY(-110deg); }
-        90%  { transform: rotateY(-103deg); }
-        100% { transform: rotateY(-107deg); }
-      }
-
-      /* ── Logo sticker ── */
-      .locker-logo {
-        position: absolute;
-        top: 36%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-4deg);
-        width: clamp(80px, 58%, 155px);
-        height: auto;
-        z-index: 2;
-        background: #fff;
-        border-radius: 6px;
-        padding: 6px 8px 4px;
-        box-shadow:
-          0 3px 10px rgba(0,0,0,0.35),
-          0 1px 3px rgba(0,0,0,0.2),
-          inset 0 0 0 1px rgba(0,0,0,0.04);
-        pointer-events: none;
-        backface-visibility: hidden;
-        -webkit-backface-visibility: hidden;
-      }
-
-      /* ── Vent groups (upper center) ── */
-      .locker-vents {
-        position: absolute;
-        top: clamp(3rem, 12%, 5rem);
-        left: 10%;
-        right: 10%;
-        display: flex;
-        flex-direction: column;
-        gap: clamp(0.5rem, 3%, 0.9rem);
-        z-index: 1;
-      }
-      .locker-vent-group {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      .locker-vent {
-        height: 7px;
-        border-radius: 2px;
-        background: rgba(0,0,0,0.55);
-        box-shadow:
-          inset 0 2px 4px rgba(0,0,0,0.7),
-          0 1px 0 rgba(255,255,255,0.1);
-      }
-
-      /* ── Combination dial lock — right side, vertically centered ── */
-      .locker-lock {
-        position: absolute;
-        right: 18%;
-        top: 55%;
-        transform: translateY(-50%);
-        z-index: 1;
-      }
-      /* Mounting plate */
-      .locker-lock__plate {
-        width: 56px;
-        height: 72px;
-        background: linear-gradient(160deg, #d4d4d8 0%, #a1a1aa 50%, #c4c4c8 100%);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow:
-          0 6px 16px rgba(0,0,0,0.5),
-          inset 0 1px 0 rgba(255,255,255,0.5),
-          inset 0 -1px 0 rgba(0,0,0,0.2);
-      }
-      /* Dial */
-      .locker-lock__dial {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        background: radial-gradient(circle at 38% 36%, #52525b 0%, #27272a 55%, #18181b 100%);
-        border: 3px solid #e4e4e7;
-        box-shadow:
-          inset 0 2px 8px rgba(0,0,0,0.75),
-          0 3px 8px rgba(0,0,0,0.45);
-        position: relative;
-        /* Tick marks via conic gradient */
-        background-image:
-          conic-gradient(
-            from 0deg,
-            transparent 0deg 9deg, rgba(255,255,255,0.18) 9deg 11deg,
-            transparent 11deg 21deg, rgba(255,255,255,0.09) 21deg 23deg,
-            transparent 23deg 33deg, rgba(255,255,255,0.18) 33deg 35deg,
-            transparent 35deg 45deg, rgba(255,255,255,0.09) 45deg 47deg,
-            transparent 47deg 57deg, rgba(255,255,255,0.18) 57deg 59deg,
-            transparent 59deg 69deg, rgba(255,255,255,0.09) 69deg 71deg,
-            transparent 71deg 81deg, rgba(255,255,255,0.18) 81deg 83deg,
-            transparent 83deg 93deg, rgba(255,255,255,0.09) 93deg 95deg,
-            transparent 95deg 105deg, rgba(255,255,255,0.18) 105deg 107deg,
-            transparent 107deg 117deg, rgba(255,255,255,0.09) 117deg 119deg,
-            transparent 119deg 129deg, rgba(255,255,255,0.18) 129deg 131deg,
-            transparent 131deg 141deg, rgba(255,255,255,0.09) 141deg 143deg,
-            transparent 143deg 153deg, rgba(255,255,255,0.18) 153deg 155deg,
-            transparent 155deg 165deg, rgba(255,255,255,0.09) 165deg 167deg,
-            transparent 167deg 177deg, rgba(255,255,255,0.18) 177deg 179deg,
-            transparent 179deg 189deg, rgba(255,255,255,0.09) 189deg 191deg,
-            transparent 191deg 201deg, rgba(255,255,255,0.18) 201deg 203deg,
-            transparent 203deg 213deg, rgba(255,255,255,0.09) 213deg 215deg,
-            transparent 215deg 225deg, rgba(255,255,255,0.18) 225deg 227deg,
-            transparent 227deg 237deg, rgba(255,255,255,0.09) 237deg 239deg,
-            transparent 239deg 249deg, rgba(255,255,255,0.18) 249deg 251deg,
-            transparent 251deg 261deg, rgba(255,255,255,0.09) 261deg 263deg,
-            transparent 263deg 273deg, rgba(255,255,255,0.18) 273deg 275deg,
-            transparent 275deg 285deg, rgba(255,255,255,0.09) 285deg 287deg,
-            transparent 287deg 297deg, rgba(255,255,255,0.18) 297deg 299deg,
-            transparent 299deg 309deg, rgba(255,255,255,0.09) 309deg 311deg,
-            transparent 311deg 321deg, rgba(255,255,255,0.18) 321deg 323deg,
-            transparent 323deg 333deg, rgba(255,255,255,0.09) 333deg 335deg,
-            transparent 335deg 345deg, rgba(255,255,255,0.18) 345deg 347deg,
-            transparent 347deg 360deg
-          ),
-          radial-gradient(circle at 38% 36%, #52525b 0%, #27272a 55%, #18181b 100%);
-      }
-      /* Arrow indicator — fixed pointer at top of plate, not on dial */
-      .locker-lock__indicator {
-        position: absolute;
-        top: -14px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 5px solid transparent;
-        border-right: 5px solid transparent;
-        border-top: 8px solid #a1a1aa;
-        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
-      }
-      /* Dial spin */
-      .locker-lock__dial--spinning {
-        animation: dialSpin 1.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-      }
-      @keyframes dialSpin {
-        0%   { transform: rotate(0deg); }
-        30%  { transform: rotate(-720deg); }
-        62%  { transform: rotate(-360deg); }
-        82%  { transform: rotate(-540deg); }
-        100% { transform: rotate(-540deg); }
-      }
-
-      /* ══════════════════════════════════════════════════════════
-         DASHBOARD (locker interior)
-         Uses CSS custom properties set via [ngStyle]:
-           --lc-interior  background paint color
-           --lc-shelf     header/shelf color
-           --lc-accent    door color used for buttons/highlights
-         ══════════════════════════════════════════════════════════ */
-
-      .dashboard {
-        min-height: 100dvh;
-        font-family: var(--locker-font, inherit);
-        background-color: var(--lc-accent, #3d8ed4);
-        background-image: repeating-linear-gradient(
-          0deg, transparent 0, transparent 3px,
-          rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px
-        );
-        color: #1c1c1e;
-        padding: clamp(1.5rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.5rem);
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-      }
-
-      /* ── Header / shelf — frosted white over the vibrant background ── */
-      .dashboard__header {
-        position: relative;
-        /* No z-index — does not create a stacking context, so the sticker-layer
-           (z-index:1) paints over the ::before background but under the content
-           divs (z-index:2) that are children of this element. */
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 1rem;
-        padding: 1.25rem 1.5rem;
-      }
-
-      /* Frosted background lives on a pseudo-element so the sticker layer can
-         paint between it and the interactive content above. */
-      .dashboard__header::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: rgba(255,255,255,0.82);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        border-radius: 14px;
-        border: 1px solid rgba(255,255,255,0.6);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        pointer-events: none;
-        z-index: 0;
-      }
-
-      /* Interactive header content must sit above the sticker layer (z-index:1).
-         pointer-events:none on the wrapper so transparent areas don't block stickers;
-         restored on all children so buttons/links/inputs remain clickable. */
-      .top-row,
-      .locker-app-bar {
-        position: relative;
-        z-index: 2;
-        pointer-events: none;
-      }
-      .top-row > *,
-      .locker-app-bar > * {
-        pointer-events: auto;
-      }
-      .top-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        width: 100%;
-        flex-wrap: wrap;
-      }
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .brand__link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.75rem;
-        color: #1c1c1e;
-        text-decoration: none;
-      }
-      .brand img {
-        height: 40px;
-        width: auto;
-        display: block;
-      }
-      .brand__text h1 {
-        margin: 0;
-        font-size: 1.4rem;
-        color: #1c1c1e;
-        letter-spacing: 0.5px;
-      }
-      .header-right {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-      }
-      .nav-links {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .nav-link {
-        color: #3f3f46;
-        text-decoration: none;
-        font-weight: 700;
-        font-size: 0.875rem;
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        background: rgba(0,0,0,0.06);
-        border: 1px solid rgba(0,0,0,0.1);
-        transition: background 0.12s;
-        display: inline-block;
-      }
-      .nav-link:hover { background: rgba(0,0,0,0.12); color: #1c1c1e; }
-      button.nav-link { cursor: pointer; font-family: inherit; }
-      .nav-link--admin { color: #7048c0; border-color: rgba(112,72,192,0.25); background: rgba(112,72,192,0.08); }
-      .nav-link--admin:hover { background: rgba(112,72,192,0.16); color: #5030a0; }
-      .nav-link--logout { color: #b91c1c; border-color: rgba(185,28,28,0.2); background: rgba(185,28,28,0.06); }
-      .nav-link--logout:hover { background: rgba(185,28,28,0.14); color: #991b1b; }
-
-      /* ── Locker color picker ── */
-      .locker-color-picker {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-      .locker-color-picker__label {
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: #52525b;
-        white-space: nowrap;
-      }
-      .locker-color-swatches {
-        display: flex;
-        gap: 5px;
-      }
-      .locker-swatch {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 2px solid transparent;
-        padding: 0;
-        cursor: pointer;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        transition: transform 0.12s, box-shadow 0.12s;
-      }
-      .locker-swatch:hover {
-        transform: scale(1.2);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-      }
-      .locker-swatch--active {
-        border-color: #1c1c1e;
-        transform: scale(1.15);
-        box-shadow: 0 0 0 1px rgba(255,255,255,0.6), 0 3px 8px rgba(0,0,0,0.3);
-      }
-
-      .error {
-        color: #b00020;
-        margin: 0;
-        font-weight: 600;
-        font-size: 0.9rem;
-        width: 100%;
-      }
-
-      /* ── New list form ── */
-      .new-list {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        flex-wrap: wrap;
-        width: 100%;
-      }
-      .new-list input {
-        border: 1px solid rgba(0,0,0,0.15);
-        border-radius: 8px;
-        padding: 0.6rem 0.85rem;
-        min-width: 200px;
-        background: rgba(255,255,255,0.7);
-        color: #1c1c1e;
-        font: inherit;
-        font-size: 0.95rem;
-      }
-      .new-list input::placeholder { color: rgba(0,0,0,0.35); }
-      .new-list input:focus {
-        outline: none;
-        border-color: var(--lc-accent, #3d8ed4);
-        background: #fff;
-      }
-      .new-list button {
-        background: var(--lc-accent, #3d8ed4);
-        border: none;
-        border-radius: 8px;
-        padding: 0.6rem 1.1rem;
-        color: #fff;
-        font-weight: 800;
-        font-size: 0.9rem;
-        font-family: inherit;
-        cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        transition: opacity 0.12s;
-      }
-      .new-list button:hover { opacity: 0.88; }
-      .new-list button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-      /* ── List grid ── */
-      .lists {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1rem;
-        align-items: start;
-        position: relative;
-        z-index: 2;
-        /* Pass pointer events through empty grid gaps so stickers beneath remain
-           interactive; CDK drag items (direct children) restore pointer-events. */
-        pointer-events: none;
-      }
-      .lists > * {
-        pointer-events: auto;
-      }
-
-      /* ── List card ── */
-      .list-card {
-        border-radius: 12px;
-        padding: 1rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        position: relative;
-        z-index: 2;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
-        border: 1px solid rgba(255,255,255,0.5);
-      }
-      .list-card--elevated { z-index: 20; }
-      .list-card__header {
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
-        position: relative;
-      }
-      .list-card__header h3 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 800;
-        color: #2d1a10;
-        flex: 1;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      /* ── Buttons (inside list cards) ── */
-      button {
-        border: 1px solid rgba(45,26,16,0.2);
-        border-radius: 6px;
-        padding: 0.4rem 0.75rem;
-        background: rgba(255,255,255,0.8);
-        color: #2d1a10;
-        font-weight: 700;
-        font-size: 0.8rem;
-        font-family: inherit;
-        cursor: pointer;
-        transition: opacity 0.12s;
-      }
-      button:hover { opacity: 0.8; }
-      button:disabled { opacity: 0.4; cursor: not-allowed; }
-      .ghost {
-        background: rgba(255,255,255,0.5);
-        border: 1px dashed rgba(45,26,16,0.2);
-        padding: 0.3rem 0.6rem;
-      }
-      .ghost.clean { background: rgba(130,201,255,0.2); }
-      .clean__label { text-decoration: line-through; }
-      .danger { color: #b00020; border-color: rgba(176,0,32,0.25); }
-      .icon-button {
-        width: 1.8rem;
-        height: 1.8rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        font-size: 1rem;
-        line-height: 1;
-        padding: 0;
-        background: rgba(255,255,255,0.7);
-        border: 1px solid rgba(45,26,16,0.2);
-        color: #2d1a10;
-      }
-      .icon-button.gear { background: rgba(255,255,255,0.9); }
-      @keyframes timer-flash {
-        0%   { box-shadow: 0 0 0 3px rgba(255,165,0,0.8); }
-        60%  { box-shadow: 0 0 0 6px rgba(255,165,0,0.3); }
-        100% { box-shadow: 0 0 0 0 rgba(255,165,0,0); }
-      }
-      .timer-flash { animation: timer-flash 0.9s ease-out forwards; }
-      .list-actions {
-        display: flex;
-        gap: 0.3rem;
-        align-items: center;
-        justify-content: flex-end;
-      }
-      .confirm-bar {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: rgba(176,0,32,0.08);
-        border: 1px solid rgba(176,0,32,0.2);
-        border-radius: 6px;
-        padding: 0.3rem 0.5rem;
-        color: #8c1f24;
-        font-size: 0.8rem;
-        font-weight: 700;
-      }
-      .config-panel {
-        padding: 0.6rem;
-        border-radius: 8px;
-        border: 1px solid rgba(45,26,16,0.15);
-        background: #fffef8;
-        display: inline-flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        position: absolute;
-        top: 2.2rem;
-        right: 0;
-        z-index: 5;
-        box-shadow: 0 12px 32px rgba(0,0,0,0.2);
-        min-width: 220px;
-      }
-      .config-row {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 700;
-        font-size: 0.85rem;
-        color: #2d1a10;
-      }
-      .swatches {
-        display: grid;
-        grid-template-columns: repeat(4, 28px);
-        gap: 0.3rem;
-      }
-      .swatch {
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        border: 2px solid transparent;
-        cursor: pointer;
-        padding: 0;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-      }
-      .swatch--active { border-color: #2d1a10; }
-
-      /* ── Tasks ── */
-      .task-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-      }
-      .task-list li {
-        display: flex;
-        align-items: stretch;
-        gap: 0.4rem;
-        background: rgba(255,255,255,0.6);
-        border-radius: 6px;
-        padding: 0.2rem 0.4rem;
-      }
-      .drag-handle {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.3rem 0.2rem;
-        cursor: grab;
-        color: rgba(45,26,16,0.4);
-        font-size: 0.85rem;
-        user-select: none;
-      }
-      .drag-handle:active { cursor: grabbing; }
-      .task-list li.cdk-drag-preview { box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
-      .task-list li.cdk-drag-placeholder { opacity: 0.2; }
-      .task-row {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        flex: 1;
-        justify-content: space-between;
-      }
-      .task-row.editing { align-items: stretch; }
-      .task-text {
-        flex: 1;
-        background: transparent;
-        border: none;
-        text-align: left;
-        padding: 0.3rem 0.4rem;
-        font: inherit;
-        font-size: 0.875rem;
-        color: #2d1a10;
-        cursor: text;
-      }
-      .task-text.completed { color: #8a8a8a; text-decoration: line-through; }
-      .new-task {
-        display: flex;
-        gap: 0.4rem;
-        align-items: center;
-      }
-      .new-task input {
-        flex: 1;
-        border: 1px solid rgba(45,26,16,0.18);
-        border-radius: 6px;
-        padding: 0.45rem 0.65rem;
-        background: rgba(255,255,255,0.75);
-        color: #2d1a10;
-        font: inherit;
-        font-size: 0.875rem;
-      }
-      .new-task input::placeholder { color: rgba(45,26,16,0.35); }
-      .new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
-      .title-edit-input,
-      .edit-input {
-        flex: 1;
-        border: 1px solid rgba(45,26,16,0.2);
-        border-radius: 6px;
-        padding: 0.35rem 0.55rem;
-        background: #fffdf7;
-        color: #2d1a10;
-        font: inherit;
-        font-size: 0.875rem;
-        min-width: 120px;
-      }
-
-      /* ── Empty state ── */
-      .empty-card {
-        background: #fff;
-        border: 1px solid rgba(0,0,0,0.08);
-        border-radius: 14px;
-        padding: clamp(1.5rem, 3vw, 2rem);
-        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-        max-width: 560px;
-        margin: 2rem auto 0;
-        display: grid;
-        gap: 0.75rem;
-        text-align: center;
-      }
-      .empty-card__icon { font-size: 2.5rem; }
-      .empty-card h2 { margin: 0; font-size: 1.4rem; color: #1c1c1e; }
-      .empty-card__lead { margin: 0; font-size: 1rem; line-height: 1.6; color: #3f3f46; }
-      .empty-card__steps {
-        margin: 0;
-        padding-left: 1.2rem;
-        display: grid;
-        gap: 0.35rem;
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #52525b;
-        text-align: left;
-      }
-      .empty-card__steps li { line-height: 1.5; }
-
-      .sr-only {
-        position: absolute;
-        width: 1px; height: 1px;
-        padding: 0; margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        border: 0;
-      }
-
-      /* ── App bar (create + font) ── */
-      .locker-app-bar {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        width: 100%;
-        margin-top: 0.25rem;
-      }
-
-      .app-icon-btn {
-        width: 3rem;
-        height: 3rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        font-size: 1.5rem;
-        line-height: 1;
-        padding: 0;
-        background: rgba(255,255,255,0.85);
-        border: 2px solid rgba(0,0,0,0.12);
-        cursor: pointer;
-        transition: transform 0.12s, opacity 0.12s;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-      }
-      .app-icon-btn:hover:not(:disabled) { transform: scale(1.1); }
-      .app-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-      .app-icon-btn--font { font-family: var(--font-display, inherit); font-size: 1.1rem; font-weight: 800; }
-
-      /* ── Font picker panel ── */
-      .font-picker-panel {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-        padding: 0.75rem;
-        background: rgba(255,255,255,0.95);
-        backdrop-filter: blur(12px);
-        border-radius: 10px;
-        border: 1px solid rgba(0,0,0,0.1);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-        width: 100%;
-        margin-top: 0.25rem;
-      }
-
-      .font-option {
-        padding: 0.4rem 0.8rem;
-        border-radius: 6px;
-        border: 1px solid rgba(0,0,0,0.12);
-        background: rgba(255,255,255,0.7);
-        cursor: pointer;
-        font-size: 0.9rem;
-        transition: background 0.12s;
-      }
-      .font-option:hover { background: rgba(0,0,0,0.06); }
-      .font-option--active {
-        background: var(--lc-accent, #3d8ed4);
-        color: #fff;
-        border-color: transparent;
-      }
-
-      .sticker-picker-panel {
-        position: absolute;
-        top: 100%;
-        right: 0;
-        z-index: 100;
-        margin-top: 0.25rem;
-      }
-
-      .sticker-layer {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        z-index: 1;
-
-        app-sticker { pointer-events: all; }
-      }
-
-      /* When a sticker is hovered or showing its confirm prompt, raise the whole
-         layer above the tool-card grid (z-index:2) so controls are never obscured. */
-      .sticker-layer:has(.sticker:hover),
-      .sticker-layer:has(.sticker--confirming) {
-        z-index: 3;
-      }
-
-      /* ── Floating color picker panel ── */
-      .color-picker-panel.floating {
-        position: absolute;
-        top: 2.4rem;
-        right: 0;
-        z-index: 20;
-        background: #fffef8;
-        border-radius: 10px;
-        border: 1px solid rgba(45,26,16,0.12);
-        box-shadow: 0 12px 32px rgba(0,0,0,0.2);
-        padding: 0.5rem;
-        min-width: 300px;
-      }
-
-      /* ── Card drag handle ── */
-      .list-card__drag-handle {
-        position: absolute;
-        top: 0.5rem;
-        left: 0.5rem;
-        cursor: grab;
-        color: rgba(45,26,16,0.3);
-        font-size: 1rem;
-        line-height: 1;
-        user-select: none;
-        padding: 0.15rem;
-      }
-      .list-card__drag-handle:active { cursor: grabbing; }
-      .list-card.cdk-drag-preview {
-        box-shadow: 0 16px 40px rgba(0,0,0,0.3);
-        border-radius: 12px;
-      }
-      .list-card.cdk-drag-placeholder { opacity: 0.3; }
-
-      /* ── Task content layout ── */
-      .task-content {
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
-        flex: 1;
-        min-width: 0;
-      }
-      .task-main-row {
-        display: flex;
-        align-items: center;
-        gap: 0.2rem;
-      }
-
-      /* ── Due date display ── */
-      .task-due {
-        display: flex;
-        align-items: center;
-      }
-
-      .due-date-btn {
-        background: rgba(255,255,255,0.6);
-        border: 1px solid rgba(45,26,16,0.15);
-        border-radius: 4px;
-        padding: 0.1rem 0.4rem;
-        font-size: 0.72rem;
-        font-weight: 600;
-        cursor: pointer;
-        color: #52525b;
-        font-family: inherit;
-        transition: background 0.12s;
-      }
-      .due-date-btn:hover { background: rgba(255,255,255,0.9); }
-      .due-date-btn--overdue {
-        color: #b91c1c;
-        border-color: rgba(185,28,28,0.3);
-        background: rgba(185,28,28,0.08);
-      }
-
-      .calendar-icon-btn {
-        background: transparent;
-        border: none;
-        padding: 0.1rem 0.25rem;
-        font-size: 0.85rem;
-        cursor: pointer;
-        opacity: 0.4;
-        transition: opacity 0.12s;
-        line-height: 1;
-      }
-      .calendar-icon-btn:hover { opacity: 0.8; background: transparent; }
-
-      /* ── Due date popover wrapper ── */
-      .due-date-popover-wrap {
-        padding: 0.25rem 0;
-      }
-
-      /* ══════════════════════════════════════════════════════════
-         STUDY SESSION
-         ══════════════════════════════════════════════════════════ */
-
-      .study-session {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-      }
-
-      .study-session__header {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-      }
-
-      .study-session__back {
-        background: rgba(255,255,255,0.85);
-        border: 1px solid rgba(0,0,0,0.12);
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        font: inherit;
-        font-size: 0.875rem;
-        font-weight: 700;
-        cursor: pointer;
-        color: #3f3f46;
-        transition: background 0.12s;
-      }
-      .study-session__back:hover { background: rgba(255,255,255,1); }
-
-      .study-session__title {
-        margin: 0;
-        font-size: 1.2rem;
-        color: rgba(255,255,255,0.92);
-        text-shadow: 0 1px 4px rgba(0,0,0,0.3);
-      }
-
-      .study-session__panels {
-        display: grid;
-        grid-template-columns: 1fr 320px;
-        gap: 1rem;
-        align-items: start;
-      }
-
-      @media (max-width: 700px) {
-        .study-session__panels {
-          grid-template-columns: 1fr;
-        }
-        .study-panel--timer { order: -1; }
-      }
-
-      .study-panel {
-        border-radius: 12px;
-        padding: 1rem;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
-        border: 1px solid rgba(255,255,255,0.5);
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-      }
-
-      .study-panel--timer {
-        background: transparent;
-        padding: 0;
-        box-shadow: none;
-        border: none;
-      }
-
-      .study-panel__title {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 800;
-      }
-
-      .study-task-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-      }
-
-      .study-task {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: rgba(255,255,255,0.55);
-        border-radius: 6px;
-        padding: 0.35rem 0.6rem;
-      }
-
-      .study-task input[type="checkbox"] { cursor: pointer; flex-shrink: 0; }
-
-      .study-task__text {
-        font-size: 0.875rem;
-        line-height: 1.4;
-      }
-      .study-task__text--done {
-        text-decoration: line-through;
-        opacity: 0.5;
-      }
-
-      .study-new-task {
-        display: flex;
-        gap: 0.4rem;
-        align-items: center;
-        margin-top: 0.25rem;
-      }
-      .study-new-task input {
-        flex: 1;
-        border: 1px solid rgba(45,26,16,0.18);
-        border-radius: 6px;
-        padding: 0.45rem 0.65rem;
-        background: rgba(255,255,255,0.75);
-        color: inherit;
-        font: inherit;
-        font-size: 0.875rem;
-      }
-      .study-new-task input::placeholder { color: rgba(45,26,16,0.35); }
-      .study-new-task input:focus { outline: none; border-color: var(--lc-accent, #4a7eb5); }
-      .study-new-task button {
-        background: var(--lc-accent, #3d8ed4);
-        border: none;
-        border-radius: 8px;
-        padding: 0.45rem 0.9rem;
-        color: #fff;
-        font-weight: 800;
-        font-size: 0.85rem;
-        font-family: inherit;
-        cursor: pointer;
-        transition: opacity 0.12s;
-      }
-      .study-new-task button:hover { opacity: 0.88; }
-      .study-new-task button:disabled { opacity: 0.4; cursor: not-allowed; }
-    `
-  ]
+  styleUrl: './locker.component.scss',
 })
 export class LockerComponent implements AfterViewInit, OnInit {
   private readonly sessionStore = inject(SessionStore);
   private readonly router = inject(Router);
+  private readonly gridEngine = inject(LockerGridEngineService);
 
   protected readonly isAdmin = this.sessionStore.isAdmin;
 
   protected readonly LOCKER_COLORS = LOCKER_COLORS;
   protected readonly LOCKER_FONTS = LOCKER_FONTS;
+  protected readonly LOCKER_FONT_SIZES = LOCKER_FONT_SIZES;
   protected lockerColor = signal<LockerColor>(this.loadLockerColor());
   protected lockerFont = signal<LockerFont>(this.loadLockerFont());
+  protected lockerFontSize = signal<LockerFontSize>(this.loadLockerFontSize());
 
   // Animation phases
   protected lockerDone = signal(false);
@@ -1659,9 +944,9 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected readonly taskLists = signal<TaskList[]>([]);
   protected readonly timers = signal<Timer[]>([]);
   protected readonly notes = signal<Note[]>([]);
-  protected readonly bookmarkLists = signal<BookmarkList[]>([]);
+  protected readonly shortcuts = signal<Shortcut[]>([]);
   protected readonly stickers = signal<Sticker[]>([]);
-  protected stickerPickerOpen = false;
+  protected stickerDialogOpen = false;
   protected taskDrafts: Record<string, string> = {};
   protected errorMessage = '';
   protected editDrafts: Record<string, string> = {};
@@ -1672,50 +957,116 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected colorDrafts: Record<string, string> = {};
   protected colorOriginals: Record<string, string> = {};
 
+  // Minimized state for task list cards (by list id)
+  protected minimizedLists: Record<string, boolean> = {};
+
+  // Edit vs view mode per task list (by list id). Undefined means "use default":
+  // edit mode when the list is empty, view mode once it has items.
+  protected listEditModeOverrides: Record<string, boolean> = {};
+
+
   // New Phase 1 state
   protected colorPickerListId: string | null = null;
-  protected colorDraftTextColors: Record<string, string | null> = {};
   protected confirmDeleteList: TaskList | null = null;
   protected confirmCleanList: TaskList | null = null;
   protected dueDatePopoverTaskId: string | null = null;
   protected dueDatePopoverListId: string | null = null;
   protected fontPickerOpen = false;
 
+  // Shortcuts panel + dialog state
+  protected shortcutsPanelOpen = false;
+  protected quotePanelOpen = false;
+  protected shortcutDialogOpen = false;
+  protected editingShortcut: Shortcut | null = null;
+  protected shortcutUrlDraft = '';
+  protected shortcutNameDraft = '';
+  protected shortcutFaviconPreview: string | null = null;
+  protected shortcutMetadataFetching = false;
+  /** True once the backend has returned an authoritative favicon (from the final redirected domain). */
+  private shortcutFaviconCorrected = false;
+  protected shortcutIconType: 'favicon' | 'emoji' = 'favicon';
+  protected shortcutEmojiDraft = '';
+  protected confirmDeleteShortcut: Shortcut | null = null;
+  protected confirmDeleteCard: LockerCard | null = null;
+  protected timerMenuOpen = false;
+  protected badgeShelfOpen = false;
+  /** Timer IDs that should open in configuration mode (newly created from the tray). */
+  protected timerIdsAwaitingConfig = signal<Set<string>>(new Set());
+
   protected readonly atListLimit = computed(() => this.taskLists().length >= 20);
   protected readonly atTimerLimit = computed(() => this.timers().length >= 10);
+  protected readonly hasIndependentPomodoro = computed(() =>
+    this.timers().some(t => t.timerType !== 'BASIC' && !t.linkedTaskListId));
+  protected readonly hasIndependentBasicTimer = computed(() =>
+    this.timers().some(t => t.timerType === 'BASIC' && !t.linkedTaskListId));
   protected readonly atNoteLimit = computed(() => this.notes().length >= 20);
-  protected readonly atBookmarkListLimit = computed(() => this.bookmarkLists().length >= 10);
-  protected readonly atStickerLimit = computed(() => this.stickers().length >= 30);
+  protected readonly atShortcutLimit = computed(() => this.shortcuts().length >= 50);
+  protected readonly atStickerLimit = computed(() => this.stickers().length >= 50);
 
-  protected readonly studySession = signal<{ timerId: string; listId: string } | null>(null);
-  protected readonly studySessionTimer = computed(() =>
-    this.timers().find(t => t.id === this.studySession()?.timerId) ?? null
-  );
-  protected readonly studySessionList = computed(() =>
-    this.taskLists().find(l => l.id === this.studySession()?.listId) ?? null
-  );
-  protected readonly studyReadyTimers = computed(() =>
-    this.timers().filter(t => t.linkedTaskListId && this.taskLists().some(l => l.id === t.linkedTaskListId))
-  );
+  private readonly cardOrder = signal<Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'STICKER'; id: string }>>([]);
 
-  private readonly cardOrder = signal<Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST' | 'BOOKMARK_LIST'; id: string }>>([]);
+  // ── Free-form layout state ──
+  /** Per-card placement in pixel coordinates. */
+  private readonly layoutMap = signal<Map<string, CardLayout>>(new Map());
+  /** Current container width in px. */
+  private readonly containerWidth = signal<number>(LEGACY_DESKTOP_COLS * LEGACY_COL_WIDTH_PX);
+  /** Measured heights per card id (set by ResizeObserver). */
+  private readonly heightMap = signal<Map<string, number>>(new Map());
+  /** Grid container element ref for width measurement. Uses a setter so the
+   *  ResizeObserver attaches whenever the element enters the DOM (it is behind
+   *  an *ngIf, so it is not present on initial view init). */
+  protected gridContainerRef?: ElementRef<HTMLElement>;
+  @ViewChild('gridContainer') set gridContainerSetter(ref: ElementRef<HTMLElement> | undefined) {
+    this.gridContainerRef = ref;
+    this.attachResizeObserver();
+  }
+  private resizeObserver?: ResizeObserver;
+
+  /** True when the viewport is narrow enough to reflow to a single column. */
+  protected readonly isNarrow = computed(() => this.containerWidth() < NARROW_VIEWPORT_PX);
+
+  /** Drag state */
+  protected dragCardId: string | null = null;
+  /** Mouse X offset within the dragged card at drag start. */
+  private dragOffsetWithinCardX = 0;
+  /** Mouse Y offset within the dragged card at drag start. */
+  private dragOffsetWithinCardY = 0;
+
+  // Manual double-click tracking for stickers — native dblclick gets swallowed
+  // by the drag mousedown preventDefault chain, so we detect a rapid second
+  // mousedown on the same sticker and treat it as "delete me".
+  private lastStickerMouseDownAt = 0;
+  private lastStickerMouseDownId: string | null = null;
+  private static readonly DBL_CLICK_WINDOW_MS = 400;
+
+  /** Resize state */
+  private resizeCardId: string | null = null;
+  private resizeDir = 'se';
+  private resizeStartX = 0;
+  private resizeStartY = 0;
+  private resizeStartPosX = 0;
+  private resizeStartPosY = 0;
+  private resizeStartWidth = 0;
+  private resizeStartHeight = 0;
+  private resizeMinWidth = MIN_WIDGET_WIDTH;
+  private resizeMinHeight = MIN_WIDGET_HEIGHT;
 
   protected readonly orderedCards = computed((): LockerCard[] => {
     const lists = this.taskLists();
     const timers = this.timers();
     const notes = this.notes();
-    const bookmarkLists = this.bookmarkLists();
+    const stickers = this.stickers();
     const order = this.cardOrder();
     const listMap = new Map(lists.map(l => [l.id, l]));
     const timerMap = new Map(timers.map(t => [t.id, t]));
     const noteMap = new Map(notes.map(n => [n.id, n]));
-    const bookmarkMap = new Map(bookmarkLists.map(b => [b.id, b]));
+    const stickerMap = new Map(stickers.map(s => [s.id, s]));
     if (order.length === 0) {
       return [
         ...lists.map(l => ({ type: 'TASK_LIST' as const, data: l })),
-        ...timers.map(t => ({ type: 'TIMER' as const, data: t })),
+        ...timers.filter(t => !t.linkedTaskListId).map(t => ({ type: 'TIMER' as const, data: t })),
         ...notes.map(n => ({ type: 'NOTE' as const, data: n })),
-        ...bookmarkLists.map(b => ({ type: 'BOOKMARK_LIST' as const, data: b })),
+        ...stickers.map(s => ({ type: 'STICKER' as const, data: s })),
       ];
     }
     const result: LockerCard[] = [];
@@ -1725,39 +1076,61 @@ export class LockerComponent implements AfterViewInit, OnInit {
         if (list) result.push({ type: 'TASK_LIST', data: list });
       } else if (type === 'TIMER') {
         const timer = timerMap.get(id);
-        if (timer) result.push({ type: 'TIMER', data: timer });
+        // Linked timers are embedded inside their task list card — skip as standalone grid cards.
+        if (timer && !timer.linkedTaskListId) result.push({ type: 'TIMER', data: timer });
       } else if (type === 'NOTE') {
         const note = noteMap.get(id);
         if (note) result.push({ type: 'NOTE', data: note });
-      } else if (type === 'BOOKMARK_LIST') {
-        const bl = bookmarkMap.get(id);
-        if (bl) result.push({ type: 'BOOKMARK_LIST', data: bl });
+      } else if (type === 'STICKER') {
+        const sticker = stickerMap.get(id);
+        if (sticker) result.push({ type: 'STICKER', data: sticker });
       }
     });
     // Append newly created cards not yet in saved order
     lists.forEach(l => { if (!order.find(o => o.type === 'TASK_LIST' && o.id === l.id)) result.push({ type: 'TASK_LIST', data: l }); });
     timers.forEach(t => { if (!order.find(o => o.type === 'TIMER' && o.id === t.id)) result.push({ type: 'TIMER', data: t }); });
     notes.forEach(n => { if (!order.find(o => o.type === 'NOTE' && o.id === n.id)) result.push({ type: 'NOTE', data: n }); });
-    bookmarkLists.forEach(b => { if (!order.find(o => o.type === 'BOOKMARK_LIST' && o.id === b.id)) result.push({ type: 'BOOKMARK_LIST', data: b }); });
+    stickers.forEach(s => { if (!order.find(o => o.type === 'STICKER' && o.id === s.id)) result.push({ type: 'STICKER', data: s }); });
     return result;
   });
 
+  /** Widget cards (everything except stickers). Stickers live on their own grid layer. */
+  protected readonly widgetCards = computed((): LockerCard[] =>
+    this.orderedCards().filter(c => c.type !== 'STICKER')
+  );
+
+  /** Sticker cards. Rendered on a separate grid layer behind the widgets. */
+  protected readonly stickerCards = computed((): LockerCard[] =>
+    this.orderedCards().filter(c => c.type === 'STICKER')
+  );
+
   @ViewChildren('taskInput') private taskInputRefs!: QueryList<ElementRef<HTMLInputElement>>;
   @ViewChildren('editInput') private editInputRefs!: QueryList<ElementRef<HTMLInputElement>>;
+  @ViewChildren('widgetEl') private widgetElRefs!: QueryList<ElementRef<HTMLElement>>;
+  private widgetHeightObserver?: ResizeObserver;
+  private observedWidgets = new Set<HTMLElement>();
   private pendingFocusListId: string | null = null;
+
+  protected readonly earnedBadges = signal<EarnedBadge[]>([]);
+  protected readonly todayQuote = signal<Quote | null>(null);
 
   constructor(
     private readonly taskApi: TaskApiService,
     private readonly timerApi: TimerApiService,
     private readonly noteApi: NoteApiService,
-    private readonly bookmarkApi: BookmarkApiService,
+    private readonly shortcutApi: ShortcutApiService,
     private readonly stickerApi: StickerApiService,
     private readonly lockerLayoutApi: LockerLayoutApiService,
+    private readonly badgeApi: BadgeApiService,
+    private readonly badgeCelebration: BadgeCelebrationService,
+    private readonly quoteApi: QuoteApiService,
   ) {
     effect(() => { this.loadCards(); });
   }
 
   ngOnInit(): void {
+    this.quoteApi.getTodayQuote().subscribe({ next: q => this.todayQuote.set(q), error: () => {} });
+
     const shuffled = [...LOCKER_ITEM_POOL].sort(() => Math.random() - 0.5);
     this.lockerItems = LOCKER_ZONES.map((zone, i) => ({
       emoji: shuffled[i % shuffled.length],
@@ -1770,7 +1143,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
     // Apply saved locker font
     const savedFont = this.lockerFont();
     document.documentElement.style.setProperty('--locker-font', savedFont.family);
-    if (savedFont.googleFont) this.loadGoogleFont(savedFont);
+    if (savedFont.googleFont || savedFont.cssUrl) this.loadGoogleFont(savedFont);
 
     // Phase 1 (500ms pause) → Phase 2: dial spins (1300ms) → Phase 3: door swings open (900ms)
     setTimeout(() => {
@@ -1788,6 +1161,60 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.taskInputRefs.changes.subscribe(() => {
       if (this.pendingFocusListId) this.tryFocusTaskInput(this.pendingFocusListId);
     });
+    this.attachResizeObserver();
+
+    // Observe each widget element for height changes and keep heightMap in sync.
+    this.widgetHeightObserver = new ResizeObserver((entries) => {
+      let changed = false;
+      const updated = new Map(this.heightMap());
+      for (const entry of entries) {
+        const el = entry.target as HTMLElement;
+        const id = el.dataset['cardId'];
+        if (!id) continue;
+        const h = Math.round(entry.contentRect.height);
+        if (h > 0 && updated.get(id) !== h) {
+          updated.set(id, h);
+          changed = true;
+        }
+      }
+      if (changed) this.heightMap.set(updated);
+    });
+    const syncWidgetObservers = () => {
+      const current = new Set<HTMLElement>();
+      this.widgetElRefs.forEach((ref) => {
+        const el = ref.nativeElement;
+        current.add(el);
+        if (!this.observedWidgets.has(el)) {
+          this.widgetHeightObserver!.observe(el);
+          this.observedWidgets.add(el);
+        }
+      });
+      // Unobserve removed elements.
+      for (const el of this.observedWidgets) {
+        if (!current.has(el)) {
+          this.widgetHeightObserver!.unobserve(el);
+          this.observedWidgets.delete(el);
+        }
+      }
+    };
+    this.widgetElRefs.changes.subscribe(syncWidgetObservers);
+    syncWidgetObservers();
+  }
+
+  private attachResizeObserver(): void {
+    if (typeof ResizeObserver === 'undefined') return;
+    const el = this.gridContainerRef?.nativeElement;
+    if (!el) return;
+    // Avoid re-attaching to the same element.
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      if (width > 0) this.containerWidth.set(width);
+    });
+    this.resizeObserver.observe(el);
+    // Prime once immediately so we don't wait for a resize event.
+    const width = el.getBoundingClientRect().width;
+    if (width > 0) this.containerWidth.set(width);
   }
 
   protected setLockerColor(color: LockerColor): void {
@@ -1804,7 +1231,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.lockerFont.set(font);
     localStorage.setItem(LOCKER_FONT_KEY, font.id);
     this.fontPickerOpen = false;
-    if (font.googleFont) this.loadGoogleFont(font);
+    if (font.googleFont || font.cssUrl) this.loadGoogleFont(font);
     document.documentElement.style.setProperty('--locker-font', font.family);
   }
 
@@ -1813,21 +1240,68 @@ export class LockerComponent implements AfterViewInit, OnInit {
     return LOCKER_FONTS.find(f => f.id === saved) ?? LOCKER_FONTS[0];
   }
 
+  protected setLockerFontSize(size: LockerFontSize): void {
+    this.lockerFontSize.set(size);
+    localStorage.setItem(LOCKER_FONT_SIZE_KEY, size.id);
+  }
+
+  private loadLockerFontSize(): LockerFontSize {
+    const saved = localStorage.getItem(LOCKER_FONT_SIZE_KEY);
+    return LOCKER_FONT_SIZES.find(s => s.id === saved) ?? LOCKER_FONT_SIZES.find(s => s.id === 'medium')!;
+  }
+
   private loadGoogleFont(font: LockerFont): void {
-    const name = font.name.replace(/ /g, '+');
     const id = `gfont-${font.id}`;
-    if (!document.getElementById(id)) {
-      const link = document.createElement('link');
-      link.id = id;
-      link.rel = 'stylesheet';
+    if (document.getElementById(id)) return;
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    if (font.cssUrl) {
+      link.href = font.cssUrl;
+    } else {
+      const name = font.name.replace(/ /g, '+');
       link.href = `https://fonts.googleapis.com/css2?family=${name}&display=swap`;
-      document.head.appendChild(link);
     }
+    document.head.appendChild(link);
   }
 
   protected toggleFontPicker(): void {
     this.fontPickerOpen = !this.fontPickerOpen;
     this.colorPickerListId = null;
+    this.shortcutsPanelOpen = false;
+    this.quotePanelOpen = false;
+    this.badgeShelfOpen = false;
+    this.stickerDialogOpen = false;
+  }
+
+  protected toggleShortcutsPanel(): void {
+    this.shortcutsPanelOpen = !this.shortcutsPanelOpen;
+    this.fontPickerOpen = false;
+    this.badgeShelfOpen = false;
+    this.quotePanelOpen = false;
+    this.colorPickerListId = null;
+    this.timerMenuOpen = false;
+    this.stickerDialogOpen = false;
+  }
+
+  protected toggleQuotePanel(): void {
+    this.quotePanelOpen = !this.quotePanelOpen;
+    this.shortcutsPanelOpen = false;
+    this.fontPickerOpen = false;
+    this.badgeShelfOpen = false;
+    this.colorPickerListId = null;
+    this.timerMenuOpen = false;
+    this.stickerDialogOpen = false;
+  }
+
+  protected toggleBadgeShelf(): void {
+    this.badgeShelfOpen = !this.badgeShelfOpen;
+    this.shortcutsPanelOpen = false;
+    this.quotePanelOpen = false;
+    this.fontPickerOpen = false;
+    this.colorPickerListId = null;
+    this.timerMenuOpen = false;
+    this.stickerDialogOpen = false;
   }
 
   private loadCards(): void {
@@ -1835,15 +1309,104 @@ export class LockerComponent implements AfterViewInit, OnInit {
       this.taskApi.getTaskLists(),
       this.timerApi.getTimers(),
       this.noteApi.getNotes(),
-      this.bookmarkApi.getBookmarkLists(),
+      this.shortcutApi.getShortcuts(),
       this.stickerApi.getStickers(),
+      this.badgeApi.getEarnedBadges(),
+      this.lockerLayoutApi.getLayout(),
     ]).subscribe({
-      next: ([lists, timers, notes, bookmarkLists, stickers]) => {
+      next: ([lists, timers, notes, shortcuts, stickers, badges, layout]) => {
         this.taskLists.set(lists);
         this.timers.set(timers);
         this.notes.set(notes);
-        this.bookmarkLists.set(bookmarkLists);
+        this.shortcuts.set(shortcuts);
         this.stickers.set(stickers);
+        this.earnedBadges.set(badges);
+
+        // Apply saved layout into layoutMap and cardOrder.
+        // If items are missing pixel coords (legacy grid-based layout), backfill them.
+        if (layout.length > 0) {
+          const newMap = new Map<string, CardLayout>();
+          const newOrder: Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'STICKER'; id: string }> = [];
+
+          // Collect legacy data temporarily to compute pack positions.
+          const legacyItems: Array<{ id: string; col: number; colSpan: number; order: number; minimized: boolean; minHeight: number | null }> = [];
+          const needsFreeFormMigration = layout.some(item => item.width == null && item.cardType !== 'SHORTCUT');
+
+          layout.forEach((item) => {
+            if (item.cardType === 'SHORTCUT') return; // shortcuts no longer live in the grid
+
+            if (item.width != null) {
+              // Already free-form layout data.
+              newMap.set(item.cardId, {
+                posX: item.posX ?? 0,
+                posY: item.posY ?? 0,
+                width: item.width,
+                height: item.height ?? DEFAULT_WIDGET_HEIGHT,
+                order: item.order,
+                minimized: item.minimized,
+              });
+            } else {
+              // Legacy grid record — will be backfilled below.
+              let col = item.col;
+              let colSpan = item.colSpan;
+              const legacyVersion = Number(localStorage.getItem(GRID_VERSION_KEY) ?? 0);
+              if (legacyVersion < 2) {
+                // Old grid: 12 cols × 80px → new: 24 cols × 40px.
+                col = (col - 1) * 2 + 1;
+                colSpan = colSpan * 2;
+              }
+              if (item.cardType === 'STICKER') {
+                const w = colSpan * LEGACY_COL_WIDTH_PX - 16;
+                const h = item.minHeight ?? STICKER_DEFAULT_PX;
+                newMap.set(item.cardId, {
+                  posX: item.posX ?? (col - 1) * LEGACY_COL_WIDTH_PX,
+                  posY: item.posY ?? item.order * (STICKER_DEFAULT_PX + 16),
+                  width: Math.max(MIN_STICKER_SIZE, w),
+                  height: Math.max(MIN_STICKER_SIZE, h),
+                  order: item.order,
+                  minimized: item.minimized,
+                });
+              } else {
+                legacyItems.push({ id: item.cardId, col, colSpan, order: item.order, minimized: item.minimized, minHeight: item.minHeight ?? null });
+              }
+            }
+            newOrder.push({ type: item.cardType as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'STICKER', id: item.cardId });
+          });
+
+          // Pack legacy widget items using the grid engine and estimated heights.
+          if (legacyItems.length > 0) {
+            const packInput = legacyItems.map(li => ({
+              id: li.id,
+              col: li.col,
+              colSpan: li.colSpan,
+              order: li.order,
+              row: 0,
+              minimized: li.minimized,
+              height: li.minHeight ?? DEFAULT_WIDGET_HEIGHT,
+            }));
+            const packed = this.gridEngine.pack(packInput, LEGACY_DESKTOP_COLS, LEGACY_COL_WIDTH_PX);
+            packed.forEach(p => {
+              const li = legacyItems.find(l => l.id === p.id)!;
+              newMap.set(p.id, {
+                posX: (li.col - 1) * LEGACY_COL_WIDTH_PX,
+                posY: p.top,
+                width: Math.max(MIN_WIDGET_WIDTH, li.colSpan * LEGACY_COL_WIDTH_PX - 16),
+                height: Math.max(MIN_WIDGET_HEIGHT, li.minHeight ?? DEFAULT_WIDGET_HEIGHT),
+                order: li.order,
+                minimized: li.minimized,
+              });
+            });
+          }
+
+          this.layoutMap.set(newMap);
+          this.cardOrder.set(newOrder);
+          if (needsFreeFormMigration) {
+            localStorage.setItem(GRID_VERSION_KEY, String(GRID_VERSION));
+            this.saveLockerLayout();
+          }
+        } else {
+          localStorage.setItem(GRID_VERSION_KEY, String(GRID_VERSION));
+        }
       },
       error: () => { this.errorMessage = 'Could not load your locker. Please log in again.'; },
     });
@@ -1852,19 +1415,25 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected closeConfig(): void {
     this.colorPickerListId = null;
     this.fontPickerOpen = false;
+    this.shortcutsPanelOpen = false;
+    this.badgeShelfOpen = false;
     this.dueDatePopoverTaskId = null;
     this.dueDatePopoverListId = null;
+
+    this.timerMenuOpen = false;
   }
 
   protected createList(): void {
     if (this.atListLimit()) return;
     const existingTitles = this.taskLists().map(l => l.title);
-    const title = nextAutoName(existingTitles, 'To-dos');
+    const title = nextListName(existingTitles);
     const color = this.nextAvailableColor();
     this.taskApi.createList(title, color).subscribe({
       next: list => {
         this.taskLists.update(current => [...current, { ...list }]);
+        this.listEditModeOverrides[list.id] = true;
         this.errorMessage = '';
+        this.assignNewCardLayout(list.id, false, undefined, { posX: 0, posY: 0 });
         this.saveLockerLayout();
       },
       error: () => { this.errorMessage = 'Unable to add a list right now. Please try again or sign in again.'; },
@@ -1873,7 +1442,18 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   // --- Delete and Clean confirmation (new ConfirmDialogComponent-based) ---
   protected requestDelete(list: TaskList): void {
+    // Skip confirmation if the list is empty or every task is already completed.
+    if (this.isListTrivialToDelete(list)) {
+      this.deleteList(list);
+      return;
+    }
     this.confirmDeleteList = list;
+  }
+
+  /** A list is "trivial" (skip-confirm) when it has no tasks or all tasks are completed. */
+  private isListTrivialToDelete(list: TaskList): boolean {
+    const tasks = list.tasks ?? [];
+    return tasks.length === 0 || tasks.every(t => t.completed);
   }
 
   protected onConfirmDeleteList(): void {
@@ -1883,6 +1463,42 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   protected onCancelDeleteList(): void {
     this.confirmDeleteList = null;
+  }
+
+  // --- Unified delete from title bar close button ---
+  protected requestDeleteCard(card: LockerCard): void {
+    // Task lists with no items or all tasks completed can be deleted without confirmation.
+    if (card.type === 'TASK_LIST' && this.isListTrivialToDelete(card.data as TaskList)) {
+      this.deleteList(card.data as TaskList);
+      return;
+    }
+    // Empty notes need no confirmation.
+    if (card.type === 'NOTE' && !((card.data as Note).content?.trim())) {
+      this.onNoteDeleted(card.data.id);
+      return;
+    }
+    this.confirmDeleteCard = card;
+  }
+
+  protected onConfirmDeleteCard(): void {
+    const card = this.confirmDeleteCard;
+    if (!card) return;
+    this.confirmDeleteCard = null;
+
+    switch (card.type) {
+      case 'TASK_LIST':
+        this.deleteList(card.data as TaskList);
+        break;
+      case 'TIMER':
+        this.onTimerDeleted(card.data.id);
+        break;
+      case 'NOTE':
+        this.onNoteDeleted(card.data.id);
+        break;
+      case 'STICKER':
+        this.onStickerDeleted(card.data.id);
+        break;
+    }
   }
 
   protected onCancelClean(): void {
@@ -1903,7 +1519,6 @@ export class LockerComponent implements AfterViewInit, OnInit {
       this.colorPickerListId = list.id;
       this.colorOriginals = { ...this.colorOriginals, [list.id]: list.color };
       this.colorDrafts = { ...this.colorDrafts, [list.id]: list.color };
-      this.colorDraftTextColors = { ...this.colorDraftTextColors, [list.id]: list.textColor ?? null };
       this.fontPickerOpen = false;
     }
   }
@@ -1914,16 +1529,14 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.timers.update(current => current.map(t => t.linkedTaskListId === list.id ? { ...t, color } : t));
   }
 
-  protected onCardTextColorChange(list: TaskList, textColor: string | null): void {
-    this.colorDraftTextColors = { ...this.colorDraftTextColors, [list.id]: textColor };
-    this.taskLists.update(current => current.map(item => item.id === list.id ? { ...item, textColor } : item));
-    this.timers.update(current => current.map(t => t.linkedTaskListId === list.id ? { ...t, textColor } : t));
+  protected onCardColorCommit(list: TaskList, color: string): void {
+    this.onCardColorChange(list, color);
+    this.saveCardColor(list);
   }
 
   protected saveCardColor(list: TaskList): void {
     const color = this.colorDrafts[list.id] ?? list.color;
-    const textColor = this.colorDraftTextColors[list.id] ?? null;
-    this.taskApi.updateListColor(list.id, color, textColor).subscribe({
+    this.taskApi.updateListColor(list.id, color, null).subscribe({
       next: updated => {
         this.taskLists.update(current => current.map(item =>
           item.id === list.id ? { ...item, color: updated.color, textColor: updated.textColor } : item));
@@ -1942,6 +1555,15 @@ export class LockerComponent implements AfterViewInit, OnInit {
       },
     });
     this.colorPickerListId = null;
+  }
+
+  protected cancelCardColor(list: TaskList): void {
+    this.colorPickerListId = null;
+    const original = this.colorOriginals[list.id];
+    if (original && original !== (this.colorDrafts[list.id] ?? list.color)) {
+      this.taskLists.update(current => current.map(item => item.id === list.id ? { ...item, color: original } : item));
+      this.timers.update(current => current.map(t => t.linkedTaskListId === list.id ? { ...t, color: original } : t));
+    }
   }
 
   private cascadeColorToTimer(timer: Timer, color: string, textColor: string | null): void {
@@ -2026,24 +1648,432 @@ export class LockerComponent implements AfterViewInit, OnInit {
       ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   }
 
-  // --- Card-level drag-drop (grid reordering) ---
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected reorderCards(event: CdkDragDrop<any[]>): void {
-    const cards = [...this.orderedCards()];
-    moveItemInArray(cards, event.previousIndex, event.currentIndex);
-    const newOrder = cards.map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }));
-    this.cardOrder.set(newOrder);
-    this.saveLockerLayout(newOrder);
+  private saveLockerLayout(): void {
+    this.lockerLayoutApi.saveLayout(this.buildLayoutItems()).subscribe({ error: () => {} });
   }
 
-  private saveLockerLayout(order?: Array<{ type: 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST'; id: string }>): void {
-    const cards = order ?? this.orderedCards().map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }));
-    const items = cards.map(({ type, id }, index) => ({
-      cardType: type,
-      cardId: id,
-      sortOrder: index,
-    }));
-    this.lockerLayoutApi.saveLayout(items).subscribe({ error: () => {} });
+  private buildLayoutItems() {
+    const cards = this.orderedCards();
+    const layout = this.layoutMap();
+    const heightMap = this.heightMap();
+    return cards.map((card, index) => {
+      const id = card.data.id;
+      const pl = layout.get(id);
+      // For task lists (auto-height), persist the ResizeObserver measurement so
+      // shelfPack and future loads use the actual rendered height.
+      const height = card.type === 'TASK_LIST'
+        ? (heightMap.get(id) ?? pl?.height ?? null)
+        : (pl?.height ?? null);
+      return {
+        cardType: card.type,
+        cardId: id,
+        col: 1,
+        colSpan: 8,
+        order: pl?.order ?? index,
+        minimized: pl?.minimized ?? false,
+        posX: pl?.posX ?? null,
+        posY: pl?.posY ?? null,
+        minHeight: null,
+        width: pl?.width ?? null,
+        height,
+      };
+    });
+  }
+
+  // ── Free-form layout helpers ──
+
+  /** Return the layout for a card, or sensible defaults. */
+  private defaultLayout(): CardLayout {
+    return { posX: 0, posY: 0, width: DEFAULT_WIDGET_WIDTH, height: DEFAULT_WIDGET_HEIGHT, order: 0, minimized: false };
+  }
+
+  private getLayout(card: LockerCard): CardLayout {
+    return this.layoutMap().get(card.data.id) ?? this.defaultLayout();
+  }
+
+  /**
+   * Single-column reflow for narrow viewports. Only applies to widget cards —
+   * stickers stay at their saved pixel positions. Reads saved posY to preserve
+   * vertical order without mutating the persisted desktop layout.
+   */
+  private readonly singleColumnLayout = computed((): Map<string, CardLayout> | null => {
+    if (!this.isNarrow()) return null;
+    const cards = this.widgetCards(); // stickers excluded — they stay at saved positions
+    const layoutMap = this.layoutMap();
+    const heightMap = this.heightMap();
+    const containerWidth = this.containerWidth();
+    const w = Math.max(120, containerWidth - 32);
+    const result = new Map<string, CardLayout>();
+    const sorted = [...cards]
+      .map(c => ({ c, pl: layoutMap.get(c.data.id) }))
+      .sort((a, b) => (a.pl?.posY ?? 0) - (b.pl?.posY ?? 0));
+    let y = 16;
+    sorted.forEach(({ c, pl }) => {
+      const h = pl?.minimized
+        ? MINIMIZED_HEIGHT_PX
+        : (c.type === 'TASK_LIST'
+            ? (heightMap.get(c.data.id) ?? pl?.height ?? DEFAULT_WIDGET_HEIGHT)
+            : (pl?.height ?? DEFAULT_WIDGET_HEIGHT));
+      result.set(c.data.id, {
+        posX: 16,
+        posY: y,
+        width: w,
+        height: h,
+        order: pl?.order ?? 0,
+        minimized: pl?.minimized ?? false,
+      });
+      y += h + 16;
+    });
+    return result;
+  });
+
+  protected readonly gridHeight = computed(() => {
+    const cards = this.orderedCards();
+    const layoutMap = this.layoutMap();
+    const heightMap = this.heightMap();
+    if (cards.length === 0) return 400;
+    let max = 0;
+    cards.forEach(c => {
+      const pl = layoutMap.get(c.data.id);
+      if (!pl) return;
+      // For task lists, prefer the ResizeObserver measurement (auto-height widget).
+      const h = pl.minimized
+        ? MINIMIZED_HEIGHT_PX
+        : (heightMap.get(c.data.id) ?? pl.height);
+      max = Math.max(max, pl.posY + h + 80);
+    });
+    return max;
+  });
+
+  protected getCardTop(card: LockerCard): number {
+    const id = card.data.id;
+    return this.singleColumnLayout()?.get(id)?.posY ?? this.layoutMap().get(id)?.posY ?? 0;
+  }
+
+  protected getCardLeft(card: LockerCard): string {
+    const id = card.data.id;
+    const posX = this.singleColumnLayout()?.get(id)?.posX ?? this.layoutMap().get(id)?.posX ?? 0;
+    return `${posX}px`;
+  }
+
+  protected getCardWidth(card: LockerCard): string {
+    const id = card.data.id;
+    const w = this.singleColumnLayout()?.get(id)?.width ?? this.layoutMap().get(id)?.width ?? DEFAULT_WIDGET_WIDTH;
+    return `${w}px`;
+  }
+
+  protected getCardHeight(card: LockerCard): number | null {
+    const layout = this.layoutMap().get(card.data.id);
+    if (layout?.minimized) return MINIMIZED_HEIGHT_PX;
+    // Task lists grow to fit their content (auto-height). The height is tracked
+    // via ResizeObserver and saved to DB for use by shelfPack, but is not applied
+    // as an inline style so the widget expands naturally and the list scrolls internally.
+    if (card.type === 'TASK_LIST') return null;
+    // Stickers always need an explicit height so both dimensions are independently resizable.
+    if (card.type === 'STICKER') return layout?.height ?? STICKER_DEFAULT_PX;
+    return layout?.height ?? null;
+  }
+
+  /** The widgets currently held in the foreground via geometry-based hover detection. Stickers never set this. */
+  protected readonly hoveredWidgetIds = signal<Set<string>>(new Set());
+  protected readonly emptySet: Set<string> = new Set();
+
+  /**
+   * Geometry-based hover detection. Tests cursor position against each widget's
+   * saved bounds instead of relying on pointer-events, which cause feedback loops
+   * when z-index changes re-route pointer targets mid-hover.
+   */
+  protected onGridMouseMove(event: MouseEvent): void {
+    if (this.dragCardId !== null) return; // drag system owns z-order during drag
+    const container = this.gridContainerRef?.nativeElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const cx = event.clientX - rect.left;
+    const cy = event.clientY - rect.top;
+    const widgets = this.widgetCards();
+    const layoutMap = this.layoutMap();
+    const heightMap = this.heightMap();
+    const hits = new Set<string>();
+    for (const card of widgets) {
+      const pl = layoutMap.get(card.data.id);
+      if (!pl) continue;
+      const w = pl.width ?? DEFAULT_WIDGET_WIDTH;
+      const h = pl.minimized ? MINIMIZED_HEIGHT_PX : (pl.height ?? heightMap.get(card.data.id) ?? DEFAULT_WIDGET_HEIGHT);
+      if (cx >= pl.posX && cx <= pl.posX + w && cy >= pl.posY && cy <= pl.posY + h) {
+        hits.add(card.data.id);
+      }
+    }
+    // Only update the signal if the set contents changed (avoid spurious re-renders).
+    const prev = this.hoveredWidgetIds();
+    if (hits.size !== prev.size || [...hits].some(id => !prev.has(id))) {
+      this.hoveredWidgetIds.set(hits);
+    }
+  }
+
+  protected getCardZIndex(card: LockerCard): number {
+    const base = this.layoutMap().get(card.data.id)?.order ?? 0;
+    if (card.type !== 'STICKER' && this.hoveredWidgetIds().has(card.data.id)) return 50 + base;
+    return base;
+  }
+
+  protected getWidgetFontSize(card: LockerCard): string {
+    const layout = this.layoutMap().get(card.data.id);
+    const width = layout?.width ?? DEFAULT_WIDGET_WIDTH;
+    // Scale font size with widget width. Clamp between 0.75rem and 1.35rem.
+    const scale = Math.max(0.75, Math.min(1.35, width / DEFAULT_WIDGET_WIDTH));
+    return `${scale.toFixed(3)}rem`;
+  }
+
+  protected getCardColor(card: LockerCard): string {
+    if (card.type === 'TASK_LIST') return (card.data as TaskList).color || '#fffef8';
+    if (card.type === 'TIMER') return (card.data as Timer).color || '#fffef8';
+    if (card.type === 'NOTE') return (card.data as Note).color || '#fffef8';
+    if (card.type === 'STICKER') return 'transparent';
+    return '#fffef8';
+  }
+
+  protected getCardTitle(card: LockerCard): string {
+    const title = (card.data as { title: string }).title ?? '';
+    return card.type === 'TASK_LIST' ? `To-do: ${title}` : title;
+  }
+
+  protected isCardMinimized(card: LockerCard): boolean {
+    return this.layoutMap().get(card.data.id)?.minimized ?? false;
+  }
+
+  protected toggleMinimize(card: LockerCard): void {
+    const id = card.data.id;
+    const current = this.layoutMap().get(id) ?? this.defaultLayout();
+    const updated = new Map(this.layoutMap());
+    updated.set(id, { ...current, minimized: !current.minimized });
+    this.layoutMap.set(updated);
+    this.saveLockerLayout();
+  }
+
+  // ── Drag-and-drop (free placement) ──
+
+  protected onDragStart(event: MouseEvent, card: LockerCard): void {
+    // Don't initiate drag if the click was on a button or input.
+    if ((event.target as HTMLElement).closest('button, input, a, textarea')) return;
+    const isSticker = card.type === 'STICKER';
+    // Stickers are only draggable when sticker edit mode is active.
+    if (isSticker && !this.stickerDialogOpen) return;
+    // Non-sticker widgets only drag from their title bar.
+    if (!isSticker && !(event.target as HTMLElement).closest('app-widget-title-bar')) return;
+
+    // Sticker double-click → delete (only in sticker edit mode, checked above).
+    if (isSticker) {
+      const now = Date.now();
+      if (
+        this.lastStickerMouseDownId === card.data.id &&
+        now - this.lastStickerMouseDownAt < LockerComponent.DBL_CLICK_WINDOW_MS
+      ) {
+        this.lastStickerMouseDownAt = 0;
+        this.lastStickerMouseDownId = null;
+        this.dragCardId = null;
+        this.onStickerDeleted(card.data.id);
+        event.preventDefault();
+        return;
+      }
+      this.lastStickerMouseDownAt = now;
+      this.lastStickerMouseDownId = card.data.id;
+    }
+
+    const container = this.gridContainerRef?.nativeElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const id = card.data.id;
+    const layout = this.layoutMap().get(id) ?? this.defaultLayout();
+
+    this.dragCardId = id;
+    this.dragOffsetWithinCardX = event.clientX - rect.left - layout.posX;
+    this.dragOffsetWithinCardY = event.clientY - rect.top - layout.posY;
+
+    // Bring dragged card to the top of the z-order.
+    const maxOrder = Math.max(0, ...Array.from(this.layoutMap().values()).map(l => l.order));
+    if (layout.order <= maxOrder) {
+      const updated = new Map(this.layoutMap());
+      updated.set(id, { ...layout, order: maxOrder + 1 });
+      this.layoutMap.set(updated);
+    }
+
+    event.preventDefault();
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(event: MouseEvent): void {
+    this.handleDragMove(event);
+    this.handleResizeMove(event);
+  }
+
+  private handleDragMove(event: MouseEvent): void {
+    if (!this.dragCardId || !this.gridContainerRef?.nativeElement) return;
+    const container = this.gridContainerRef.nativeElement;
+    const rect = container.getBoundingClientRect();
+    const id = this.dragCardId;
+    const current = this.layoutMap().get(id) ?? this.defaultLayout();
+
+    const snap = (v: number) => Math.round(v / GRID_SNAP_PX) * GRID_SNAP_PX;
+    const newPosX = Math.max(0, snap(event.clientX - rect.left - this.dragOffsetWithinCardX));
+    const newPosY = Math.max(0, snap(event.clientY - rect.top - this.dragOffsetWithinCardY));
+
+    if (newPosX !== current.posX || newPosY !== current.posY) {
+      const updated = new Map(this.layoutMap());
+      updated.set(id, { ...current, posX: newPosX, posY: newPosY });
+      this.layoutMap.set(updated);
+    }
+  }
+
+  @HostListener('document:mouseup')
+  onMouseUp(): void {
+    if (this.dragCardId) {
+      this.dragCardId = null;
+      this.saveLockerLayout();
+    }
+    if (this.resizeCardId) {
+      this.resizeCardId = null;
+      this.saveLockerLayout();
+    }
+  }
+
+  // ── Resize (all sides + corners) ──
+
+  /** Unified resize handler for all card types. */
+  protected onResizeStart(event: MouseEvent, card: LockerCard, dir: string): void {
+    event.stopPropagation();
+    event.preventDefault();
+    const isSticker = card.type === 'STICKER';
+    this.resizeCardId = card.data.id;
+    this.resizeDir = dir;
+    this.resizeStartX = event.clientX;
+    this.resizeStartY = event.clientY;
+    const layout = this.getLayout(card);
+    this.resizeStartPosX = layout.posX;
+    this.resizeStartPosY = layout.posY;
+    this.resizeStartWidth = layout.width;
+    // For cards with no explicit height (auto-sized), read the rendered height from the DOM
+    // so the resize starts from the actual visible size rather than 0.
+    if (layout.height != null) {
+      this.resizeStartHeight = layout.height;
+    } else {
+      const el = this.widgetElRefs.find(r => r.nativeElement.dataset['cardId'] === card.data.id)?.nativeElement;
+      this.resizeStartHeight = el ? el.getBoundingClientRect().height : DEFAULT_WIDGET_HEIGHT;
+    }
+    this.resizeMinWidth = isSticker ? MIN_STICKER_SIZE : MIN_WIDGET_WIDTH;
+    this.resizeMinHeight = isSticker ? MIN_STICKER_SIZE : MIN_WIDGET_HEIGHT;
+  }
+
+  private handleResizeMove(event: MouseEvent): void {
+    if (!this.resizeCardId) return;
+    const dx = event.clientX - this.resizeStartX;
+    const dy = event.clientY - this.resizeStartY;
+    const id = this.resizeCardId;
+    const updated = new Map(this.layoutMap());
+    const current = updated.get(id) ?? this.defaultLayout();
+    const snap = (v: number) => Math.round(v / GRID_SNAP_PX) * GRID_SNAP_PX;
+    const dir = this.resizeDir;
+
+    let newPosX = current.posX;
+    let newPosY = current.posY;
+    let newWidth = current.width;
+    let newHeight = current.height;
+
+    // East: grow/shrink right edge.
+    if (dir.includes('e')) {
+      newWidth = Math.max(this.resizeMinWidth, snap(this.resizeStartWidth + dx));
+    }
+    // West: move left edge, adjust width inversely.
+    if (dir.includes('w')) {
+      const clampedW = Math.max(this.resizeMinWidth, snap(this.resizeStartWidth - dx));
+      const delta = this.resizeStartWidth - clampedW;
+      newWidth = clampedW;
+      newPosX = Math.max(0, snap(this.resizeStartPosX + delta));
+    }
+    // South: grow/shrink bottom edge.
+    if (dir.includes('s')) {
+      newHeight = Math.max(this.resizeMinHeight, snap(this.resizeStartHeight + dy));
+    }
+    // North: move top edge, adjust height inversely.
+    if (dir.includes('n')) {
+      const clampedH = Math.max(this.resizeMinHeight, snap(this.resizeStartHeight - dy));
+      const delta = this.resizeStartHeight - clampedH;
+      newHeight = clampedH;
+      newPosY = Math.max(0, snap(this.resizeStartPosY + delta));
+    }
+
+    updated.set(id, { ...current, posX: newPosX, posY: newPosY, width: newWidth, height: newHeight });
+    this.layoutMap.set(updated);
+  }
+
+  /** Assign a layout entry for a newly created card. */
+  private assignNewCardLayout(
+    cardId: string,
+    isSticker = false,
+    dropCoords?: { posX: number; posY: number },
+    posOverride?: { posX: number; posY: number },
+  ): void {
+    const maxOrder = Math.max(0, ...Array.from(this.layoutMap().values()).map(l => l.order)) + 1;
+    const updated = new Map(this.layoutMap());
+
+    if (isSticker) {
+      let posX = dropCoords?.posX ?? 0;
+      let posY = dropCoords?.posY ?? 0;
+      if (!dropCoords) {
+        const existing = this.stickerCards().length;
+        posX = (existing % 6) * STICKER_DEFAULT_PX;
+        posY = Math.floor(existing / 6) * STICKER_DEFAULT_PX;
+      }
+      updated.set(cardId, {
+        posX, posY,
+        width: STICKER_DEFAULT_PX,
+        height: STICKER_DEFAULT_PX,
+        order: maxOrder,
+        minimized: false,
+      });
+    } else {
+      // Place new widget below the lowest existing widget, unless a position is specified.
+      const layouts = Array.from(updated.values());
+      let posX = posOverride?.posX ?? 16;
+      let posY = posOverride?.posY ?? 16;
+      if (posOverride == null && layouts.length > 0) {
+        const maxBottom = Math.max(...layouts.map(l => l.posY + l.height + 16));
+        posY = maxBottom;
+      }
+      updated.set(cardId, {
+        posX, posY,
+        width: DEFAULT_WIDGET_WIDTH,
+        height: DEFAULT_WIDGET_HEIGHT,
+        order: maxOrder,
+        minimized: false,
+      });
+    }
+    this.layoutMap.set(updated);
+  }
+
+  /** Shelf-pack all widgets into a compact layout. */
+  protected autoArrange(): void {
+    const widgets = this.widgetCards();
+    const layoutMap = this.layoutMap();
+    const heightMap = this.heightMap();
+    const containerWidth = this.containerWidth();
+
+    const items: FreeItem[] = widgets.map(c => {
+      const pl = layoutMap.get(c.data.id) ?? this.defaultLayout();
+      // For task lists (auto-height), use the ResizeObserver measurement.
+      const h = c.type === 'TASK_LIST'
+        ? (heightMap.get(c.data.id) ?? pl.height)
+        : pl.height;
+      return { id: c.data.id, posX: pl.posX, posY: pl.posY, width: pl.width, height: h };
+    });
+
+    const packed = this.gridEngine.shelfPack(items, Math.max(300, containerWidth - 32));
+    const updated = new Map(layoutMap);
+    packed.forEach(p => {
+      const current = updated.get(p.id) ?? this.defaultLayout();
+      updated.set(p.id, { ...current, posX: p.posX, posY: p.posY });
+    });
+    this.layoutMap.set(updated);
+    this.saveLockerLayout();
   }
 
   protected deleteList(list: TaskList): void {
@@ -2053,14 +2083,15 @@ export class LockerComponent implements AfterViewInit, OnInit {
   }
 
   protected addTask(list: TaskList): void {
-    const draft = this.taskDrafts[list.id]?.trim();
-    if (!draft) return;
-    this.taskApi.addTask(list.id, draft).subscribe(task => {
+    const raw = this.taskDrafts[list.id]?.trim();
+    if (!raw) return;
+    this.taskApi.addTask(list.id, raw).subscribe(task => {
       this.taskLists.update(current => current.map(item => item.id === list.id ? { ...item, tasks: [...item.tasks, task] } : item));
       this.taskDrafts = { ...this.taskDrafts, [list.id]: '' };
       this.focusTaskInput(list.id);
     });
   }
+
 
   protected toggleTask(list: TaskList, task: TaskItem, completed: boolean): void {
     this.taskApi.updateTask(list.id, task.id, { completed }).subscribe(updated => {
@@ -2071,6 +2102,10 @@ export class LockerComponent implements AfterViewInit, OnInit {
             : item
         )
       );
+      if (updated.earnedBadge) {
+        this.earnedBadges.update(current => [...current, updated.earnedBadge!]);
+        this.badgeCelebration.notify(updated.earnedBadge);
+      }
     });
   }
 
@@ -2098,9 +2133,50 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   protected isEditing(taskId: string): boolean { return this.editingTaskIds.has(taskId); }
 
+  /** True when a list is in edit mode — either explicitly toggled on, or by default when empty. */
+  protected isListEditMode(list: TaskList): boolean {
+    const override = this.listEditModeOverrides[list.id];
+    if (override !== undefined) return override;
+    return list.tasks.length === 0;
+  }
+
+  protected enterListEditMode(list: TaskList): void {
+    this.listEditModeOverrides[list.id] = true;
+    setTimeout(() => this.tryFocusTaskInput(list.id));
+  }
+
+  protected commitListEditMode(list: TaskList): void {
+    this.listEditModeOverrides[list.id] = false;
+    // Close any in-flight row edits, color picker, or due-date popovers for this list.
+    list.tasks.forEach(t => this.editingTaskIds.delete(t.id));
+    if (this.colorPickerListId === list.id) this.colorPickerListId = null;
+    if (this.dueDatePopoverListId === list.id) {
+      this.dueDatePopoverListId = null;
+      this.dueDatePopoverTaskId = null;
+    }
+  }
+
+  protected onListKeydown(event: KeyboardEvent, list: TaskList): void {
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+    if (event.key === 'e') {
+      event.preventDefault();
+      this.isListEditMode(list) ? this.commitListEditMode(list) : this.enterListEditMode(list);
+    } else if (event.key === 't') {
+      event.preventDefault();
+      this.launchTimerFromList(list);
+    }
+  }
+
   protected requestClean(list: TaskList): void {
     if (list.tasks.every(task => !task.completed)) return;
     this.confirmCleanList = list;
+  }
+
+  protected onAddInputEnter(event: Event, list: TaskList): void {
+    if (this.taskDrafts[list.id]?.trim()) return; // has content — let form submit handle it
+    event.preventDefault();
+    this.commitListEditMode(list);
   }
 
   protected startEdit(task: TaskItem): void {
@@ -2180,8 +2256,11 @@ export class LockerComponent implements AfterViewInit, OnInit {
   protected asNote(card: LockerCard): Note | null {
     return card.type === 'NOTE' ? (card.data as Note) : null;
   }
-  protected asBookmarkList(card: LockerCard): BookmarkList | null {
-    return card.type === 'BOOKMARK_LIST' ? (card.data as BookmarkList) : null;
+  protected asSticker(card: LockerCard): Sticker | null {
+    return card.type === 'STICKER' ? (card.data as Sticker) : null;
+  }
+  protected asTimer(card: LockerCard): Timer | null {
+    return card.type === 'TIMER' ? (card.data as Timer) : null;
   }
 
   // --- Timer launch from task list ---
@@ -2203,6 +2282,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
         this.timers.update(current => [...current, timer]);
         this.errorMessage = '';
         this.insertTimerAfterList(timer.id, list.id);
+        this.assignNewCardLayout(timer.id, false, undefined, { posX: 0, posY: 0 });
         this.saveLockerLayout();
         setTimeout(() => this.scrollToTimer(timer.id), 80);
       },
@@ -2212,7 +2292,7 @@ export class LockerComponent implements AfterViewInit, OnInit {
 
   private insertTimerAfterList(timerId: string, listId: string): void {
     const current = this.orderedCards()
-      .map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'BOOKMARK_LIST', id: c.data.id }))
+      .map(c => ({ type: c.type as 'TASK_LIST' | 'TIMER' | 'NOTE' | 'STICKER', id: c.data.id }))
       .filter(o => !(o.type === 'TIMER' && o.id === timerId));
     const listIdx = current.findIndex(o => o.type === 'TASK_LIST' && o.id === listId);
     if (listIdx !== -1) {
@@ -2223,38 +2303,102 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.cardOrder.set(current);
   }
 
-  private scrollToTimer(timerId: string): void {
-    const el = document.getElementById('timer-' + timerId);
+  private scrollToElement(elementId: string, flashClass: string): void {
+    const el = document.getElementById(elementId);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      el.classList.add('timer-flash');
-      setTimeout(() => el.classList.remove('timer-flash'), 900);
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add(flashClass);
+      setTimeout(() => el.classList.remove(flashClass), 900);
     }
   }
 
+  private scrollToTimer(timerId: string): void {
+    this.scrollToElement('timer-' + timerId, 'timer-flash');
+  }
+
+  protected scrollToLinkedList(timer: Timer): void {
+    if (!timer.linkedTaskListId) return;
+    this.scrollToElement('task-list-' + timer.linkedTaskListId, 'list-flash');
+  }
+
   // --- Timer CRUD ---
-  protected createTimer(): void {
+  protected toggleTimerMenu(): void {
     if (this.atTimerLimit()) return;
+    this.timerMenuOpen = !this.timerMenuOpen;
+
+    this.shortcutsPanelOpen = false;
+  }
+
+  protected createTimer(timerType: 'POMODORO' | 'BASIC' = 'POMODORO'): void {
+    this.timerMenuOpen = false;
+    if (this.atTimerLimit()) return;
+    if (timerType === 'BASIC' && this.hasIndependentBasicTimer()) return;
+    if (timerType === 'POMODORO' && this.hasIndependentPomodoro()) return;
     const existingTitles = this.timers().map(t => t.title);
-    const title = nextAutoName(existingTitles, 'Timer');
-    const color = this.nextAvailableColor();
-    this.timerApi.createTimer({ title, color }).subscribe({
+    const baseName = timerType === 'BASIC' ? 'Timer' : 'Pomodoro Timer';
+    const title = nextAutoName(existingTitles, baseName);
+    const savedColor = localStorage.getItem('hsht_timerColorDefault');
+    const color = savedColor ?? this.nextAvailableColor();
+    const req: CreateTimerRequest = { title, color, timerType };
+    let hasDefaults = false;
+    if (timerType === 'BASIC') {
+      const saved = localStorage.getItem('hsht_basicTimerDefault');
+      if (saved) { req.basicDurationSeconds = parseInt(saved, 10); hasDefaults = true; }
+    } else {
+      const saved = localStorage.getItem('hsht_pomodoroDefault');
+      if (saved) {
+        try {
+          const d = JSON.parse(saved);
+          req.focusDuration = d.focusDuration;
+          req.shortBreakDuration = d.shortBreakDuration;
+          req.longBreakDuration = d.longBreakDuration;
+          req.sessionsBeforeLongBreak = d.sessionsBeforeLongBreak;
+          req.presetName = d.presetName;
+          hasDefaults = true;
+        } catch { /* ignore corrupt data */ }
+      }
+    }
+    this.timerApi.createTimer(req).subscribe({
       next: timer => {
         this.timers.update(current => [...current, timer]);
         this.errorMessage = '';
+        this.assignNewCardLayout(timer.id, false, undefined, { posX: 0, posY: 0 });
         this.saveLockerLayout();
+        setTimeout(() => this.scrollToTimer(timer.id), 80);
+        // Only open config mode if no saved defaults — otherwise the timer is ready to use.
+        if (!hasDefaults) {
+          this.timerIdsAwaitingConfig.update(set => {
+            const next = new Set(set);
+            next.add(timer.id);
+            return next;
+          });
+        }
       },
       error: () => { this.errorMessage = 'Unable to create a timer right now. Please try again.'; },
     });
   }
 
-  protected onTimerUpdated(updated: Timer): void {
+  protected shouldStartTimerInConfig(timerId: string): boolean {
+    return this.timerIdsAwaitingConfig().has(timerId);
+  }
+
+  protected clearTimerConfigFlag(timerId: string): void {
+    if (!this.timerIdsAwaitingConfig().has(timerId)) return;
+    this.timerIdsAwaitingConfig.update(set => {
+      const next = new Set(set);
+      next.delete(timerId);
+      return next;
+    });
+  }
+
+  protected onTimerUpdated(updated: UpdateTimerResponse): void {
     const prev = this.timers().find(t => t.id === updated.id);
     this.timers.update(current => current.map(t => t.id === updated.id ? updated : t));
-    if (updated.linkedTaskListId && prev?.linkedTaskListId !== updated.linkedTaskListId) {
-      this.insertTimerAfterList(updated.id, updated.linkedTaskListId);
-      this.saveLockerLayout();
+    if (updated.earnedBadge) {
+      this.earnedBadges.update(current => [...current, updated.earnedBadge!]);
+      this.badgeCelebration.notify(updated.earnedBadge);
     }
+    // Linked timers are embedded inside their task list — no standalone grid card needed.
     // Cascade color to linked list if color changed
     if (updated.linkedTaskListId && prev?.color !== updated.color) {
       const linkedList = this.taskLists().find(l => l.id === updated.linkedTaskListId);
@@ -2275,16 +2419,21 @@ export class LockerComponent implements AfterViewInit, OnInit {
   }
 
   // --- Note CRUD ---
-  protected createNote(): void {
+  protected createNote(noteType: NoteType = 'REGULAR'): void {
     if (this.atNoteLimit()) return;
     const existingTitles = this.notes().map(n => n.title);
     const title = nextAutoName(existingTitles, 'Note');
     const color = this.nextAvailableColor();
-    this.noteApi.createNote({ title, color }).subscribe({
+    this.noteApi.createNote({ title, color, noteType }).subscribe({
       next: note => {
         this.notes.update(current => [...current, note]);
         this.errorMessage = '';
+        this.assignNewCardLayout(note.id, false, undefined, { posX: 0, posY: 0 });
         this.saveLockerLayout();
+        if (note.earnedBadge) {
+          this.earnedBadges.update(current => [...current, note.earnedBadge!]);
+          this.badgeCelebration.notify(note.earnedBadge);
+        }
       },
       error: () => { this.errorMessage = 'Unable to create a note right now. Please try again.'; },
     });
@@ -2300,30 +2449,196 @@ export class LockerComponent implements AfterViewInit, OnInit {
     this.saveLockerLayout();
   }
 
-  // --- Bookmark List CRUD ---
-  protected createBookmarkList(): void {
-    if (this.atBookmarkListLimit()) return;
-    const existingTitles = this.bookmarkLists().map(l => l.title);
-    const title = nextAutoName(existingTitles, 'Bookmarks');
-    const color = this.nextAvailableColor();
-    this.bookmarkApi.createBookmarkList({ title, color }).subscribe({
-      next: list => {
-        this.bookmarkLists.update(current => [...current, list]);
-        this.errorMessage = '';
-        this.saveLockerLayout();
+  // --- Shortcut CRUD ---
+  protected openAddShortcutDialog(): void {
+    if (this.atShortcutLimit()) return;
+    this.editingShortcut = null;
+    this.shortcutUrlDraft = '';
+    this.shortcutNameDraft = '';
+    this.shortcutFaviconPreview = null;
+    this.shortcutIconType = 'favicon';
+    this.shortcutEmojiDraft = '';
+    this.shortcutDialogOpen = true;
+  }
+
+  protected closeShortcutDialog(): void {
+    this.shortcutDialogOpen = false;
+    this.editingShortcut = null;
+    this.shortcutMetadataFetching = false;
+  }
+
+  protected onShortcutDialogEnter(event: KeyboardEvent): void {
+    // Don't save while the emoji picker is open (user may be navigating it)
+    if (this.shortcutIconType === 'emoji' && !this.shortcutEmojiDraft) return;
+    event.preventDefault();
+    this.saveShortcut();
+  }
+
+  private normalizeShortcutUrl(raw: string): string {
+    const trimmed = raw.trim();
+    if (!trimmed) return trimmed;
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  }
+
+  /** Derives the favicon URL synchronously from the domain using Google's public favicon service. */
+  /** Returns a hardcoded icon for known brands (e.g. Gmail), or null. */
+  private knownFaviconOverride(url: string): string | null {
+    try {
+      const { hostname } = new URL(url);
+      return KNOWN_FAVICONS[hostname.toLowerCase()] ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  private faviconUrlForDomain(url: string): string {
+    const override = this.knownFaviconOverride(url);
+    if (override) return override;
+    try {
+      const { origin } = new URL(url);
+      return `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(origin)}`;
+    } catch {
+      return `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(url)}`;
+    }
+  }
+
+  protected onShortcutUrlBlur(): void {
+    const url = this.normalizeShortcutUrl(this.shortcutUrlDraft);
+    if (!url) return;
+    this.shortcutUrlDraft = url;
+    // Set a preliminary favicon immediately from the entered domain.
+    this.shortcutFaviconPreview = this.faviconUrlForDomain(url);
+    this.shortcutFaviconCorrected = false;
+    // Fetch metadata; backend returns favicon from the *final* redirected domain.
+    this.fetchShortcutMetadata(url);
+  }
+
+  /** Fetches page title and the authoritative (post-redirect) favicon from the backend. */
+  private fetchShortcutMetadata(url: string, then?: () => void): void {
+    this.shortcutMetadataFetching = true;
+    this.shortcutApi.getMetadata(url).subscribe({
+      next: meta => {
+        this.shortcutMetadataFetching = false;
+        if (!this.shortcutNameDraft.trim()) this.shortcutNameDraft = meta.title;
+        // Prefer hardcoded overrides for known brands (e.g. Gmail); otherwise
+        // trust the backend's URL (computed from the final redirected domain).
+        if (this.shortcutIconType === 'favicon') {
+          this.shortcutFaviconPreview = this.knownFaviconOverride(url) ?? meta.faviconUrl;
+        }
+        this.shortcutFaviconCorrected = true;
+        then?.();
       },
-      error: () => { this.errorMessage = 'Unable to create a bookmark list right now. Please try again.'; },
+      error: () => { this.shortcutMetadataFetching = false; then?.(); },
     });
   }
 
-  protected onBookmarkListUpdated(updated: BookmarkList): void {
-    this.bookmarkLists.update(current => current.map(l => l.id === updated.id ? updated : l));
+  protected refetchShortcutMetadata(): void {
+    const url = this.normalizeShortcutUrl(this.shortcutUrlDraft);
+    if (!url) return;
+    this.shortcutUrlDraft = url;
+    // Reset to preliminary favicon while fetching.
+    this.shortcutFaviconPreview = this.faviconUrlForDomain(url);
+    this.shortcutFaviconCorrected = false;
+    // Re-fetch metadata.
+    this.shortcutMetadataFetching = true;
+    this.shortcutApi.getMetadata(url).subscribe({
+      next: meta => {
+        this.shortcutMetadataFetching = false;
+        this.shortcutNameDraft = meta.title;
+        if (this.shortcutIconType === 'favicon') {
+          this.shortcutFaviconPreview = this.knownFaviconOverride(url) ?? meta.faviconUrl;
+        }
+        this.shortcutFaviconCorrected = true;
+      },
+      error: () => { this.shortcutMetadataFetching = false; },
+    });
   }
 
-  protected onBookmarkListDeleted(listId: string): void {
-    this.bookmarkLists.update(current => current.filter(l => l.id !== listId));
-    this.cardOrder.update(order => order.filter(o => !(o.type === 'BOOKMARK_LIST' && o.id === listId)));
-    this.saveLockerLayout();
+  protected saveShortcut(): void {
+    const url = this.normalizeShortcutUrl(this.shortcutUrlDraft);
+    if (!url) return;
+    this.shortcutUrlDraft = url;
+
+    // Ensure a preliminary favicon is always set synchronously.
+    if (!this.shortcutFaviconPreview && this.shortcutIconType === 'favicon') {
+      this.shortcutFaviconPreview = this.faviconUrlForDomain(url);
+    }
+
+    // Wait for metadata if: title is missing, OR the favicon hasn't been corrected yet
+    // (backend uses the final redirected domain, e.g. gmail.com → mail.google.com).
+    if (!this.shortcutNameDraft.trim() || !this.shortcutFaviconCorrected) {
+      this.fetchShortcutMetadata(url, () => this.doSaveShortcut(url));
+      return;
+    }
+    this.doSaveShortcut(url);
+  }
+
+  private doSaveShortcut(url: string): void {
+    const name = this.shortcutNameDraft.trim() || undefined;
+    const emoji = this.shortcutIconType === 'emoji' ? this.shortcutEmojiDraft.trim() || undefined : undefined;
+    const faviconUrl = this.shortcutIconType === 'favicon' ? this.shortcutFaviconPreview || undefined : undefined;
+
+    if (this.editingShortcut) {
+      const shortcutName = name || this.editingShortcut.name;
+      this.shortcutApi.updateShortcut(this.editingShortcut.id, {
+        url,
+        name: shortcutName,
+        faviconUrl: faviconUrl ?? null,
+        emoji: emoji ?? null,
+      }).subscribe({
+        next: updated => {
+          this.shortcuts.update(current => current.map(s => s.id === updated.id ? updated : s));
+          this.closeShortcutDialog();
+        },
+        error: () => { this.errorMessage = 'Unable to update shortcut. Please try again.'; },
+      });
+    } else {
+      this.shortcutApi.createShortcut({ url, name, faviconUrl, emoji }).subscribe({
+        next: created => {
+          this.shortcuts.update(current => [...current, created]);
+          this.errorMessage = '';
+          this.closeShortcutDialog();
+        },
+        error: () => { this.errorMessage = 'Unable to add shortcut. Please try again.'; },
+      });
+    }
+  }
+
+  protected onShortcutEditRequested(shortcut: Shortcut): void {
+    this.editingShortcut = shortcut;
+    this.shortcutUrlDraft = shortcut.url;
+    this.shortcutNameDraft = shortcut.name;
+    this.shortcutFaviconPreview = shortcut.faviconUrl ?? null;
+    this.shortcutFaviconCorrected = true; // existing shortcut already has a saved favicon
+    this.shortcutIconType = shortcut.emoji ? 'emoji' : 'favicon';
+    this.shortcutEmojiDraft = shortcut.emoji ?? '';
+    this.shortcutDialogOpen = true;
+  }
+
+  protected reorderShortcuts(event: CdkDragDrop<Shortcut[]>): void {
+    const prev = [...this.shortcuts()];
+    const next = [...prev];
+    moveItemInArray(next, event.previousIndex, event.currentIndex);
+    this.shortcuts.set(next);
+    this.shortcutApi.reorderShortcuts(next.map(s => s.id)).subscribe({
+      error: () => this.shortcuts.set(prev), // revert on failure
+    });
+  }
+
+  protected onShortcutDeleteRequested(shortcut: Shortcut): void {
+    this.confirmDeleteShortcut = shortcut;
+  }
+
+  protected onConfirmDeleteShortcut(): void {
+    const shortcut = this.confirmDeleteShortcut;
+    if (!shortcut) return;
+    this.confirmDeleteShortcut = null;
+    this.shortcutApi.deleteShortcut(shortcut.id).subscribe({
+      next: () => {
+        this.shortcuts.update(current => current.filter(s => s.id !== shortcut.id));
+      },
+      error: () => { this.errorMessage = 'Unable to delete shortcut. Please try again.'; },
+    });
   }
 
   protected onTimerTaskCheckChange(event: { taskId: string; listId: string; completed: boolean }): void {
@@ -2336,74 +2651,103 @@ export class LockerComponent implements AfterViewInit, OnInit {
     });
   }
 
-  // --- Study Session ---
-  protected enterStudySession(timerId: string): void {
-    const timer = this.timers().find(t => t.id === timerId);
-    if (!timer?.linkedTaskListId) return;
-    this.closeConfig();
-    this.studySession.set({ timerId, listId: timer.linkedTaskListId });
-  }
-
-  protected exitStudySession(): void {
-    this.studySession.set(null);
-  }
-
-  protected enterStudySessionFromBar(): void {
-    const timer = this.studyReadyTimers()[0];
-    if (timer) this.enterStudySession(timer.id);
-  }
-
   protected handleLogout(): void {
     this.sessionStore.clearSession();
     this.router.navigate(['/']);
   }
 
   // --- Sticker CRUD ---
-  protected toggleStickerPicker(): void {
-    this.stickerPickerOpen = !this.stickerPickerOpen;
+  protected toggleStickerPanel(): void {
+    this.stickerDialogOpen = !this.stickerDialogOpen;
+    if (this.stickerDialogOpen) {
+      this.fontPickerOpen = false;
+      this.shortcutsPanelOpen = false;
+      this.quotePanelOpen = false;
+      this.badgeShelfOpen = false;
+      this.colorPickerListId = null;
+    }
   }
 
-  protected onEmojiSelected(emoji: string): void {
-    this.stickerPickerOpen = false;
+  protected closeStickerDialog(): void {
+    this.stickerDialogOpen = false;
+  }
+
+  protected onStickerDialogEmojiSelected(emoji: string): void {
+    this.createStickerAt(emoji);
+  }
+
+  /**
+   * Create a sticker. If `dropCoords` is provided (in pixels relative to the
+   * grid container), the sticker is placed at that exact position.
+   * Otherwise it cascades from existing stickers.
+   */
+  private createStickerAt(emoji: string, dropCoords?: { posX: number; posY: number }): void {
     if (this.atStickerLimit()) return;
-    // Place near center of visible locker area
-    const x = 120 + Math.round(Math.random() * 200);
-    const y = 80 + Math.round(Math.random() * 120);
-    this.stickerApi.createSticker({ emoji, positionX: x, positionY: y, size: 'medium' }).subscribe({
-      next: sticker => this.stickers.update(current => [...current, sticker]),
+    this.stickerApi.createSticker({ emoji, iconUrl: null, label: null }).subscribe({
+      next: sticker => {
+        this.stickers.update(current => [...current, sticker]);
+        if (sticker.earnedBadge) {
+          this.earnedBadges.update(current => [...current, sticker.earnedBadge!]);
+          this.badgeCelebration.notify(sticker.earnedBadge);
+        }
+        this.errorMessage = '';
+        this.assignNewCardLayout(sticker.id, true, dropCoords);
+        this.saveLockerLayout();
+        // Keep panel open so user can add multiple stickers
+      },
       error: () => { this.errorMessage = 'Unable to add sticker. Please try again.'; },
     });
   }
 
-  protected onStickerPositionChanged(id: string, x: number, y: number): void {
-    // Optimistic update
-    this.stickers.update(current => current.map(s => s.id === id ? { ...s, positionX: x, positionY: y } : s));
-    const sticker = this.stickers().find(s => s.id === id);
-    if (!sticker) return;
-    this.stickerApi.updateSticker(id, { positionX: x, positionY: y, size: sticker.size }).subscribe();
+  /** Allow emoji-picker drags to be dropped onto the grid container. */
+  protected onGridDragOver(event: DragEvent): void {
+    if (!event.dataTransfer) return;
+    const types = Array.from(event.dataTransfer.types);
+    if (types.includes(EmojiPickerComponent.DRAG_MIME) || types.includes('text/plain')) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+    }
   }
 
-  protected onStickerSizeChanged(id: string, size: string): void {
-    this.stickers.update(current => current.map(s => s.id === id ? { ...s, size: size as any } : s));
-    const sticker = this.stickers().find(s => s.id === id);
-    if (!sticker) return;
-    this.stickerApi.updateSticker(id, { positionX: sticker.positionX, positionY: sticker.positionY, size: sticker.size }).subscribe();
+  /** Drop handler: extract the emoji from the drag data and create a sticker at the drop location. */
+  protected onGridDrop(event: DragEvent): void {
+    const dt = event.dataTransfer;
+    if (!dt) return;
+    const emoji = dt.getData(EmojiPickerComponent.DRAG_MIME) || dt.getData('text/plain');
+    if (!emoji) return;
+    event.preventDefault();
+
+    const container = this.gridContainerRef?.nativeElement;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    // Center the new sticker on the cursor for a natural drop feel.
+    const posX = event.clientX - rect.left - STICKER_DEFAULT_PX / 2;
+    const posY = event.clientY - rect.top - STICKER_DEFAULT_PX / 2;
+    this.createStickerAt(emoji, { posX: Math.max(0, posX), posY: Math.max(0, posY) });
   }
 
   protected onStickerDeleted(id: string): void {
     this.stickers.update(current => current.filter(s => s.id !== id));
-    this.stickerApi.deleteSticker(id).subscribe({
-      error: () => this.stickers.update(current => current), // no recovery needed, already removed optimistically
-    });
+    this.cardOrder.update(order => order.filter(o => !(o.type === 'STICKER' && o.id === id)));
+    this.stickerApi.deleteSticker(id).subscribe();
+    this.saveLockerLayout();
   }
 
-  private nextAvailableColor(): string {
+private nextAvailableColor(): string {
+    const lockerSolid = this.lockerColor().doorSolid;
     const used = new Set([
       ...this.taskLists().map(l => l.color),
       ...this.timers().map(t => t.color),
       ...this.notes().map(n => n.color),
-      ...this.bookmarkLists().map(l => l.color),
     ]);
-    return this.colorPalette.find(color => !used.has(color)) ?? this.colorPalette[0];
+    const candidates = this.colorPalette.filter((c: string) => !used.has(c) && c !== lockerSolid);
+    const hex = candidates.length > 0
+      ? candidates[Math.floor(Math.random() * candidates.length)]
+      : (() => {
+          const nonLocker = this.colorPalette.filter((c: string) => c !== lockerSolid);
+          const pool = nonLocker.length > 0 ? nonLocker : this.colorPalette;
+          return pool[Math.floor(Math.random() * pool.length)];
+        })();
+    return `linear-gradient(to bottom, #ffffff, ${hex})`;
   }
 }

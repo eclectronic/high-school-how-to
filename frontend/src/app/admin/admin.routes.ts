@@ -26,6 +26,25 @@ export const adminRoutes: Routes = [
         loadComponent: () =>
           import('./tags/tag-manager.component').then((m) => m.TagManagerComponent),
       },
+      {
+        path: 'quotes',
+        loadComponent: () =>
+          import('./quote-library/quote-library.component').then(
+            (m) => m.QuoteLibraryComponent,
+          ),
+      },
+      {
+        path: 'badges',
+        loadComponent: () =>
+          import('./badges/badge-manager.component').then((m) => m.BadgeManagerComponent),
+      },
+      {
+        path: 'color-palette',
+        loadComponent: () =>
+          import('./color-palette/color-palette-editor.component').then(
+            (m) => m.ColorPaletteEditorComponent,
+          ),
+      },
     ],
   },
 ];
