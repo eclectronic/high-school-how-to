@@ -48,8 +48,30 @@ jobs:
           SERVICE_NAME: highschoolhowto-api
         run: ./api/scripts/deploy.sh
 
+      - name: Wait for App Runner deployment to complete
+        env:
+          SERVICE_ARN: arn:aws:apprunner:us-west-2:${{ secrets.AWS_ACCOUNT_ID }}:service/highschoolhowto-api/94935f8663744265926241dce6252d76
+        run: |
+          echo "Waiting for App Runner service to reach RUNNING status..."
+          for i in $(seq 1 30); do
+            STATUS=$(aws apprunner describe-service \
+              --service-arn "$SERVICE_ARN" \
+              --region us-west-2 \
+              --query "Service.Status" \
+              --output text)
+            echo "  attempt $i: status=$STATUS"
+            if [ "$STATUS" = "RUNNING" ]; then
+              echo "App Runner deployment complete."
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "ERROR: App Runner did not reach RUNNING status within 10 minutes." >&2
+          exit 1
+
   deploy-frontend:
     name: Deploy Frontend (S3 + CloudFront)
+    needs: deploy-api
     runs-on: ubuntu-latest
     environment: production
     defaults:

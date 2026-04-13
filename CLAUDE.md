@@ -10,6 +10,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Documentation**: Keep CLAUDE.md and any relevant docs up to date as the codebase evolves. When adding or changing architecture, workflows, or conventions, update the relevant section in this file. Use comments and README sections to explain non-obvious decisions, architectural rationale and how different pieces fit together. This is especially important for authentication flows, API contracts, and shared utilities.
 - **Testability**: Write code that is easy to test with unit and integration tests.
 - Design for testability by keeping functions pure where possible, minimizing side effects, and using dependency injection for external services.
+- **Tests are required for new features**: Any new feature, service, controller, or component must ship with tests. This is non-negotiable — do not consider a feature complete without them. Specifically:
+  - Backend: unit tests for services (happy path + edge cases/validation), integration tests for controller endpoints (auth, correct responses, error cases).
+  - Frontend: unit tests for components (renders correctly, key interactions) and services (correct HTTP calls).
+  - Follow existing test patterns in the codebase (Karma/Jasmine for frontend, JUnit/Spring Boot Test for backend).
 - **Security best practices**: For authentication and sensitive operations, follow security best practices:
 - Use parameterized queries or ORM features to prevent SQL injection.
 - Hash passwords securely (e.g., bcrypt) and never log sensitive information.

@@ -1,0 +1,232 @@
+<div class="timer-app">
+  @if (loading()) {
+    <div class="timer-app__loading">Loading…</div>
+  }
+
+  @if (!loading()) {
+    <!-- Mode tabs -->
+    <div class="timer-app__tabs">
+      <button
+        type="button"
+        class="timer-tab"
+        [class.timer-tab--active]="mode() === 'BASIC'"
+        [style.--tab-color]="paletteColor"
+        [disabled]="running() || pomodoroRunning()"
+        [title]="(running() || pomodoroRunning()) ? 'Stop the timer before switching modes' : 'Basic'"
+        (click)="setMode('BASIC')"
+      >Basic</button>
+      <button
+        type="button"
+        class="timer-tab"
+        [class.timer-tab--active]="mode() === 'POMODORO'"
+        [style.--tab-color]="paletteColor"
+        [disabled]="running() || pomodoroRunning()"
+        [title]="(running() || pomodoroRunning()) ? 'Stop the timer before switching modes' : 'Pomodoro'"
+        (click)="setMode('POMODORO')"
+      >Pomodoro</button>
+    </div>
+
+    <!-- BASIC MODE -->
+    @if (mode() === 'BASIC') {
+      <div class="timer-app__basic">
+        <!-- Duration display / edit -->
+        @if (!editingDuration()) {
+          <button
+            type="button"
+            class="timer-app__display"
+            [class.timer-app__display--done]="done()"
+            [style.color]="paletteColor"
+            (click)="startEditDuration()"
+            title="Click to change duration"
+          >
+            @if (done()) {
+              <span class="timer-app__done-text">Done!</span>
+            } @else {
+              {{ formattedRemaining() }}
+            }
+          </button>
+        } @else {
+          <div class="timer-app__duration-edit">
+            <div class="duration-spinners">
+              <!-- Hours -->
+              <div class="duration-spinner">
+                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustHours(1)">▲</button>
+                <input
+                  type="number"
+                  class="spinner-input"
+                  [style.color]="paletteColor"
+                  [min]="0" [max]="23"
+                  [(ngModel)]="editHours"
+                  (blur)="clampHours()"
+                />
+                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustHours(-1)">▼</button>
+                <span class="spinner-label">h</span>
+              </div>
+              <span class="duration-sep" [style.color]="paletteColor">:</span>
+              <!-- Minutes -->
+              <div class="duration-spinner">
+                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustMinutes(1)">▲</button>
+                <input
+                  type="number"
+                  class="spinner-input"
+                  [style.color]="paletteColor"
+                  [min]="0" [max]="59"
+                  [(ngModel)]="editMinutes"
+                  (blur)="clampMinutes()"
+                />
+                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustMinutes(-1)">▼</button>
+                <span class="spinner-label">m</span>
+              </div>
+              <span class="duration-sep" [style.color]="paletteColor">:</span>
+              <!-- Seconds -->
+              <div class="duration-spinner">
+                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustSeconds(1)">▲</button>
+                <input
+                  type="number"
+                  class="spinner-input"
+                  [style.color]="paletteColor"
+                  [min]="0" [max]="59"
+                  [(ngModel)]="editSeconds"
+                  (blur)="clampSeconds()"
+                />
+                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustSeconds(-1)">▼</button>
+                <span class="spinner-label">s</span>
+              </div>
+            </div>
+            <div class="duration-actions">
+              <button type="button" class="btn btn--cancel" (click)="cancelEditDuration()">Cancel</button>
+              <button type="button" class="btn btn--save" [style.background]="paletteColor" (click)="saveDuration()">Set</button>
+            </div>
+          </div>
+        }
+
+        <!-- Controls -->
+        <div class="timer-app__controls">
+          @if (!running()) {
+            <button
+              type="button"
+              class="timer-btn timer-btn--primary"
+              [style.background]="paletteColor"
+              (click)="startBasic()"
+            >{{ done() ? 'Restart' : 'Start' }}</button>
+          } @else {
+            <button
+              type="button"
+              class="timer-btn timer-btn--secondary"
+              (click)="pauseBasic()"
+            >Pause</button>
+          }
+          <button
+            type="button"
+            class="timer-btn timer-btn--ghost"
+            (click)="resetBasic()"
+          >Reset</button>
+        </div>
+      </div>
+    }
+
+    <!-- POMODORO MODE -->
+    @if (mode() === 'POMODORO') {
+      <div class="timer-app__pomodoro">
+
+        <!-- Settings gear — top-right -->
+        @if (timer()) {
+          <button
+            type="button"
+            class="pomodoro-settings-btn"
+            [class.pomodoro-settings-btn--active]="showPomodoroSettings()"
+            [style.color]="showPomodoroSettings() ? paletteColor : null"
+            title="Settings"
+            (click)="showPomodoroSettings.set(!showPomodoroSettings())"
+          >⚙</button>
+        }
+
+        @if (showPomodoroSettings() && timer()) {
+          <!-- Settings panel — replaces the display area -->
+          <div class="pomodoro-settings__fields">
+            <label class="pomo-field">
+              <span>Focus (min)</span>
+              <input type="number" class="pomo-input" [min]="1"
+                [(ngModel)]="timer()!.focusDuration" (change)="savePomodoroSettings()" />
+            </label>
+            <label class="pomo-field">
+              <span>Short break (min)</span>
+              <input type="number" class="pomo-input" [min]="1"
+                [(ngModel)]="timer()!.shortBreakDuration" (change)="savePomodoroSettings()" />
+            </label>
+            <label class="pomo-field">
+              <span>Long break (min)</span>
+              <input type="number" class="pomo-input" [min]="1"
+                [(ngModel)]="timer()!.longBreakDuration" (change)="savePomodoroSettings()" />
+            </label>
+            <label class="pomo-field">
+              <span>Sessions before long break</span>
+              <input type="number" class="pomo-input" [min]="1"
+                [(ngModel)]="timer()!.sessionsBeforeLongBreak" (change)="savePomodoroSettings()" />
+            </label>
+          </div>
+          <div class="duration-actions">
+            <button type="button" class="btn btn--save" [style.background]="paletteColor"
+              (click)="showPomodoroSettings.set(false)">Done</button>
+          </div>
+        } @else {
+          <!-- Phase indicator -->
+          <div class="pomodoro-phase" [style.color]="paletteColor">
+            {{ phaseLabel() }}
+          </div>
+
+          <!-- Session dots -->
+          @if (timer()) {
+            <div class="pomodoro-dots">
+              @for (filled of pomodoroSessionDots; track $index) {
+                <span
+                  class="pomodoro-dot"
+                  [class.pomodoro-dot--filled]="filled"
+                  [style.background]="filled ? paletteColor : 'transparent'"
+                  [style.border-color]="paletteColor"
+                ></span>
+              }
+            </div>
+          }
+
+          <!-- Remaining time -->
+          <div
+            class="timer-app__display"
+            [class.timer-app__display--done]="pomodoroDone()"
+            [style.color]="paletteColor"
+          >
+            @if (pomodoroDone()) {
+              <span class="timer-app__done-text">
+                {{ pomodoroPhase() === 'focus' ? 'Focus done!' : 'Break over!' }}
+              </span>
+            } @else {
+              {{ formattedPomodoroRemaining() }}
+            }
+          </div>
+        }
+
+        <!-- Controls (always visible) -->
+        <div class="timer-app__controls">
+          @if (!showPomodoroSettings()) {
+            @if (!pomodoroRunning()) {
+              <button
+                type="button"
+                class="timer-btn timer-btn--primary"
+                [style.background]="paletteColor"
+                (click)="startPomodoro()"
+              >{{ pomodoroDone() ? 'Start Next' : 'Start' }}</button>
+            } @else {
+              <button
+                type="button"
+                class="timer-btn timer-btn--secondary"
+                (click)="pausePomodoro()"
+              >Pause</button>
+            }
+            <button type="button" class="timer-btn timer-btn--ghost" (click)="resetPomodoro()">Reset</button>
+            <button type="button" class="timer-btn timer-btn--ghost" (click)="skipPhase()" title="Skip to next phase">Skip</button>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

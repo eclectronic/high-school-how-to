@@ -1,8 +1,33 @@
 <section class="home">
-  <!-- ── Header ── -->
-  <header class="home__top-bar">
+  <!-- ── Site nav ── -->
+  <app-site-nav />
+
+  <!-- ── Top strip: socials + CTAs ── -->
+  <div class="home__top-strip">
+    <figure class="home__socials" aria-label="Follow High School How To on social media">
+      <img src="/assets/images/home-socials.png" alt="" aria-hidden="true" loading="lazy" />
+      <a class="home__social-link home__social-link--instagram"
+         href="https://www.instagram.com/highschoolhowto"
+         target="_blank" rel="noreferrer" aria-label="Instagram"></a>
+      <a class="home__social-link home__social-link--youtube"
+         href="https://www.youtube.com/@HighSchool-HowTo"
+         target="_blank" rel="noreferrer" aria-label="YouTube"></a>
+    </figure>
+
+    <div class="home__hero-ctas">
+      <a routerLink="/how-to" class="home__cta-btn home__cta-btn--primary">Explore How To</a>
+      @if (isAuthenticated()) {
+        <a routerLink="/locker" class="home__cta-btn home__cta-btn--secondary">My Locker</a>
+      } @else {
+        <a routerLink="/auth/signup" class="home__cta-btn home__cta-btn--secondary">Sign Up — It's Free</a>
+      }
+    </div>
+  </div>
+
+  <!-- ── Hero: logo + tagline ── -->
+  <header class="home__hero">
     <div class="home__hero-intro">
-      <figure class="home__logo-card">
+      <figure class="home__logo-pinned">
         <span class="home__card-tape" aria-hidden="true"></span>
         <img src="/assets/images/home-logo.png" alt="High School How To illustrated logo" loading="lazy" />
       </figure>
@@ -12,93 +37,38 @@
           <span class="home__note-card-tape" aria-hidden="true"></span>
           <div class="note-card note-card--wide">
             <p class="note-card__copy">
-              <span class="note-card__line">
-                Helping you navigate, organize, and lock in for school.
-              </span>
+              <span class="note-card__line">Helping you navigate, organize, and lock in for school.</span>
+            </p>
+            <p class="note-card__sub">
+              Videos, infographics, and checklists to help you stay on top of high school — from study tips to college prep.
             </p>
           </div>
         </div>
       </div>
     </div>
-
-    <div class="home__actions">
-      <button type="button" class="home__auth-btn" (click)="handleAuthCta()">
-        {{ isAuthenticated() ? 'My Locker' : 'Log in / Sign Up' }}
-      </button>
-      @if (isAuthenticated()) {
-        <button type="button" class="home__logout-btn" (click)="handleLogout()">
-          Log out
-        </button>
-      }
-      <a routerLink="/about" class="home__about-link">About</a>
-      @if (isAdmin()) {
-        <a routerLink="/admin" class="home__admin-link">Admin</a>
-      }
-
-      <figure class="home__socials" aria-label="Follow High School How To on social media">
-        <img src="/assets/images/home-socials.png" alt="" aria-hidden="true" loading="lazy" />
-        <a class="home__social-link home__social-link--instagram"
-           href="https://www.instagram.com/highschoolhowto"
-           target="_blank" rel="noreferrer" aria-label="Instagram"></a>
-        <a class="home__social-link home__social-link--youtube"
-           href="https://www.youtube.com/@HighSchool-HowTo"
-           target="_blank" rel="noreferrer" aria-label="YouTube"></a>
-      </figure>
-    </div>
-
   </header>
 
-  <!-- ── Tag navigation (in-page filter) ── -->
-  <nav class="tag-nav" aria-label="Browse by topic">
-    <button type="button" class="tag-nav__link"
-            [class.tag-nav__link--active]="selectedTagSlug() === null"
-            (click)="selectTag(null)">All</button>
-    @for (tag of navTags(); track tag.id) {
-      <button type="button" class="tag-nav__link"
-              [class.tag-nav__link--active]="selectedTagSlug() === tag.slug"
-              (click)="selectTag(tag.slug)">{{ tag.name }}</button>
-    }
-  </nav>
-
-  <!-- ── Content sections ── -->
-  @if (!loading()) {
-    @for (section of visibleSections(); track section.tag.id) {
-      @if (section.cards.length) {
-        <section class="content-section" [id]="'section-' + section.tag.slug">
-          <div class="content-section__header">
-            <h2 class="content-section__title">{{ section.heading }}</h2>
-          </div>
-          <div class="card-grid">
-            @for (card of section.cards; track card.id) {
-              <a class="content-card" [routerLink]="['/content', card.slug]" [queryParams]="{ tag: section.tag.slug }">
-                <div class="content-card__thumb-wrapper">
-                  @if (cardThumbnail(card)) {
-                    <img class="content-card__thumb" [class.content-card__thumb--infographic]="card.cardType === 'INFOGRAPHIC'" [src]="cardThumbnail(card)!" [alt]="card.title" loading="lazy" />
-                  } @else {
-                    <div class="content-card__thumb content-card__thumb--placeholder">
-                      <span>{{ card.cardType[0] }}</span>
-                    </div>
-                  }
-                  @if (card.cardType === 'TODO_LIST') {
-                    <span class="content-card__type-icon content-card__type-icon--todo" aria-label="To-Do List">☑</span>
-                  }
-                </div>
-                <div class="content-card__body">
-                  <span class="content-card__type-badge">{{ card.cardType === 'TODO_LIST' ? 'To-Do List' : card.cardType }}</span>
-                  <strong class="content-card__title">{{ card.title }}</strong>
-                  @if (card.description) {
-                    <p class="content-card__desc">{{ card.description }}</p>
-                  }
-                </div>
-              </a>
-            }
-          </div>
-        </section>
+  <!-- ── Quote of the Day ── -->
+  @if (quote()) {
+    <div class="home__quote-card">
+      <span class="home__quote-card-tape" aria-hidden="true"></span>
+      <p class="home__quote-label">Quote of the Day</p>
+      <blockquote class="home__quote-text">"{{ quote()!.quoteText }}"</blockquote>
+      @if (quote()!.attribution) {
+        <p class="home__quote-attribution">— {{ quote()!.attribution }}</p>
       }
-    }
+    </div>
   }
 
+  <!-- ── Footer ── -->
   <footer class="home__footer">
     <a routerLink="/about" class="home__footer-link">About</a>
+    <a routerLink="/help" class="home__footer-link">Help</a>
+    @if (isAuthenticated()) {
+      <button type="button" class="home__footer-btn" (click)="handleLogout()">Log out</button>
+    }
+    @if (isAdmin()) {
+      <a routerLink="/admin" class="home__footer-link">Admin</a>
+    }
   </footer>
 </section>

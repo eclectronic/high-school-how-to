@@ -1,0 +1,165 @@
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+.launcher {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: calc(100vh - 60px);
+  padding: 2rem 1rem;
+  gap: 2rem;
+  overflow: hidden;
+  background: linear-gradient(160deg, #1a2a4a 0%, #2a3a5a 100%);
+}
+
+.launcher__stickers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: none;
+
+  @media (min-width: 769px) {
+    display: block;
+  }
+}
+
+.launcher__sticker {
+  position: absolute;
+  user-select: none;
+}
+
+.sticker-emoji {
+  font-size: 2rem;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.sticker-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  opacity: 0.6;
+}
+
+.launcher__top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 700px;
+  z-index: 1;
+}
+
+.launcher__apps {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  z-index: 1;
+
+  @media (max-width: 480px) {
+    gap: 1rem;
+  }
+}
+
+.launcher__app-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.5rem 1.25rem;
+  border-radius: 20px;
+  border: 3px solid transparent;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  min-width: 100px;
+  transition: background 0.2s, border-color 0.2s, opacity 0.2s, transform 0.15s;
+  backdrop-filter: blur(4px);
+
+  @media (max-width: 480px) {
+    min-width: 80px;
+    padding: 1.25rem 1rem;
+  }
+
+  &--active {
+    border-color: var(--accent-color, rgba(255, 255, 255, 0.5));
+    background: rgba(255, 255, 255, 0.18);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+    }
+  }
+
+  &--inactive {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  &--wiggle {
+    animation: wiggle 0.5s ease-in-out infinite;
+  }
+}
+
+.launcher__app-check {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+
+  &--on {
+    background: #27ae60;
+    border-color: #27ae60;
+  }
+}
+
+.launcher__app-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.launcher__app-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.02em;
+}
+
+.launcher__bottom {
+  z-index: 1;
+}
+
+.launcher__customize-btn {
+  padding: 0.6rem 1.75rem;
+  border-radius: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.7);
+  }
+}

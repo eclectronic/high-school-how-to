@@ -1,0 +1,43 @@
+<div class="swipe-container" #scrollContainer>
+  @for (appType of allApps; track appType; let i = $index) {
+    <div class="swipe-page" #page [attr.data-page-index]="i">
+      <app-pane-header
+        [appType]="appType"
+        [paletteColor]="getPaletteColor(appType)"
+        [paletteGradient]="getPaletteGradient(appType)"
+        [paneIndex]="i"
+        [showWindowButtons]="false"
+      />
+      <div class="swipe-page__app">
+        @switch (appType) {
+          @case ('TODO') {
+            <app-todo-app [paletteColor]="getPaletteColor('TODO')" />
+          }
+          @case ('NOTES') {
+            <app-notes-app [paletteColor]="getPaletteColor('NOTES')" />
+          }
+          @case ('TIMER') {
+            <app-timer-app [paletteColor]="getPaletteColor('TIMER')" />
+          }
+          @case ('SHORTCUTS') {
+            <app-shortcuts-app [paletteColor]="getPaletteColor('SHORTCUTS')" />
+          }
+        }
+      </div>
+    </div>
+  }
+
+</div>
+
+<!-- Page dot indicators -->
+<div class="page-dots" aria-label="Page navigation">
+  @for (idx of dotPages(); track idx) {
+    <button
+      type="button"
+      class="page-dot"
+      [class.page-dot--active]="currentPage() === idx"
+      (click)="scrollToPage(idx)"
+      [attr.aria-label]="getPageLabel(idx)"
+    ></button>
+  }
+</div>

@@ -265,3 +265,19 @@ $color-ink: #2d1a10;
     &:hover { text-decoration: underline; }
   }
 }
+
+.locker-added-toast {
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1b5e20;
+
+  a {
+    color: #1b5e20;
+    font-weight: 700;
+    text-decoration: underline;
+  }
+}

@@ -16,6 +16,11 @@
     <button type="button" class="toolbar-btn" (click)="setAlign('left')" title="Align Left">←</button>
     <button type="button" class="toolbar-btn" (click)="setAlign('center')" title="Align Center">↔</button>
     <button type="button" class="toolbar-btn" (click)="setAlign('right')" title="Align Right">→</button>
+    <span class="toolbar-sep"></span>
+    <button type="button" class="toolbar-btn toolbar-btn--image" (click)="triggerImageUpload()" [disabled]="uploadingImage()" title="Insert Image">
+      @if (uploadingImage()) { ⏳ } @else { 🖼 }
+    </button>
+    <input #imageFileInput type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="image-file-input" (change)="onImageFileSelected($event)" />
   </div>
   <div #editorEl class="tiptap-content"
     [style.background-color]="backgroundColor || null"

@@ -1,0 +1,146 @@
+.shortcuts-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.shortcuts-row__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.shortcuts-row__item-wrap {
+  position: relative;
+}
+
+.shortcuts-row__delete-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(220, 38, 38, 0.9);
+  color: #fff;
+  font-size: 0.65rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #dc2626;
+  }
+}
+
+.shortcuts-row__add-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  border-radius: 12px;
+  border: 2px dashed rgba(45, 26, 16, 0.25);
+  background: transparent;
+  cursor: pointer;
+  min-width: 60px;
+  transition: background 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: rgba(45, 26, 16, 0.05);
+    border-color: rgba(45, 26, 16, 0.5);
+  }
+}
+
+.shortcuts-row__add-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  color: rgba(45, 26, 16, 0.5);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(45, 26, 16, 0.06);
+}
+
+.shortcuts-row__add-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(45, 26, 16, 0.6);
+}
+
+.shortcuts-row__add-form {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.shortcuts-row__input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(45, 26, 16, 0.2);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  background: #fff;
+  color: #2d1a10;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: #2d1a10;
+  }
+}
+
+.shortcuts-row__form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: opacity 0.15s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.8;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.btn--cancel {
+  background: #e8e0d4;
+  color: #2d1a10;
+}
+
+.btn--save {
+  background: #2d1a10;
+  color: #fff;
+}

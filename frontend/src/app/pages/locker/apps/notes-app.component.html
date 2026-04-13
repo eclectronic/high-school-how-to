@@ -1,0 +1,111 @@
+<div class="notes-app">
+  @if (loading()) {
+    <div class="notes-app__loading">Loading…</div>
+  }
+
+  <!-- LIST VIEW — always rendered so the pane keeps its height; detail overlays on top -->
+  @if (!loading()) {
+    <div class="notes-app__list-view">
+      @if (notes().length === 0) {
+        <div class="notes-app__empty">
+          <p>No notes yet.</p>
+        </div>
+      }
+
+      @for (note of notes(); track note.id) {
+        <div
+          class="note-card"
+          [style.background]="note.color"
+          [style.color]="note.textColor || '#2d1a10'"
+          (click)="openNote(note)"
+        >
+          <div class="note-card__header">
+            <span class="note-card__title">{{ note.title }}</span>
+            <button
+              type="button"
+              class="note-card__delete-btn"
+              title="Delete note"
+              (click)="confirmDeleteNote(note); $event.stopPropagation()"
+            >✕</button>
+          </div>
+          @if (getContentPreview(note)) {
+            <p class="note-card__preview">{{ getContentPreview(note) }}</p>
+          }
+        </div>
+      }
+
+      <button type="button" class="notes-app__new-btn" (click)="createNote()">
+        + New Note
+      </button>
+    </div>
+  }
+
+  <!-- DETAIL VIEW -->
+  @if (!loading() && view() === 'detail' && selectedNote()) {
+    <div
+      class="notes-app__detail-view"
+      [style.background]="selectedNote()!.color"
+      [style.color]="selectedNote()!.textColor || '#2d1a10'"
+    >
+
+      <!-- Floating toolbar — overlays content area -->
+      <div class="notes-app__detail-toolbar">
+        <button type="button" class="notes-app__back-btn" (click)="goBack()" aria-label="Back">← Back</button>
+        <app-inline-title-edit
+          class="notes-app__note-title"
+          [title]="selectedNote()!.title"
+          (titleChange)="onTitleChange($event)"
+        />
+        <div class="notes-app__toolbar-actions">
+          <button
+            type="button"
+            class="notes-color-btn"
+            [style.background]="selectedNote()!.color"
+            title="Change color"
+            (click)="toggleColorPicker(selectedNote()!.id); $event.stopPropagation()"
+          ></button>
+          <button
+            type="button"
+            class="notes-app__delete-btn"
+            title="Delete note"
+            (click)="confirmDeleteNote(selectedNote()!)"
+          >🗑</button>
+        </div>
+      </div>
+
+      <!-- Content fills the full area -->
+      <div class="notes-app__content-area">
+        <textarea
+          class="notes-app__textarea"
+          [style.color]="selectedNote()!.textColor || '#2d1a10'"
+          placeholder="Write your note here…"
+          [(ngModel)]="editContent"
+          (blur)="onContentBlur()"
+        ></textarea>
+      </div>
+
+      <!-- Color picker overlay -->
+      @if (colorPickerNote()) {
+        <div class="notes-app__color-overlay" (click)="showColorPickerForNote.set(null)">
+          <div class="notes-app__color-overlay__card" (click)="$event.stopPropagation()">
+            <app-swatch-picker
+              [selectedColor]="colorPickerNote()!.color"
+              [showGradientToggle]="false"
+              (colorChange)="onColorChange($event)"
+              (escaped)="showColorPickerForNote.set(null)"
+            />
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Delete confirmation -->
+  @if (deleteTarget()) {
+    <app-confirm-dialog
+      [itemName]="deleteTarget()!.title"
+      (confirmed)="onDeleteConfirmed()"
+      (cancelled)="onDeleteCancelled()"
+    />
+  }
+</div>

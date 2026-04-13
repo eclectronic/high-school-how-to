@@ -84,11 +84,18 @@ export class ContentApiService {
     return this.http.delete<void>(`/api/admin/content/${id}`);
   }
 
-  // Admin — image upload
+  // Admin — image upload (thumbnail/cover images)
   adminUploadImage(file: File) {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<ImageUploadResponse>('/api/admin/images/upload', formData);
+  }
+
+  // Admin — image upload for article body content (rich text editor)
+  adminUploadContentImage(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ImageUploadResponse>('/api/admin/images/upload/content', formData);
   }
 
   // Admin — content search (for link picker typeahead)

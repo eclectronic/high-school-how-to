@@ -1,0 +1,8 @@
+@if (!loading() && quote()) {
+  <div class="daily-quote">
+    <span class="daily-quote__text">"{{ quote()!.quoteText }}"</span>
+    @if (quote()!.attribution) {
+      <span class="daily-quote__attribution"> — {{ quote()!.attribution }}</span>
+    }
+  </div>
+}

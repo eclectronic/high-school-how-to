@@ -30,6 +30,7 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   protected safeHtml = signal<SafeHtml | null>(null);
   protected lockerStatus = signal<LockerStatusResponse | null>(null);
   protected lockerActionPending = signal(false);
+  protected lockerAddedToast = signal(false);
 
   /** True when the card should render without nav arrows, back link, or tag header. */
   protected simpleLayout = computed(() => {
@@ -133,6 +134,8 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
       next: (list) => {
         this.lockerStatus.set({ added: true, taskListId: list.id });
         this.lockerActionPending.set(false);
+        this.lockerAddedToast.set(true);
+        setTimeout(() => this.lockerAddedToast.set(false), 4000);
       },
       error: () => {
         this.lockerActionPending.set(false);

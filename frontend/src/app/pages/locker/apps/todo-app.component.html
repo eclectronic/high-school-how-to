@@ -1,0 +1,197 @@
+<div class="todo-app">
+  @if (loading()) {
+    <div class="todo-app__loading">Loading…</div>
+  }
+
+  <!-- LIST VIEW -->
+  @if (!loading() && view() === 'list') {
+    <div class="todo-app__list-view">
+      @if (lists().length === 0) {
+        <div class="todo-app__empty">
+          <p>No task lists yet.</p>
+        </div>
+      }
+
+      @for (list of lists(); track list.id) {
+        <div class="todo-list-row">
+          <button
+            type="button"
+            class="todo-list-row__btn"
+            [style.background]="list.color"
+            [style.color]="list.textColor || '#2d1a10'"
+            (click)="openList(list)"
+          >
+            <span class="todo-list-row__title">{{ list.title }}</span>
+            <span class="todo-list-row__count">
+              {{ getCompletedCount(list) }}/{{ list.tasks.length }}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="todo-list-row__color-btn"
+            [style.background]="list.color"
+            title="Change color"
+            (click)="toggleColorPicker(list.id); $event.stopPropagation()"
+          ></button>
+
+          <button
+            type="button"
+            class="todo-list-row__delete-btn"
+            title="Delete list"
+            (click)="confirmDeleteList(list); $event.stopPropagation()"
+          >🗑</button>
+
+        </div>
+      }
+
+      <button type="button" class="todo-app__new-btn" (click)="createList()">
+        + New List
+      </button>
+    </div>
+  }
+
+  <!-- DETAIL VIEW -->
+  @if (!loading() && view() === 'detail' && selectedList()) {
+    <div
+      class="todo-app__detail-view"
+      [style.background]="selectedList()!.color"
+      [style.color]="selectedList()!.textColor || '#2d1a10'"
+    >
+      <div class="todo-app__detail-header">
+        <button type="button" class="todo-app__back-btn" (click)="goBack()" aria-label="Back">← Back</button>
+        <app-inline-title-edit
+          class="todo-app__list-title"
+          [title]="selectedList()!.title"
+          (titleChange)="onListTitleChange(selectedList()!, $event)"
+        />
+        <div class="todo-app__header-actions">
+          <button
+            type="button"
+            class="todo-list-row__color-btn"
+            [style.background]="selectedList()!.color"
+            title="Change color"
+            (click)="toggleColorPicker(selectedList()!.id)"
+          ></button>
+          <button
+            type="button"
+            class="todo-list-row__delete-btn"
+            title="Delete list"
+            (click)="confirmDeleteList(selectedList()!)"
+          >🗑</button>
+        </div>
+      </div>
+
+      <div class="todo-app__tasks">
+        @if (selectedList()!.tasks.length === 0) {
+          <p class="todo-app__no-tasks">No tasks yet. Add one below!</p>
+        }
+
+        @for (task of selectedList()!.tasks; track task.id) {
+          <div class="todo-task" [class.todo-task--done]="task.completed">
+            <label class="todo-task__check-label">
+              <input
+                type="checkbox"
+                class="todo-task__checkbox"
+                [checked]="task.completed"
+                (change)="toggleTask(task)"
+              />
+            </label>
+            <app-inline-title-edit
+              class="todo-task__desc"
+              [title]="task.description"
+              (titleChange)="onTaskDescChange(task, $event)"
+            />
+
+            <div class="todo-task__actions">
+              @if (task.dueAt) {
+                <button
+                  type="button"
+                  class="todo-task__due-badge"
+                  [class.todo-task__due-badge--overdue]="isDueOverdue(task.dueAt)"
+                  (click)="toggleDueDatePopover(task.id)"
+                  title="Change due date"
+                >{{ formatDueDate(task.dueAt) }}</button>
+              } @else {
+                <button
+                  type="button"
+                  class="todo-task__due-btn"
+                  title="Set due date"
+                  (click)="toggleDueDatePopover(task.id)"
+                >📅</button>
+              }
+
+              <button
+                type="button"
+                class="todo-task__delete-btn"
+                title="Delete task"
+                (click)="confirmDeleteTask(selectedList()!.id, task)"
+              >✕</button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="todo-app__add-task">
+        <input
+          type="text"
+          class="todo-app__task-input"
+          placeholder="Add a to-do…"
+          [(ngModel)]="newTaskDesc"
+          (keydown.enter)="addTask()"
+        />
+        <button
+          type="button"
+          class="todo-app__add-task-btn"
+          [style.background]="paletteColor"
+          [disabled]="!newTaskDesc.trim()"
+          (click)="addTask()"
+        >Add</button>
+      </div>
+
+      <!-- Due date overlay — covers the app area to avoid clipping -->
+      @if (dueDateTask()) {
+        <div class="todo-app__due-overlay" (click)="showDueDateForTask.set(null)">
+          <app-due-date-popover
+            [dueAt]="dueDateTask()!.dueAt ?? null"
+            (dueAtChange)="onDueDateChange(dueDateTask()!, $event)"
+            (cancelled)="showDueDateForTask.set(null)"
+          />
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Color picker overlay — covers the app area to avoid clipping -->
+  @if (colorPickerList()) {
+    <div class="todo-app__color-overlay" (click)="showColorPickerForList.set(null)">
+      <div class="todo-app__color-overlay__card" (click)="$event.stopPropagation()">
+        <p class="todo-app__color-overlay__title">Color for "{{ colorPickerList()!.title }}"</p>
+        <app-swatch-picker
+          [selectedColor]="colorPickerList()!.color"
+          [showGradientToggle]="false"
+          (colorChange)="onColorChange(colorPickerList()!, $event)"
+          (escaped)="showColorPickerForList.set(null)"
+        />
+      </div>
+    </div>
+  }
+
+  <!-- Delete list confirmation -->
+  @if (deleteListTarget()) {
+    <app-confirm-dialog
+      [itemName]="deleteListTarget()!.title"
+      (confirmed)="onDeleteListConfirmed()"
+      (cancelled)="onDeleteListCancelled()"
+    />
+  }
+
+  <!-- Delete task confirmation -->
+  @if (deleteTaskTarget()) {
+    <app-confirm-dialog
+      [itemName]="deleteTaskTarget()!.desc"
+      (confirmed)="onDeleteTaskConfirmed()"
+      (cancelled)="onDeleteTaskCancelled()"
+    />
+  }
+</div>

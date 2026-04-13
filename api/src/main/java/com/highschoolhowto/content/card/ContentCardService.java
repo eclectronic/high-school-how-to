@@ -65,16 +65,18 @@ public class ContentCardService {
     }
 
     @Transactional(readOnly = true)
-    public List<ContentCard> findPublished() {
-        return cardRepository.findByStatus(CardStatus.PUBLISHED);
+    public List<ContentCardResponse> findPublished() {
+        return cardRepository.findByStatus(CardStatus.PUBLISHED).stream()
+                .map(ContentCardResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<ContentCard> findByTagSlug(String tagSlug, boolean publishedOnly) {
-        if (publishedOnly) {
-            return cardRepository.findByTagSlugAndStatus(tagSlug, CardStatus.PUBLISHED);
-        }
-        return cardRepository.findByTagSlug(tagSlug);
+    public List<ContentCardResponse> findByTagSlug(String tagSlug, boolean publishedOnly) {
+        List<ContentCard> cards = publishedOnly
+                ? cardRepository.findByTagSlugAndStatus(tagSlug, CardStatus.PUBLISHED)
+                : cardRepository.findByTagSlug(tagSlug);
+        return cards.stream().map(ContentCardResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
@@ -90,6 +92,11 @@ public class ContentCardService {
             throw new ApiException(HttpStatus.NOT_FOUND, "Card not found", "No card with slug: " + slug);
         }
         return card;
+    }
+
+    @Transactional(readOnly = true)
+    public ContentCardResponse findPublishedResponseBySlug(String slug) {
+        return ContentCardResponse.from(findPublishedBySlug(slug));
     }
 
     @Transactional(readOnly = true)

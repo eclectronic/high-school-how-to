@@ -1,0 +1,89 @@
+<div class="shortcuts-row">
+  <div class="shortcuts-row__items">
+    @for (shortcut of shortcuts(); track shortcut.id) {
+      <div class="shortcuts-row__item-wrap">
+        <app-shortcut-icon
+          [shortcut]="shortcut"
+          (editRequested)="onEditRequested($event)"
+          (deleteRequested)="deleteShortcut($event)"
+        />
+        @if (editMode) {
+          <button
+            type="button"
+            class="shortcuts-row__delete-btn"
+            title="Remove shortcut"
+            (click)="deleteShortcut(shortcut)"
+          >✕</button>
+        }
+      </div>
+    }
+
+    @if (!showAddForm()) {
+      <button type="button" class="shortcuts-row__add-btn" (click)="openAddForm()" aria-label="Add shortcut">
+        <span class="shortcuts-row__add-icon">+</span>
+        <span class="shortcuts-row__add-label">Add</span>
+      </button>
+    }
+  </div>
+
+  @if (showAddForm()) {
+    <div class="shortcuts-row__add-form" (click)="$event.stopPropagation()">
+      <input
+        type="url"
+        class="shortcuts-row__input"
+        placeholder="https://example.com"
+        [(ngModel)]="newUrl"
+        (keydown.enter)="submitAdd()"
+        (keydown.escape)="cancelAdd()"
+        autofocus
+      />
+      <input
+        type="text"
+        class="shortcuts-row__input"
+        placeholder="Name (optional)"
+        [(ngModel)]="newName"
+        (keydown.enter)="submitAdd()"
+        (keydown.escape)="cancelAdd()"
+      />
+      <div class="shortcuts-row__form-actions">
+        <button type="button" class="btn btn--cancel" (click)="cancelAdd()">Cancel</button>
+        <button
+          type="button"
+          class="btn btn--save"
+          [disabled]="!newUrl.trim() || adding()"
+          (click)="submitAdd()"
+        >Add</button>
+      </div>
+    </div>
+  }
+
+  @if (editingShortcut()) {
+    <div class="shortcuts-row__add-form" (click)="$event.stopPropagation()">
+      <input
+        type="url"
+        class="shortcuts-row__input"
+        placeholder="https://example.com"
+        [(ngModel)]="editUrl"
+        (keydown.enter)="submitEdit()"
+        (keydown.escape)="cancelEdit()"
+      />
+      <input
+        type="text"
+        class="shortcuts-row__input"
+        placeholder="Name"
+        [(ngModel)]="editName"
+        (keydown.enter)="submitEdit()"
+        (keydown.escape)="cancelEdit()"
+      />
+      <div class="shortcuts-row__form-actions">
+        <button type="button" class="btn btn--cancel" (click)="cancelEdit()">Cancel</button>
+        <button
+          type="button"
+          class="btn btn--save"
+          [disabled]="!editUrl.trim()"
+          (click)="submitEdit()"
+        >Save</button>
+      </div>
+    </div>
+  }
+</div>

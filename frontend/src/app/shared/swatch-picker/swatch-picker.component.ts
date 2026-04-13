@@ -30,10 +30,12 @@ import { isGradient, lastHexFromGradient } from '../color-picker/color-utils';
           </button>
         }
       </div>
-      <label class="gradient-toggle">
-        <input type="checkbox" [(ngModel)]="gradientMode" (change)="onGradientToggle()" />
-        White-to-color gradient
-      </label>
+      @if (showGradientToggle) {
+        <label class="gradient-toggle">
+          <input type="checkbox" [(ngModel)]="gradientMode" (change)="onGradientToggle()" />
+          White-to-color gradient
+        </label>
+      }
     </div>
   `,
   styles: [`
@@ -77,6 +79,7 @@ import { isGradient, lastHexFromGradient } from '../color-picker/color-utils';
 })
 export class SwatchPickerComponent implements OnInit, OnChanges {
   @Input() selectedColor = '#fffef8';
+  @Input() showGradientToggle = true;
   @Output() colorChange = new EventEmitter<string>();
   @Output() colorCommit = new EventEmitter<string>();
   @Output() escaped = new EventEmitter<void>();

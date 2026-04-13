@@ -1,0 +1,65 @@
+<div class="launcher">
+  <!-- Sticker layer (desktop only) -->
+  <div class="launcher__stickers" aria-hidden="true">
+    @for (sp of stickerPositions(); track sp.sticker.id) {
+      <div
+        class="launcher__sticker"
+        [style.left.%]="sp.x"
+        [style.top.%]="sp.y"
+        [style.transform]="'rotate(' + sp.rotation + 'deg)'"
+      >
+        @if (sp.sticker.emoji) {
+          <span class="sticker-emoji">{{ sp.sticker.emoji }}</span>
+        } @else if (sp.sticker.iconUrl) {
+          <img class="sticker-img" [src]="sp.sticker.iconUrl" [alt]="sp.sticker.label ?? ''" />
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Top area: quote + shortcuts -->
+  <div class="launcher__top">
+    <app-daily-quote />
+    <app-shortcuts-row [editMode]="editMode" />
+  </div>
+
+  <!-- App grid -->
+  <div class="launcher__apps">
+    @for (app of appDefs; track app.type) {
+      <button
+        type="button"
+        class="launcher__app-btn"
+        [class.launcher__app-btn--active]="isActive(app.type)"
+        [class.launcher__app-btn--inactive]="!isActive(app.type)"
+        [class.launcher__app-btn--wiggle]="editMode"
+        [style.--accent-color]="getAccentColor(app.type)"
+        (click)="onAppClick(app.type)"
+        [attr.aria-label]="app.label + (isActive(app.type) ? '' : ' (inactive)')"
+      >
+        @if (editMode) {
+          <span class="launcher__app-check" [class.launcher__app-check--on]="isActive(app.type)">
+            {{ isActive(app.type) ? '✓' : '' }}
+          </span>
+        }
+        <span class="launcher__app-icon">{{ app.icon }}</span>
+        <span class="launcher__app-label">{{ app.label }}</span>
+      </button>
+    }
+  </div>
+
+  <!-- Bottom actions -->
+  <div class="launcher__bottom">
+    <button type="button" class="launcher__customize-btn" (click)="onCustomize()">
+      {{ editMode ? 'Done' : '⚙ Customize' }}
+    </button>
+  </div>
+
+  <!-- Edit mode overlay -->
+  @if (editMode) {
+    <app-edit-mode
+      [preferences]="preferences"
+      (save)="onEditSave($event)"
+      (close)="onEditClose()"
+    />
+  }
+</div>

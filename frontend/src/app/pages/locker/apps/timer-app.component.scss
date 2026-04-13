@@ -1,0 +1,324 @@
+.timer-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-size: 0.9rem;
+  color: #2d1a10;
+  align-items: center;
+}
+
+.timer-app__loading {
+  padding: 1.5rem;
+  text-align: center;
+  color: #888;
+}
+
+/* Tabs */
+
+.timer-app__tabs {
+  display: flex;
+  width: 100%;
+  border-bottom: 1px solid rgba(45, 26, 16, 0.1);
+  flex-shrink: 0;
+}
+
+.timer-tab {
+  flex: 1;
+  padding: 0.65rem;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.15s, border-bottom-color 0.15s;
+  border-bottom: 3px solid transparent;
+
+  &--active {
+    color: var(--tab-color, #0f9b8e);
+    border-bottom-color: var(--tab-color, #0f9b8e);
+  }
+
+  &:hover:not(&--active):not(:disabled) {
+    color: #2d1a10;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+/* Basic timer */
+
+.timer-app__basic,
+.timer-app__pomodoro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1rem;
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.timer-app__display {
+  font-size: 3.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  text-align: center;
+
+  &--done {
+    font-size: 1.8rem;
+  }
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.timer-app__done-text {
+  font-size: 1.5rem;
+}
+
+/* Duration edit — spinner controls */
+
+.timer-app__duration-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.duration-spinners {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.duration-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.spinner-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  transition: background 0.1s, transform 0.1s;
+  opacity: 0.6;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+    opacity: 1;
+    transform: scale(1.2);
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.spinner-input {
+  // Match the running display exactly
+  width: 2ch;
+  font-size: 3.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  font-family: inherit;
+  line-height: 1;
+  text-align: center;
+  border: none;
+  border-bottom: 2px solid currentColor;
+  background: transparent;
+  outline: none;
+  padding: 0;
+
+  &:focus {
+    opacity: 1;
+  }
+
+  // Hide browser spinners
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button { -webkit-appearance: none; }
+  -moz-appearance: textfield;
+}
+
+.spinner-label {
+  font-size: 0.65rem;
+  color: #999;
+  font-weight: 600;
+  line-height: 1;
+  margin-top: 0.15rem;
+}
+
+.duration-sep {
+  font-size: 3.5rem;  // match timer display
+  font-weight: 700;
+  line-height: 1;
+  padding-bottom: 1.6rem; // push down to align with input digits (above label)
+  opacity: 0.6;
+  padding-left: 0.05em;
+  padding-right: 0.05em;
+}
+
+.duration-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Controls */
+
+.timer-app__controls {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.timer-btn {
+  padding: 0.55rem 1.35rem;
+  border-radius: 8px;
+  border: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  &--primary {
+    color: #fff;
+  }
+
+  &--secondary {
+    background: #e8e0d4;
+    color: #2d1a10;
+  }
+
+  &--ghost {
+    background: transparent;
+    border: 2px solid rgba(45, 26, 16, 0.2);
+    color: #2d1a10;
+
+    &:hover {
+      border-color: rgba(45, 26, 16, 0.5);
+    }
+  }
+
+  &--settings {
+    padding: 0.55rem 0.75rem;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+
+  &--settings-active {
+    border-width: 2px;
+  }
+}
+
+/* Pomodoro */
+
+.pomodoro-phase {
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.pomodoro-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.pomodoro-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: inline-block;
+  transition: background 0.2s;
+}
+
+/* Pomodoro settings */
+
+.pomodoro-settings__fields {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.pomo-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: #555;
+  gap: 0.5rem;
+
+  span {
+    flex: 1;
+  }
+}
+
+.pomo-input {
+  width: 60px;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid rgba(45, 26, 16, 0.2);
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  text-align: center;
+  background: #fff;
+  color: #2d1a10;
+  outline: none;
+
+  &:focus {
+    border-color: #2d1a10;
+  }
+}
+
+/* Shared button styles for duration editor */
+
+.btn {
+  padding: 0.4rem 0.9rem;
+  border-radius: 7px;
+  border: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+.btn--cancel {
+  background: #e8e0d4;
+  color: #2d1a10;
+}
+
+.btn--save {
+  color: #fff;
+}
