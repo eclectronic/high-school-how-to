@@ -49,8 +49,7 @@ export class AppPaneHeaderComponent {
   }
 
   protected get textColor(): string {
-    // Header is transparent over the pastel pane body — always use dark text
-    return '#2d1a10';
+    return autoContrastColor(this.paletteColor.startsWith('#') ? this.paletteColor : '#fefdf4');
   }
 
   protected toggleTooltip(): void {

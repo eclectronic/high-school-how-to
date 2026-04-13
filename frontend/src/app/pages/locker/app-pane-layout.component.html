@@ -65,7 +65,7 @@
       >
         <div
           class="pane"
-          [style.--pane-tint]="getPaletteColor(appType)"
+          [style.--pane-tint]="getHeaderColor(appType)"
           [class.pane--focused]="focusedPane === i"
           [class.pane--drag-source]="dragSourceIndex() === i"
           [class.pane--drag-over]="dragOverIndex() === i"
