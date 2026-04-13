@@ -42,7 +42,7 @@
       <optgroup label="Dyslexia-friendly">
         @for (opt of fontOptions; track opt.label) {
           @if (opt.group === 'Dyslexia-friendly') {
-            <option [value]="opt.value ?? ''">{{ opt.label }}</option>
+            <option [value]="opt.value">{{ opt.label }}</option>
           }
         }
       </optgroup>

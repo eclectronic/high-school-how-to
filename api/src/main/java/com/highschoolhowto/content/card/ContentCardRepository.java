@@ -11,10 +11,10 @@ public interface ContentCardRepository extends JpaRepository<ContentCard, Long> 
     @Query("SELECT DISTINCT c FROM ContentCard c LEFT JOIN FETCH c.tags ORDER BY c.updatedAt DESC")
     List<ContentCard> findAllWithTags();
 
-    @Query("SELECT DISTINCT c FROM ContentCard c LEFT JOIN FETCH c.tags LEFT JOIN FETCH c.templateTasks WHERE c.id = :id")
+    @Query("SELECT DISTINCT c FROM ContentCard c LEFT JOIN FETCH c.tags WHERE c.id = :id")
     Optional<ContentCard> findByIdWithTags(@Param("id") Long id);
 
-    @Query("SELECT DISTINCT c FROM ContentCard c LEFT JOIN FETCH c.tags LEFT JOIN FETCH c.templateTasks WHERE c.slug = :slug")
+    @Query("SELECT DISTINCT c FROM ContentCard c LEFT JOIN FETCH c.tags WHERE c.slug = :slug")
     Optional<ContentCard> findBySlug(@Param("slug") String slug);
 
     boolean existsBySlug(String slug);

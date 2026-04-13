@@ -4,7 +4,7 @@
   } @else if (error()) {
     <div class="viewer-error">
       <p>{{ error() }}</p>
-      <a routerLink="/">Back to home</a>
+      <a class="back-link" routerLink="/">Back to home</a>
     </div>
   } @else if (card(); as card) {
 
