@@ -31,6 +31,8 @@ public class TagController {
 
     @GetMapping("/{slug}/cards")
     public List<ContentCardResponse> cardsByTag(@PathVariable String slug) {
-        return cardService.findByTagSlug(slug, true);
+        return cardService.findByTagSlug(slug, true).stream()
+                .map(ContentCardResponse::from)
+                .toList();
     }
 }
