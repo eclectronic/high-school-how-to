@@ -22,12 +22,12 @@ public class ContentCardController {
 
     @GetMapping
     public List<ContentCardResponse> listPublished() {
-        return cardService.findPublished();
+        return cardService.findPublishedResponses();
     }
 
     @GetMapping("/{slug}")
     public ContentCardResponse getBySlug(@PathVariable String slug) {
-        return cardService.findPublishedResponseBySlug(slug);
+        return cardService.findPublishedBySlugResponse(slug);
     }
 
     @PostMapping("/{slug}/add-to-locker")
