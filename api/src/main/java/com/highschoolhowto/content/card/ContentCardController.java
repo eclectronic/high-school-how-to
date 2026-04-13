@@ -43,18 +43,4 @@ public class ContentCardController {
             @AuthenticationPrincipal UserPrincipal principal) {
         return cardService.getLockerStatus(slug, principal.getUser().getId());
     }
-
-    @PostMapping("/{slug}/add-to-locker")
-    public TaskListResponse addToLocker(
-            @PathVariable String slug,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return cardService.addToLocker(slug, principal.getUser().getId());
-    }
-
-    @GetMapping("/{slug}/locker-status")
-    public LockerStatusResponse getLockerStatus(
-            @PathVariable String slug,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return cardService.getLockerStatus(slug, principal.getUser().getId());
-    }
 }
