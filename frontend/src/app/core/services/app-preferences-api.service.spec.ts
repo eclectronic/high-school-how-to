@@ -8,6 +8,7 @@ const stubPreferences: AppPreferences = {
   paneOrder: ['TODO', 'NOTES'],
   paletteName: 'ocean',
   lockerColor: null,
+  fontFamily: null,
 };
 
 describe('AppPreferencesApiService', () => {

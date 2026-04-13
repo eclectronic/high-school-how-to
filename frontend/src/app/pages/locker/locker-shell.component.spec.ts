@@ -47,52 +47,37 @@ describe('LockerShellComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('keyboard shortcut: e', () => {
-    it('calls toggleEditMode', () => {
-      spyOn(component as any, 'toggleEditMode').and.callThrough();
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'e', bubbles: true }));
-      expect((component as any).toggleEditMode).toHaveBeenCalled();
-    });
-  });
-
-  describe('keyboard shortcut: Escape', () => {
-    it('calls goBack', () => {
-      spyOn(component as any, 'goBack').and.callThrough();
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      expect((component as any).goBack).toHaveBeenCalled();
+  describe('keyboard shortcut: n', () => {
+    it('increments createNewItemSignal', () => {
+      (component as any).isMobile.set(false);
+      const before = (component as any).createNewItemSignal();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true }));
+      expect((component as any).createNewItemSignal()).toBe(before + 1);
     });
   });
 
   describe('keyboard shortcuts ignored when focus is in an INPUT', () => {
-    it('does not call toggleEditMode when event target is an INPUT', () => {
-      spyOn(component as any, 'toggleEditMode');
+    it('does not increment createNewItemSignal when event target is an INPUT', () => {
+      (component as any).isMobile.set(false);
       const inputEl = document.createElement('input');
       document.body.appendChild(inputEl);
-      inputEl.focus();
 
-      const event = new KeyboardEvent('keydown', { key: 'e', bubbles: true });
+      const before = (component as any).createNewItemSignal();
+      const event = new KeyboardEvent('keydown', { key: 'n', bubbles: true });
       Object.defineProperty(event, 'target', { value: inputEl, configurable: true });
       document.dispatchEvent(event);
 
-      expect((component as any).toggleEditMode).not.toHaveBeenCalled();
+      expect((component as any).createNewItemSignal()).toBe(before);
       document.body.removeChild(inputEl);
     });
-
   });
 
   describe('keyboard shortcuts ignored on mobile', () => {
-    it('does not call toggleEditMode when isMobile is true', () => {
+    it('does not increment createNewItemSignal when isMobile is true', () => {
       (component as any).isMobile.set(true);
-      spyOn(component as any, 'toggleEditMode');
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'e', bubbles: true }));
-      expect((component as any).toggleEditMode).not.toHaveBeenCalled();
-    });
-
-    it('does not call goBack when isMobile is true', () => {
-      (component as any).isMobile.set(true);
-      spyOn(component as any, 'goBack');
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      expect((component as any).goBack).not.toHaveBeenCalled();
+      const before = (component as any).createNewItemSignal();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true }));
+      expect((component as any).createNewItemSignal()).toBe(before);
     });
   });
 });
