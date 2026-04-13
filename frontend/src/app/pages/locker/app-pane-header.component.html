@@ -1,0 +1,59 @@
+<header
+  class="pane-header"
+  [style.color]="textColor"
+>
+  <div class="pane-header__left">
+    <span class="pane-header__icon">{{ appDef.icon }}</span>
+    <span class="pane-header__title">{{ appDef.label }}{{ subtitle ? ': ' + subtitle : '' }}</span>
+  </div>
+
+  <div class="pane-header__actions">
+    <!-- Info tooltip -->
+    <div class="pane-header__info-wrap">
+      <button
+        type="button"
+        class="pane-header__icon-btn"
+        [style.color]="textColor"
+        aria-label="App help"
+        (click)="toggleTooltip(); $event.stopPropagation()"
+      >ℹ</button>
+
+      @if (showTooltip()) {
+        <div class="pane-header__tooltip" (click)="$event.stopPropagation()">
+          <p>{{ appDef.helpText }}</p>
+          <button type="button" class="pane-header__tooltip-close" (click)="hideTooltip()">✕</button>
+        </div>
+      }
+    </div>
+
+    <!-- Windows-style title bar buttons -->
+    @if (showWindowButtons) {
+    <div class="titlebar-btns" (click)="$event.stopPropagation()">
+      <button
+        type="button"
+        class="titlebar-btn titlebar-btn--minimize"
+        aria-label="Restore"
+        title="Restore"
+        [disabled]="!isMaximized || !canMinimize"
+        (click)="minimize.emit()"
+      >&#x2013;</button>
+      <button
+        type="button"
+        class="titlebar-btn titlebar-btn--maximize"
+        aria-label="Maximize"
+        title="Maximize"
+        [disabled]="isMaximized"
+        (click)="maximize.emit()"
+      >&#x2610;</button>
+      <button
+        type="button"
+        class="titlebar-btn titlebar-btn--close"
+        aria-label="Close"
+        title="Close"
+        [disabled]="!canClose"
+        (click)="close.emit()"
+      >&#x2715;</button>
+    </div>
+    }
+  </div>
+</header>

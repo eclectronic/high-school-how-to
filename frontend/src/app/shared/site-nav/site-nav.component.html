@@ -1,0 +1,41 @@
+<nav class="site-nav" aria-label="Site navigation">
+  <a routerLink="/" class="site-nav__logo" aria-label="High School How To — Home">
+    High School How To
+  </a>
+
+  <ul class="site-nav__links" role="list">
+    <li>
+      <a routerLink="/how-to"
+         class="site-nav__link"
+         [class.site-nav__link--active]="activeRoute === 'how-to'">
+        How To
+      </a>
+    </li>
+    <li>
+      <a routerLink="/about"
+         class="site-nav__link"
+         [class.site-nav__link--active]="activeRoute === 'about'">
+        About
+      </a>
+    </li>
+    <li>
+      <a routerLink="/help"
+         class="site-nav__link"
+         [class.site-nav__link--active]="activeRoute === 'help'">
+        Help
+      </a>
+    </li>
+  </ul>
+
+  <div class="site-nav__cta">
+    @if (isAuthenticated()) {
+      <a routerLink="/locker" class="site-nav__cta-btn site-nav__cta-btn--primary">My Locker</a>
+      <button class="site-nav__cta-btn site-nav__cta-btn--logout" (click)="logout()">Log Out</button>
+    } @else {
+      <a routerLink="/auth/login" class="site-nav__cta-btn site-nav__cta-btn--primary">Log In</a>
+    }
+    @if (isAdmin()) {
+      <a routerLink="/admin" class="site-nav__cta-btn site-nav__cta-btn--admin">Admin</a>
+    }
+  </div>
+</nav>

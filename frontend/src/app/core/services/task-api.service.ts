@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { EarnedBadge, LockerLayoutItem, TaskItem, TaskList } from '../models/task.models';
+import { EarnedBadge, TaskItem, TaskList } from '../models/task.models';
 
 export interface UpdateTaskResponse extends TaskItem {
   earnedBadge?: EarnedBadge | null;

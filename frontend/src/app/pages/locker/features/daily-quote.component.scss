@@ -1,0 +1,20 @@
+.daily-quote {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+  line-height: 1.5;
+  padding: 0.5rem 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.daily-quote__text {
+  font-weight: 500;
+}
+
+.daily-quote__attribution {
+  font-weight: 600;
+  font-style: normal;
+}

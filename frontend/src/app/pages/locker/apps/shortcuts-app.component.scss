@@ -1,0 +1,188 @@
+.shortcuts-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.shortcuts-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-radius: 0;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.04);
+
+    .shortcut-row__actions {
+      opacity: 1;
+    }
+  }
+}
+
+.shortcut-row__icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shortcut-row__favicon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 3px;
+  position: relative;
+  z-index: 1;
+}
+
+.shortcut-row__emoji {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.shortcut-row__fallback {
+  font-size: 1rem;
+  line-height: 1;
+
+  // Hidden when favicon loads successfully
+  &:not(:only-child) {
+    display: none;
+  }
+}
+
+.shortcut-row__name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #2d1a10;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shortcut-row__actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  flex-shrink: 0;
+}
+
+.shortcut-row__action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: #888;
+  padding: 3px 5px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.1s, color 0.1s;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: #2d1a10;
+  }
+
+  &--delete:hover {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+  }
+}
+
+.shortcut-form {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.02);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  &--inline {
+    margin: 2px 0;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.82);
+  }
+}
+
+.shortcut-form__input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(45, 26, 16, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: #fff;
+  color: #2d1a10;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: #2d1a10;
+  }
+}
+
+.shortcut-form__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.sc-btn {
+  padding: 0.3rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: opacity 0.12s;
+
+  &:hover:not(:disabled) { opacity: 0.8; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.sc-btn--cancel { background: #e8e0d4; color: #2d1a10; }
+.sc-btn--save   { background: #2d1a10; color: #fff; }
+
+.shortcuts-app__empty {
+  margin: 2rem 1rem 0;
+  font-size: 0.85rem;
+  color: #aaa;
+  text-align: center;
+}
+
+.shortcuts-app__footer {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.shortcuts-app__add-btn {
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0.25rem 0;
+  opacity: 0.75;
+  transition: opacity 0.12s;
+
+  &:hover { opacity: 1; }
+}

@@ -1,0 +1,22 @@
+--liquibase formatted sql
+
+--changeset system:v5-drop-locker-layout-0055
+DROP TABLE IF EXISTS locker_layout;
+--rollback CREATE TABLE locker_layout (
+--rollback     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--rollback     user_id UUID NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+--rollback     card_type VARCHAR(50) NOT NULL,
+--rollback     card_id UUID NOT NULL,
+--rollback     col INT NOT NULL DEFAULT 0,
+--rollback     col_span INT NOT NULL DEFAULT 1,
+--rollback     sort_order INT NOT NULL DEFAULT 0,
+--rollback     row INT,
+--rollback     minimized BOOLEAN NOT NULL DEFAULT FALSE,
+--rollback     pos_x DOUBLE PRECISION,
+--rollback     pos_y DOUBLE PRECISION,
+--rollback     min_height DOUBLE PRECISION,
+--rollback     width DOUBLE PRECISION,
+--rollback     height DOUBLE PRECISION,
+--rollback     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+--rollback     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+--rollback );

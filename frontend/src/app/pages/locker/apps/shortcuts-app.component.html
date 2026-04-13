@@ -1,0 +1,95 @@
+<div class="shortcuts-app">
+  <div class="shortcuts-list">
+    @for (sc of shortcuts(); track sc.id) {
+      @if (editingId() === sc.id) {
+        <div class="shortcut-form shortcut-form--inline" (click)="$event.stopPropagation()">
+          <input
+            type="url"
+            class="shortcut-form__input"
+            placeholder="https://example.com"
+            [(ngModel)]="editUrl"
+            (keydown.enter)="submitEdit()"
+            (keydown.escape)="cancelEdit()"
+            autofocus
+          />
+          <input
+            type="text"
+            class="shortcut-form__input"
+            placeholder="Name"
+            [(ngModel)]="editName"
+            (keydown.enter)="submitEdit()"
+            (keydown.escape)="cancelEdit()"
+          />
+          <div class="shortcut-form__actions">
+            <button type="button" class="sc-btn sc-btn--cancel" (click)="cancelEdit()">Cancel</button>
+            <button type="button" class="sc-btn sc-btn--save" [disabled]="!editUrl.trim()" (click)="submitEdit()">Save</button>
+          </div>
+        </div>
+      } @else {
+        <div class="shortcut-row" (click)="openShortcut(sc.url)" role="link" tabindex="0" (keydown.enter)="openShortcut(sc.url)">
+          <span class="shortcut-row__icon">
+            @if (sc.emoji) {
+              <span class="shortcut-row__emoji">{{ sc.emoji }}</span>
+            } @else {
+              <img
+                class="shortcut-row__favicon"
+                [src]="getFaviconSrc(sc)"
+                alt=""
+                (error)="$any($event.target).style.display='none'"
+              />
+              <span class="shortcut-row__fallback">🔗</span>
+            }
+          </span>
+          <span class="shortcut-row__name">{{ sc.name }}</span>
+          <div class="shortcut-row__actions" (click)="$event.stopPropagation()">
+            <button type="button" class="shortcut-row__action-btn" title="Edit" (click)="startEdit(sc)">✏</button>
+            <button type="button" class="shortcut-row__action-btn shortcut-row__action-btn--delete" title="Delete" (click)="deleteShortcut(sc.id)">✕</button>
+          </div>
+        </div>
+      }
+    }
+
+    @if (shortcuts().length === 0 && !showAddForm()) {
+      <p class="shortcuts-app__empty">No shortcuts yet. Add one below.</p>
+    }
+  </div>
+
+  @if (showAddForm()) {
+    <div class="shortcut-form" (click)="$event.stopPropagation()">
+      <input
+        type="url"
+        class="shortcut-form__input"
+        placeholder="https://example.com"
+        [(ngModel)]="newUrl"
+        (keydown.enter)="submitAdd()"
+        (keydown.escape)="cancelAdd()"
+        autofocus
+      />
+      <input
+        type="text"
+        class="shortcut-form__input"
+        placeholder="Name (optional)"
+        [(ngModel)]="newName"
+        (keydown.enter)="submitAdd()"
+        (keydown.escape)="cancelAdd()"
+      />
+      <div class="shortcut-form__actions">
+        <button type="button" class="sc-btn sc-btn--cancel" (click)="cancelAdd()">Cancel</button>
+        <button
+          type="button"
+          class="sc-btn sc-btn--save"
+          [disabled]="!newUrl.trim() || adding()"
+          (click)="submitAdd()"
+        >Add</button>
+      </div>
+    </div>
+  }
+
+  <div class="shortcuts-app__footer">
+    @if (!showAddForm() && !editingId()) {
+      <button type="button" class="shortcuts-app__add-btn" [style.color]="paletteColor" (click)="openAddForm()">
+        + Add Shortcut
+      </button>
+    }
+  </div>
+</div>

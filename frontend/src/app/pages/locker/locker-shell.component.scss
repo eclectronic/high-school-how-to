@@ -1,0 +1,15 @@
+.locker-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #fff;
+}
+
+.locker-shell__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Default background — overridden by [style.background] binding in template */
+  background: #f5ede0;
+}

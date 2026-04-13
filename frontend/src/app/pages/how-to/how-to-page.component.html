@@ -1,0 +1,64 @@
+<div class="how-to-page">
+  <app-site-nav activeRoute="how-to" />
+
+  <header class="how-to-page__header">
+    <h1 class="how-to-page__title">How To</h1>
+  </header>
+
+  <!-- Tag filter bar -->
+  <nav class="tag-nav" aria-label="Filter by topic">
+    <button type="button" class="tag-nav__link"
+            [class.tag-nav__link--active]="selectedTagSlug() === null"
+            (click)="selectTag(null)">
+      All
+    </button>
+    @for (tag of availableTags(); track tag.id) {
+      <button type="button" class="tag-nav__link"
+              [class.tag-nav__link--active]="selectedTagSlug() === tag.slug"
+              (click)="selectTag(tag.slug)">
+        {{ tag.name }}
+      </button>
+    }
+  </nav>
+
+  <!-- Card grid -->
+  @if (loading()) {
+    <div class="how-to-page__loading" aria-live="polite">Loading…</div>
+  } @else {
+    <div class="card-grid">
+      @for (card of filteredCards(); track card.id) {
+        <a class="content-card" [routerLink]="['/content', card.slug]">
+          <div class="content-card__thumb-wrapper">
+            @if (cardThumbnail(card)) {
+              <img class="content-card__thumb"
+                   [class.content-card__thumb--infographic]="card.cardType === 'INFOGRAPHIC'"
+                   [src]="cardThumbnail(card)!"
+                   [alt]="card.title"
+                   loading="lazy" />
+            } @else {
+              <div class="content-card__thumb content-card__thumb--placeholder">
+                <span>{{ card.cardType[0] }}</span>
+              </div>
+            }
+            @if (card.cardType === 'TODO_LIST') {
+              <span class="content-card__type-icon content-card__type-icon--todo" aria-label="To-Do List">☑</span>
+            }
+          </div>
+          <div class="content-card__body">
+            <span class="content-card__type-badge">
+              {{ card.cardType === 'TODO_LIST' ? 'To-Do List' : card.cardType }}
+            </span>
+            <strong class="content-card__title">{{ card.title }}</strong>
+            @if (card.description) {
+              <p class="content-card__desc">{{ card.description }}</p>
+            }
+          </div>
+        </a>
+      }
+    </div>
+
+    @if (filteredCards().length === 0) {
+      <p class="how-to-page__empty">No content found.</p>
+    }
+  }
+</div>

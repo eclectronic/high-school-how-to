@@ -71,3 +71,13 @@ databaseChangeLog:
       file: db/changelog/v4-color-palette-reorder-0051.sql
   - include:
       file: db/changelog/v4-widget-free-form-0052.sql
+  - include:
+      file: db/changelog/v5-app-preferences-0053.sql
+  - include:
+      file: db/changelog/v5-content-seed-0054.sql
+  - include:
+      file: db/changelog/v5-drop-locker-layout-0055.sql
+  - include:
+      file: db/changelog/v5-locker-color-0056.sql
+  - include:
+      file: db/changelog/v5-font-family-0057.sql

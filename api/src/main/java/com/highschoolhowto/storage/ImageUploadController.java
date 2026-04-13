@@ -47,6 +47,21 @@ public class ImageUploadController {
     }
 
     /**
+     * Uploads an image for embedding in article/content body (rich text editor).
+     * Stored under the {@code content} subfolder. No thumbnail is generated.
+     * Returns a relative URL suitable for use in article HTML.
+     */
+    @PostMapping(value = "/upload/content", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ImageUploadResponse uploadContentImage(@RequestParam("file") MultipartFile file) {
+        validate(file);
+        byte[] originalBytes = readBytes(file);
+        String contentType = file.getContentType();
+        String filename = s3StorageService.generateFilename(extensionFor(contentType));
+        String imageUrl = s3StorageService.upload(originalBytes, filename, contentType, "content");
+        return new ImageUploadResponse(imageUrl, null);
+    }
+
+    /**
      * Uploads a badge icon image. Badge icons are small and do not require
      * thumbnail generation. Stored under the {@code badges} subfolder.
      */

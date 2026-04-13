@@ -70,7 +70,7 @@ export class LoginComponent {
   }
 
   private returnUrl(): string {
-    return this.route.snapshot.queryParamMap.get('returnUrl') || '/account/locker';
+    return this.route.snapshot.queryParamMap.get('returnUrl') || '/locker';
   }
 
   private humanizeError(error: unknown): string {

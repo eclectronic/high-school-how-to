@@ -1,0 +1,36 @@
+<div class="locker-shell">
+  <app-site-nav activeRoute="locker" />
+
+  <main
+    class="locker-shell__content"
+    [style.background]="preferences().lockerColor || '#f5ede0'"
+    [style.font-family]="fontCss()"
+  >
+    @if (isMobile()) {
+      <!-- Mobile: swipeable app pages -->
+      <app-swipe-container
+        [palette]="activePalette()"
+      />
+    } @else {
+      <!-- Desktop: pane layout -->
+      <app-app-pane-layout
+        [activeApps]="preferences().activeApps"
+        [palette]="activePalette()"
+        [focusedPane]="focusedPaneIndex()"
+        [createNewItemTrigger]="createNewItemSignal()"
+        [lockerColor]="preferences().lockerColor"
+        [fontFamily]="preferences().fontFamily"
+        (appsReorder)="onAppsReorder($event)"
+        (lockerColorChange)="onLockerColorChange($event)"
+        (fontFamilyChange)="onFontFamilyChange($event)"
+      />
+    }
+  </main>
+
+  @if (showAnimation()) {
+    <app-locker-opening-animation
+      [doorGradient]="doorGradient()"
+      (done)="onAnimationDone()"
+    />
+  }
+</div>

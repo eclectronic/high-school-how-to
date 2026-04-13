@@ -120,7 +120,7 @@
             </ul>
             <div class="todo-list-actions">
               @if (lockerStatus()?.added) {
-                <a class="btn btn--primary" routerLink="/account/locker">
+                <a class="btn btn--primary" routerLink="/locker">
                   View in My Locker
                 </a>
               } @else {
@@ -134,6 +134,11 @@
                     ➕ Add to My Locker
                   }
                 </button>
+              }
+              @if (lockerAddedToast()) {
+                <div class="locker-added-toast" role="status">
+                  ✅ Added to your To-do app! <a routerLink="/locker">Open My Locker</a>
+                </div>
               }
             </div>
           </article>

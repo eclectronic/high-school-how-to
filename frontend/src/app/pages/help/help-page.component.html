@@ -1,0 +1,30 @@
+<div class="help-page">
+  <app-site-nav activeRoute="help" />
+
+  <header class="help-page__header">
+    <h1 class="help-page__title">Help</h1>
+  </header>
+
+  <main class="help-page__main">
+    @if (loading()) {
+      <div class="help-page__loading" aria-live="polite">Loading…</div>
+    } @else if (articles().length === 0) {
+      <p class="help-page__empty">No help articles found.</p>
+    } @else {
+      <nav class="help-page__toc" aria-label="Help articles">
+        <ul class="help-page__list" role="list">
+          @for (article of articles(); track article.id) {
+            <li class="help-page__item">
+              <a class="help-page__link" [routerLink]="['/content', article.slug]">
+                <span class="help-page__link-title">{{ article.title }}</span>
+                @if (article.description) {
+                  <span class="help-page__link-desc">{{ article.description }}</span>
+                }
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+    }
+  </main>
+</div>

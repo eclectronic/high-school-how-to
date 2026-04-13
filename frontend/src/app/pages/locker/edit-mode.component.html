@@ -1,0 +1,48 @@
+<div class="edit-mode-backdrop" (click)="onBackdropClick()">
+  <div class="edit-mode-panel" (click)="$event.stopPropagation()">
+    <div class="edit-mode-panel__header">
+      <h2 class="edit-mode-panel__title">Customize Locker</h2>
+      <button type="button" class="edit-mode-panel__close" (click)="onClose()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- App toggles -->
+    <section class="edit-section">
+      <h3 class="edit-section__label">Active Apps</h3>
+      <div class="app-toggle-grid">
+        @for (app of appDefs; track app.type) {
+          <button
+            type="button"
+            class="app-toggle"
+            [class.app-toggle--active]="isAppActive(app.type)"
+            (click)="toggleApp(app.type)"
+            [attr.aria-pressed]="isAppActive(app.type)"
+          >
+            <span class="app-toggle__icon">{{ app.icon }}</span>
+            <span class="app-toggle__label">{{ app.label }}</span>
+            <span class="app-toggle__check">{{ isAppActive(app.type) ? '✓' : '' }}</span>
+          </button>
+        }
+      </div>
+      <p class="edit-section__hint">Select 1–3 apps to show in your locker.</p>
+    </section>
+
+    <!-- Locker background color -->
+    <section class="edit-section">
+      <h3 class="edit-section__label">Locker Color</h3>
+      <app-swatch-picker
+        [selectedColor]="currentLockerColor"
+        [showGradientToggle]="false"
+        (colorChange)="onLockerColorChange($event)"
+      />
+      @if (draft().lockerColor) {
+        <button type="button" class="locker-color-reset" (click)="resetLockerColor()">Reset to default</button>
+      }
+    </section>
+
+    <!-- Actions -->
+    <div class="edit-mode-panel__actions">
+      <button type="button" class="btn btn--cancel" (click)="onClose()">Cancel</button>
+      <button type="button" class="btn btn--save" (click)="onSave()">Done</button>
+    </div>
+  </div>
+</div>

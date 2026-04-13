@@ -1,0 +1,139 @@
+<div class="pane-layout-wrapper" style="position: relative">
+  <div class="pane-toolbar">
+    <!-- App toggles -->
+    <div class="toolbar-apps">
+      @for (def of allAppDefs; track def.type) {
+        <button
+          type="button"
+          class="toolbar-app-btn"
+          [class.toolbar-app-btn--active]="activeApps.includes(def.type)"
+          [class.toolbar-app-btn--maximized]="maximizedApp() === def.type"
+          [title]="maximizedApp() === def.type ? 'Restore ' + def.label : def.label"
+          [attr.aria-pressed]="activeApps.includes(def.type)"
+          (click)="maximizedApp() === def.type ? onMinimize(def.type) : toggleApp(def.type)"
+        >{{ def.icon }}</button>
+      }
+    </div>
+
+    <div class="toolbar-spacer"></div>
+
+    <!-- Locker color button -->
+    <button
+      type="button"
+      class="toolbar-color-btn"
+      [style.background]="lockerColor || '#f5ede0'"
+      title="Change locker color"
+      (click)="showLockerColorPicker.set(true)"
+    ></button>
+
+    <!-- Font picker -->
+    <select
+      class="toolbar-font-select"
+      [value]="fontFamily ?? ''"
+      (change)="fontFamilyChange.emit($any($event.target).value || null)"
+    >
+      <optgroup label="Standard">
+        @for (opt of fontOptions; track opt.label) {
+          @if (opt.group === 'Standard') {
+            <option [value]="opt.value ?? ''">{{ opt.label }}</option>
+          }
+        }
+      </optgroup>
+      <optgroup label="Dyslexia-friendly">
+        @for (opt of fontOptions; track opt.label) {
+          @if (opt.group === 'Dyslexia-friendly') {
+            <option [value]="opt.value ?? ''">{{ opt.label }}</option>
+          }
+        }
+      </optgroup>
+    </select>
+  </div>
+
+  <div class="pane-layout">
+    @for (appType of activeApps; track appType; let i = $index) {
+      @if (i > 0 && !isPaneHidden(activeApps[i - 1]) && !isPaneHidden(appType)) {
+        <div
+          class="col-resizer"
+          [class.col-resizer--active]="activeResizer() === i - 1"
+          (mousedown)="onResizerMousedown($event, i - 1)"
+        ></div>
+      }
+      <div
+        class="pane-wrap"
+        [style.flex-grow]="maximizedApp() === appType ? 1 : (isPaneHidden(appType) ? 0 : columnWeights()[i])"
+        [class.pane-wrap--hidden]="isPaneHidden(appType)"
+      >
+        <div
+          class="pane"
+          [style.--pane-tint]="getPaletteColor(appType)"
+          [class.pane--focused]="focusedPane === i"
+          [class.pane--drag-source]="dragSourceIndex() === i"
+          [class.pane--drag-over]="dragOverIndex() === i"
+          (click)="focusPane(i)"
+          (dragover)="onDragOver($event, i)"
+          (dragleave)="onDragLeave($event, i)"
+          (drop)="onDrop($event, i)"
+        >
+          <div
+            class="pane-drag-handle"
+            draggable="true"
+            (dragstart)="onDragStart($event, i)"
+            (dragend)="onDragEnd()"
+          >
+            <app-pane-header
+              [appType]="appType"
+              [paletteColor]="getHeaderColor(appType)"
+              [paneIndex]="i"
+              [subtitle]="appSubtitles()[appType]"
+              [isMaximized]="maximizedApp() === appType"
+              [canMinimize]="maximizedApp() === appType && activeApps.length > 1"
+              [canClose]="activeApps.length > 1"
+              (minimize)="onMinimize(appType)"
+              (maximize)="onMaximize(appType)"
+              (close)="onClose(appType)"
+            />
+          </div>
+
+          <div class="pane__content">
+              @switch (appType) {
+                @case ('TODO') {
+                  <app-todo-app
+                    [paletteColor]="getPaletteColor(appType)"
+                    (subtitleChange)="onAppSubtitleChange('TODO', $event)"
+                    (headerColorChange)="onAppHeaderColorChange('TODO', $event)"
+                  />
+                }
+                @case ('NOTES') {
+                  <app-notes-app
+                    [paletteColor]="getPaletteColor(appType)"
+                    (subtitleChange)="onAppSubtitleChange('NOTES', $event)"
+                    (headerColorChange)="onAppHeaderColorChange('NOTES', $event)"
+                  />
+                }
+                @case ('TIMER') {
+                  <app-timer-app [paletteColor]="getPaletteColor(appType)" />
+                }
+                @case ('SHORTCUTS') {
+                  <app-shortcuts-app [paletteColor]="getPaletteColor(appType)" />
+                }
+              }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (showLockerColorPicker()) {
+    <div class="locker-color-overlay" (click)="showLockerColorPicker.set(false)">
+      <div class="locker-color-overlay__card" (click)="$event.stopPropagation()">
+        <p class="locker-color-overlay__title">Locker Color</p>
+        <app-swatch-picker
+          [selectedColor]="lockerColor || '#f5ede0'"
+          [showGradientToggle]="false"
+          (colorChange)="lockerColorChange.emit($event); showLockerColorPicker.set(false)"
+          (escaped)="showLockerColorPicker.set(false)"
+        />
+      </div>
+    </div>
+  }
+</div>

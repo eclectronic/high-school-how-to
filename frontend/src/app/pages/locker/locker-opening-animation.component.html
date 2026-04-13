@@ -1,0 +1,76 @@
+<div
+  class="locker-overlay"
+  [class.locker-overlay--opening]="isOpening()"
+  [class.locker-overlay--fadeout]="isFading()"
+>
+  <!-- Side bay 1 -->
+  <div class="locker-bay">
+    <div class="locker-door" [style.background]="doorGradient"></div>
+  </div>
+
+  <!-- Side bay 2 -->
+  <div class="locker-bay">
+    <div class="locker-door" [style.background]="doorGradient"></div>
+  </div>
+
+  <!-- Center bay — animated door + interior -->
+  <div class="locker-bay locker-bay--center">
+    <!-- Interior revealed as door swings open -->
+    <div class="locker-interior">
+      <div class="locker-shelf locker-shelf--top"></div>
+      <div class="locker-shelf locker-shelf--bottom"></div>
+      <!-- Bottom shelf items -->
+      <div class="locker-books">📚📓📒✏️</div>
+      <!-- Middle section items -->
+      <div class="locker-item" style="font-size:3rem;top:34%;left:6%">🧢</div>
+      <div class="locker-item" style="font-size:2.6rem;top:36%;right:8%">🎧</div>
+      <div class="locker-item" style="font-size:2.2rem;top:54%;left:10%">💧</div>
+      <div class="locker-item" style="font-size:2rem;top:52%;right:12%">📌</div>
+      <!-- Top section items -->
+      <div class="locker-item" style="font-size:3.5rem;top:2%;left:5%">🎒</div>
+      <div class="locker-item" style="font-size:2.5rem;top:4%;right:8%">⭐</div>
+      <div class="locker-item" style="font-size:2rem;top:14%;right:22%">📎</div>
+      <div class="locker-item" style="font-size:1.8rem;top:16%;left:22%">🖊️</div>
+    </div>
+
+    <!-- Animated door -->
+    <div class="locker-door locker-door--animated" [style.background]="doorGradient">
+      <div class="locker-door__edge"></div>
+
+      <!-- Logo sticker -->
+      <img class="locker-logo" src="/assets/images/home-logo.png" alt="" />
+
+      <!-- Vent slots -->
+      <div class="locker-vents">
+        <div class="locker-vent-group">
+          <div class="locker-vent"></div>
+          <div class="locker-vent"></div>
+          <div class="locker-vent"></div>
+        </div>
+        <div class="locker-vent-group">
+          <div class="locker-vent"></div>
+          <div class="locker-vent"></div>
+        </div>
+      </div>
+
+      <!-- Combination lock -->
+      <div class="locker-lock">
+        <div class="locker-lock__plate">
+          <div class="locker-lock__dial">
+            <div class="locker-lock__tick"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side bay 4 -->
+  <div class="locker-bay">
+    <div class="locker-door" [style.background]="doorGradient"></div>
+  </div>
+
+  <!-- Side bay 5 -->
+  <div class="locker-bay">
+    <div class="locker-door" [style.background]="doorGradient"></div>
+  </div>
+</div>

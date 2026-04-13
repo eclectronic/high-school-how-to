@@ -1,0 +1,246 @@
+/* ── Overlay ── */
+.locker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.locker-overlay--fadeout {
+  animation: overlayFadeOut 0.4s ease forwards;
+}
+
+@keyframes overlayFadeOut {
+  to { opacity: 0; pointer-events: none; }
+}
+
+/* ── Bays ── */
+.locker-bay {
+  flex: 1;
+  position: relative;
+  border-right: 3px solid rgba(0, 0, 0, 0.32);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08);
+
+  &:last-child { border-right: none; }
+}
+
+/* Center bay provides perspective for the swinging door */
+.locker-bay--center {
+  perspective: 600px;
+  perspective-origin: 0% 50%;
+}
+
+/* ── Interior (center bay — visible behind open door) ── */
+.locker-interior {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 90% 18% at 50% 0%, rgba(255, 255, 255, 0.09) 0%, transparent 100%),
+    linear-gradient(180deg, #2c3540 0%, #1e2830 55%, #141c22 100%);
+  overflow: hidden;
+}
+
+.locker-shelf {
+  position: absolute;
+  left: 0; right: 0;
+  height: 8px;
+  background: linear-gradient(180deg, #6a7480 0%, #3a444c 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    height: 18px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.35), transparent);
+  }
+
+  &--top    { top: 30%; }
+  &--bottom { bottom: 22%; }
+}
+
+.locker-books {
+  position: absolute;
+  bottom: 22%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  font-size: clamp(2.4rem, 4.5vw, 4rem);
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: -0.05em;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+  user-select: none;
+}
+
+.locker-item {
+  position: absolute;
+  line-height: 1;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.65));
+  user-select: none;
+}
+
+/* ── All doors ── */
+.locker-door {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0px, transparent 49px,
+    rgba(255, 255, 255, 0.05) 49px, rgba(255, 255, 255, 0.05) 50px
+  );
+  box-shadow:
+    inset -6px 0 20px rgba(0, 0, 0, 0.35),
+    inset 4px 0 10px rgba(255, 255, 255, 0.07);
+
+  /* Inset panel bevel */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 14px;
+    border-top: 2px solid rgba(255, 255, 255, 0.25);
+    border-left: 2px solid rgba(255, 255, 255, 0.25);
+    border-right: 2px solid rgba(0, 0, 0, 0.2);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+/* Animated (center) door */
+.locker-door--animated {
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Door swing triggered by --opening class */
+.locker-overlay--opening .locker-door--animated {
+  animation: doorSwing 0.9s cubic-bezier(0.55, 0, 0.15, 1) forwards;
+}
+
+@keyframes doorSwing {
+  0%   { transform: rotateY(0deg); }
+  78%  { transform: rotateY(-110deg); }
+  90%  { transform: rotateY(-103deg); }
+  100% { transform: rotateY(-107deg); }
+}
+
+/* Right-edge depth strip on swinging door */
+.locker-door__edge {
+  position: absolute;
+  right: -18px;
+  top: 0;
+  width: 18px;
+  height: 100%;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.2) 70%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ── Logo sticker ── */
+.locker-logo {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-4deg);
+  width: clamp(80px, 58%, 155px);
+  height: auto;
+  z-index: 2;
+  background: #fff;
+  border-radius: 6px;
+  padding: 6px 8px 4px;
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+  pointer-events: none;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* ── Vent slots ── */
+.locker-vents {
+  position: absolute;
+  top: clamp(3rem, 12%, 5rem);
+  left: 10%;
+  right: 10%;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 3%, 0.9rem);
+  z-index: 1;
+}
+
+.locker-vent-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.locker-vent {
+  height: 7px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.7),
+    0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* ── Combination dial lock ── */
+.locker-lock {
+  position: absolute;
+  right: 18%;
+  top: 55%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.locker-lock__plate {
+  width: 56px;
+  height: 72px;
+  background: linear-gradient(160deg, #d4d4d8 0%, #a1a1aa 50%, #c4c4c8 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.locker-lock__dial {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #27272a 0%, #3f3f46 50%, #27272a 100%);
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  position: relative;
+  /* Dial spins automatically on render */
+  animation: dialSpin 1.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes dialSpin {
+  0%   { transform: rotate(0deg); }
+  30%  { transform: rotate(-720deg); }
+  62%  { transform: rotate(-360deg); }
+  82%  { transform: rotate(-540deg); }
+  100% { transform: rotate(-540deg); }
+}
+
+/* Tick mark on the dial */
+.locker-lock__tick {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+}

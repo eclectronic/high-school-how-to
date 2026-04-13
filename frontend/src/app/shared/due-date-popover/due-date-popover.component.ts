@@ -10,13 +10,15 @@ import { FormsModule } from '@angular/forms';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="popover" (click)="$event.stopPropagation()">
-      <h4 class="popover__title">Set due date</h4>
-      <input type="datetime-local" class="datetime-input" [(ngModel)]="pickerValue" />
-      <div class="popover__actions">
-        <button type="button" class="btn btn--clear" (click)="clear()">Clear</button>
-        <button type="button" class="btn btn--cancel" (click)="cancelled.emit()">Cancel</button>
-        <button type="button" class="btn btn--save" (click)="apply()" [disabled]="!pickerValue">Save</button>
+      <div class="popover__header">
+        <h4 class="popover__title">Set due date</h4>
+        <div class="popover__actions">
+          <button type="button" class="btn btn--clear" (click)="clear()">Clear</button>
+          <button type="button" class="btn btn--cancel" (click)="cancelled.emit()">Cancel</button>
+          <button type="button" class="btn btn--save" (click)="apply()" [disabled]="!pickerValue">Save</button>
+        </div>
       </div>
+      <input type="datetime-local" class="datetime-input" [(ngModel)]="pickerValue" />
     </div>
   `,
   styles: [`
@@ -33,12 +35,20 @@ import { FormsModule } from '@angular/forms';
       gap: 0.5rem;
     }
 
+    .popover__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
     .popover__title {
       margin: 0;
       font-family: var(--locker-font, var(--font-body));
       font-size: 0.85rem;
       font-weight: 700;
       color: #2d1a10;
+      white-space: nowrap;
     }
 
     .datetime-input {

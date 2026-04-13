@@ -38,9 +38,13 @@ export const routes: Routes = [
   },
   {
     path: 'account/locker',
+    redirectTo: '/locker',
+  },
+  {
+    path: 'locker',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./pages/account/locker/locker.component').then((m) => m.LockerComponent),
+      import('./pages/locker/locker-shell.component').then((m) => m.LockerShellComponent),
   },
   {
     path: 'infographics/:slug',
@@ -68,12 +72,19 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'how-to',
+    loadComponent: () =>
+      import('./pages/how-to/how-to-page.component').then((m) => m.HowToPageComponent),
+  },
+  {
     path: 'about',
     loadComponent: () =>
-      import('./pages/content-viewer/content-viewer.component').then(
-        (m) => m.ContentViewerComponent,
-      ),
-    data: { slug: 'my-mission', forceSimpleLayout: true },
+      import('./pages/about/about-page.component').then((m) => m.AboutPageComponent),
+  },
+  {
+    path: 'help',
+    loadComponent: () =>
+      import('./pages/help/help-page.component').then((m) => m.HelpPageComponent),
   },
   {
     path: '**',
