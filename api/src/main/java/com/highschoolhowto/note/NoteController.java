@@ -3,6 +3,7 @@ package com.highschoolhowto.note;
 import com.highschoolhowto.note.dto.CreateNoteRequest;
 import com.highschoolhowto.note.dto.CreateNoteResponse;
 import com.highschoolhowto.note.dto.NoteResponse;
+import com.highschoolhowto.note.dto.ReorderNotesRequest;
 import com.highschoolhowto.note.dto.UpdateNoteRequest;
 import com.highschoolhowto.security.UserPrincipal;
 import jakarta.validation.Valid;
@@ -58,6 +59,15 @@ public class NoteController {
             @PathVariable("noteId") UUID noteId) {
         UUID userId = principal.getUser().getId();
         noteService.deleteNote(userId, noteId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/reorder")
+    public ResponseEntity<Void> reorder(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody ReorderNotesRequest request) {
+        UUID userId = principal.getUser().getId();
+        noteService.reorderNotes(userId, request);
         return ResponseEntity.noContent().build();
     }
 }

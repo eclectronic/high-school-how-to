@@ -48,6 +48,9 @@ public class Note {
     @Column(name = "note_type", nullable = false, length = 20)
     private NoteType noteType = NoteType.REGULAR;
 
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -88,6 +91,9 @@ public class Note {
 
     public NoteType getNoteType() { return noteType; }
     public void setNoteType(NoteType noteType) { this.noteType = noteType; }
+
+    public int getSortOrder() { return sortOrder; }
+    public void setSortOrder(int sortOrder) { this.sortOrder = sortOrder; }
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

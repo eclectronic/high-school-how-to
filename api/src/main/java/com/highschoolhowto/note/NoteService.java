@@ -5,11 +5,14 @@ import com.highschoolhowto.badge.BadgeTriggerType;
 import com.highschoolhowto.note.dto.CreateNoteRequest;
 import com.highschoolhowto.note.dto.CreateNoteResponse;
 import com.highschoolhowto.note.dto.NoteResponse;
+import com.highschoolhowto.note.dto.ReorderNotesRequest;
 import com.highschoolhowto.note.dto.UpdateNoteRequest;
 import com.highschoolhowto.user.User;
 import com.highschoolhowto.user.UserRepository;
 import com.highschoolhowto.web.ApiException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,7 +36,7 @@ public class NoteService {
 
     @Transactional(readOnly = true)
     public List<NoteResponse> getNotes(UUID userId) {
-        return noteRepository.findByUserIdOrderByCreatedAt(userId).stream()
+        return noteRepository.findByUserIdOrderBySortOrderAscCreatedAtDesc(userId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -75,6 +78,15 @@ public class NoteService {
         if (StringUtils.hasText(request.fontSize())) {
             note.setFontSize(request.fontSize().trim());
         }
+        // New notes appear at the top of the custom order. Shift existing notes down
+        // so the new note can take sortOrder=0. This matches the UI, which prepends
+        // newly-created notes to the list.
+        List<Note> existing = noteRepository.findByUserIdOrderBySortOrderAscCreatedAtDesc(userId);
+        for (Note n : existing) {
+            n.setSortOrder(n.getSortOrder() + 1);
+        }
+        noteRepository.saveAll(existing);
+        note.setSortOrder(0);
         Note saved = noteRepository.save(note);
         var earnedBadge = badgeService.checkFeatureBadge(user, BadgeTriggerType.FIRST_NOTE);
         return toCreateResponse(saved, earnedBadge.orElse(null));
@@ -97,6 +109,21 @@ public class NoteService {
         noteRepository.delete(note);
     }
 
+    @Transactional
+    public void reorderNotes(UUID userId, ReorderNotesRequest request) {
+        List<Note> owned = noteRepository.findByUserIdOrderBySortOrderAscCreatedAtDesc(userId);
+        Map<UUID, Note> byId = new HashMap<>();
+        owned.forEach(n -> byId.put(n.getId(), n));
+        int position = 0;
+        for (UUID id : request.ids()) {
+            Note n = byId.get(id);
+            if (n != null) {
+                n.setSortOrder(position++);
+            }
+        }
+        noteRepository.saveAll(owned);
+    }
+
     private Note requireNote(UUID noteId, UUID userId) {
         return noteRepository.findByIdAndUserId(noteId, userId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Note not found", "Note not found for this user"));
@@ -110,7 +137,10 @@ public class NoteService {
                 note.getColor(),
                 note.getTextColor(),
                 note.getFontSize(),
-                note.getNoteType()
+                note.getNoteType(),
+                note.getSortOrder(),
+                note.getCreatedAt(),
+                note.getUpdatedAt()
         );
     }
 
@@ -123,6 +153,9 @@ public class NoteService {
                 note.getTextColor(),
                 note.getFontSize(),
                 note.getNoteType(),
+                note.getSortOrder(),
+                note.getCreatedAt(),
+                note.getUpdatedAt(),
                 earnedBadge
         );
     }

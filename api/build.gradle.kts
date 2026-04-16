@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "com.highschoolhowto"
-version = "5.1.0"
+version = "5.2.0"
 
 val spockVersion = "2.3-groovy-4.0"
 val testcontainersVersion = "1.20.3"

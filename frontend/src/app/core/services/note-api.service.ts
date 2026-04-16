@@ -45,4 +45,8 @@ export class NoteApiService {
   deleteNote(noteId: string): Observable<void> {
     return this.http.delete<void>(`/api/notes/${noteId}`);
   }
+
+  reorderNotes(ids: string[]): Observable<void> {
+    return this.http.put<void>('/api/notes/reorder', { ids });
+  }
 }

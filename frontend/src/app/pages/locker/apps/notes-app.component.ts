@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NoteApiService } from '../../../core/services/note-api.service';
 import { Note } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
@@ -8,12 +9,18 @@ import { InlineTitleEditComponent } from '../../../shared/inline-title-edit/inli
 import { SwatchPickerComponent } from '../../../shared/swatch-picker/swatch-picker.component';
 import { autoContrastColor } from '../../../shared/color-picker/color-utils';
 
+export type NotesSortMode = 'name' | 'date' | 'custom';
+
+const SORT_MODE_STORAGE_KEY = 'notes.sortMode';
+const DEFAULT_SORT_MODE: NotesSortMode = 'custom';
+
 @Component({
   selector: 'app-notes-app',
   standalone: true,
   imports: [
     CommonModule,
     FormsModule,
+    DragDropModule,
     ConfirmDialogComponent,
     InlineTitleEditComponent,
     SwatchPickerComponent,
@@ -32,6 +39,9 @@ export class NotesAppComponent implements OnInit {
   protected view = signal<'list' | 'detail'>('list');
   protected selectedNote = signal<Note | null>(null);
   protected loading = signal(false);
+
+  protected sortMode = signal<NotesSortMode>(this.readStoredSortMode());
+  protected readonly sortedNotes = computed(() => this.sortNotes(this.notes(), this.sortMode()));
 
   protected editTitle = '';
   protected editContent = '';
@@ -56,6 +66,75 @@ export class NotesAppComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
+    });
+  }
+
+  private readStoredSortMode(): NotesSortMode {
+    try {
+      const raw = localStorage.getItem(SORT_MODE_STORAGE_KEY);
+      if (raw === 'name' || raw === 'date' || raw === 'custom') return raw;
+    } catch {
+      // localStorage unavailable (SSR / privacy mode) — fall through to default
+    }
+    return DEFAULT_SORT_MODE;
+  }
+
+  private sortNotes(notes: Note[], mode: NotesSortMode): Note[] {
+    const copy = notes.slice();
+    switch (mode) {
+      case 'name':
+        return copy.sort((a, b) =>
+          a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
+        );
+      case 'date':
+        // Newest first
+        return copy.sort((a, b) => {
+          const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+          const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+          return tb - ta;
+        });
+      case 'custom':
+      default:
+        // Honor server sortOrder (already applied by the API), then createdAt DESC
+        return copy.sort((a, b) => {
+          const sa = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+          const sb = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+          if (sa !== sb) return sa - sb;
+          const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
+          const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+          return tb - ta;
+        });
+    }
+  }
+
+  protected setSortMode(mode: NotesSortMode): void {
+    this.sortMode.set(mode);
+    try {
+      localStorage.setItem(SORT_MODE_STORAGE_KEY, mode);
+    } catch {
+      // non-fatal
+    }
+  }
+
+  protected onDrop(event: CdkDragDrop<Note[]>): void {
+    if (this.sortMode() !== 'custom') return;
+    if (event.previousIndex === event.currentIndex) return;
+
+    // Rebuild the array in the new custom order and persist.
+    const reordered = this.sortedNotes().slice();
+    moveItemInArray(reordered, event.previousIndex, event.currentIndex);
+
+    // Reassign sortOrder locally so sortedNotes() reflects the drop immediately,
+    // then update the underlying notes signal.
+    const withOrder = reordered.map((n, i) => ({ ...n, sortOrder: i }));
+    const byId = new Map(withOrder.map(n => [n.id, n]));
+    this.notes.update(ns => ns.map(n => byId.get(n.id) ?? n));
+
+    this.noteApi.reorderNotes(withOrder.map(n => n.id)).subscribe({
+      error: () => {
+        // On failure, reload to resync with the server.
+        this.loadNotes();
+      },
     });
   }
 

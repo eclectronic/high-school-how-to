@@ -42,6 +42,9 @@ export interface Note {
   textColor?: string | null;
   fontSize?: string | null; // 'small' | 'medium' | 'large'
   noteType?: NoteType;
+  sortOrder?: number;
+  createdAt?: string; // ISO 8601
+  updatedAt?: string; // ISO 8601
 }
 
 export interface Quote {

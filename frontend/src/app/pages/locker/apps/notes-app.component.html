@@ -6,33 +6,86 @@
   <!-- LIST VIEW — always rendered so the pane keeps its height; detail overlays on top -->
   @if (!loading()) {
     <div class="notes-app__list-view">
+      @if (notes().length > 0) {
+        <div class="notes-app__sort-bar" role="radiogroup" aria-label="Sort notes">
+          <button
+            type="button"
+            role="radio"
+            class="notes-app__sort-btn"
+            [class.notes-app__sort-btn--active]="sortMode() === 'name'"
+            [attr.aria-checked]="sortMode() === 'name'"
+            title="Sort by name"
+            (click)="setSortMode('name')"
+          >Name</button>
+          <button
+            type="button"
+            role="radio"
+            class="notes-app__sort-btn"
+            [class.notes-app__sort-btn--active]="sortMode() === 'date'"
+            [attr.aria-checked]="sortMode() === 'date'"
+            title="Sort by date added (newest first)"
+            (click)="setSortMode('date')"
+          >Date</button>
+          <button
+            type="button"
+            role="radio"
+            class="notes-app__sort-btn"
+            [class.notes-app__sort-btn--active]="sortMode() === 'custom'"
+            [attr.aria-checked]="sortMode() === 'custom'"
+            title="Custom order — drag to arrange"
+            (click)="setSortMode('custom')"
+          >Custom</button>
+        </div>
+      }
+
       @if (notes().length === 0) {
         <div class="notes-app__empty">
           <p>No notes yet.</p>
         </div>
       }
 
-      @for (note of notes(); track note.id) {
-        <div
-          class="note-card"
-          [style.background]="note.color"
-          [style.color]="note.textColor || '#2d1a10'"
-          (click)="openNote(note)"
-        >
-          <div class="note-card__header">
-            <span class="note-card__title">{{ note.title }}</span>
-            <button
-              type="button"
-              class="note-card__delete-btn"
-              title="Delete note"
-              (click)="confirmDeleteNote(note); $event.stopPropagation()"
-            >✕</button>
+      <div
+        cdkDropList
+        [cdkDropListDisabled]="sortMode() !== 'custom'"
+        (cdkDropListDropped)="onDrop($event)"
+        class="notes-app__drop-list"
+      >
+        @for (note of sortedNotes(); track note.id) {
+          <div
+            class="note-card"
+            [class.note-card--draggable]="sortMode() === 'custom'"
+            [style.background]="note.color"
+            [style.color]="note.textColor || '#2d1a10'"
+            cdkDrag
+            [cdkDragDisabled]="sortMode() !== 'custom'"
+            (click)="openNote(note)"
+          >
+            @if (sortMode() === 'custom') {
+              <span
+                class="note-card__drag-handle"
+                cdkDragHandle
+                title="Drag to reorder"
+                aria-label="Drag to reorder"
+                (click)="$event.stopPropagation()"
+              >⋮⋮</span>
+            }
+            <div class="note-card__body">
+              <div class="note-card__header">
+                <span class="note-card__title">{{ note.title }}</span>
+                <button
+                  type="button"
+                  class="note-card__delete-btn"
+                  title="Delete note"
+                  (click)="confirmDeleteNote(note); $event.stopPropagation()"
+                >✕</button>
+              </div>
+              @if (getContentPreview(note)) {
+                <p class="note-card__preview">{{ getContentPreview(note) }}</p>
+              }
+            </div>
           </div>
-          @if (getContentPreview(note)) {
-            <p class="note-card__preview">{{ getContentPreview(note) }}</p>
-          }
-        </div>
-      }
+        }
+      </div>
 
       <button type="button" class="notes-app__new-btn" (click)="createNote()">
         + New Note

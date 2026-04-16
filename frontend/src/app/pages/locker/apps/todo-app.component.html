@@ -82,13 +82,28 @@
         </div>
       </div>
 
-      <div class="todo-app__tasks">
+      <div
+        class="todo-app__tasks"
+        cdkDropList
+        (cdkDropListDropped)="onTaskDrop($event)"
+      >
         @if (selectedList()!.tasks.length === 0) {
           <p class="todo-app__no-tasks">No tasks yet. Add one below!</p>
         }
 
         @for (task of selectedList()!.tasks; track task.id) {
-          <div class="todo-task" [class.todo-task--done]="task.completed">
+          <div
+            class="todo-task"
+            [class.todo-task--done]="task.completed"
+            cdkDrag
+            [cdkDragLockAxis]="'y'"
+          >
+            <span
+              class="todo-task__drag-handle"
+              cdkDragHandle
+              title="Drag to reorder"
+              aria-label="Drag to reorder"
+            >⋮⋮</span>
             <label class="todo-task__check-label">
               <input
                 type="checkbox"

@@ -1,5 +1,17 @@
 # Changelog
 
+## [5.2.0] — 2026-04-16
+
+### Notes App — Sort by Name, Date, or Custom Order
+
+The Notes list now has a small **sort bar** at the top with three pills: **Name**, **Date**, and **Custom**. Name sorts alphabetically (case-insensitive), Date sorts newest-first by creation date, and Custom lets you drag notes into whatever order you want. Your sort preference is saved per browser in `localStorage`, so the list opens in the same mode you left it in. When Custom mode is active, each note card shows a ⋮⋮ drag handle on the left; grabbing the handle lets you reorder notes freely, and the new order is persisted server-side. A new `sort_order` column on the `notes` table (backfilled newest-first to match the prior display) powers the custom ordering, and a new `PUT /api/notes/reorder` endpoint mirrors the pattern already used for pins and to-do tasks.
+
+### To-Do App — Drag Handles Are Back
+
+Each to-do item now has a ⋮⋮ **drag handle** on the left side of the row, restoring the ability to reorder tasks within a list. Dragging is locked to the vertical axis and updates the list order optimistically — the UI reflects the new position immediately, and a `PUT /api/tasks/reorder` call persists the change. If the server rejects the reorder, the list reloads so the UI stays in sync with the backend.
+
+---
+
 ## [5.1.0] — 2026-04-16
 
 ### Help Page Redesign — Post-It Bulletin Board

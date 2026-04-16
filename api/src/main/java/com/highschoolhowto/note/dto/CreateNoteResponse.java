@@ -2,6 +2,7 @@ package com.highschoolhowto.note.dto;
 
 import com.highschoolhowto.badge.dto.EarnedBadgeResponse;
 import com.highschoolhowto.note.NoteType;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -16,4 +17,7 @@ public record CreateNoteResponse(
         String textColor,
         String fontSize,
         NoteType noteType,
+        int sortOrder,
+        Instant createdAt,
+        Instant updatedAt,
         EarnedBadgeResponse earnedBadge) {}

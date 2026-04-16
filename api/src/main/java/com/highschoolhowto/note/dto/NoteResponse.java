@@ -1,6 +1,7 @@
 package com.highschoolhowto.note.dto;
 
 import com.highschoolhowto.note.NoteType;
+import java.time.Instant;
 import java.util.UUID;
 
 public record NoteResponse(
@@ -10,5 +11,8 @@ public record NoteResponse(
         String color,
         String textColor,
         String fontSize,
-        NoteType noteType
+        NoteType noteType,
+        int sortOrder,
+        Instant createdAt,
+        Instant updatedAt
 ) {}

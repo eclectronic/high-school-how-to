@@ -1,6 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { TaskApiService } from '../../../core/services/task-api.service';
 import { TaskList, TaskItem } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
@@ -15,6 +16,7 @@ import { autoContrastColor } from '../../../shared/color-picker/color-utils';
   imports: [
     CommonModule,
     FormsModule,
+    DragDropModule,
     ConfirmDialogComponent,
     InlineTitleEditComponent,
     SwatchPickerComponent,
@@ -230,6 +232,35 @@ export class TodoAppComponent implements OnInit {
 
   protected onDeleteTaskCancelled(): void {
     this.deleteTaskTarget.set(null);
+  }
+
+  protected onTaskDrop(event: CdkDragDrop<TaskItem[]>): void {
+    const list = this.selectedList();
+    if (!list) return;
+    if (event.previousIndex === event.currentIndex) return;
+
+    // Optimistically reorder locally so the UI updates immediately
+    const reordered = list.tasks.slice();
+    moveItemInArray(reordered, event.previousIndex, event.currentIndex);
+    const optimistic = { ...list, tasks: reordered };
+    this.lists.update(ls => ls.map(l => l.id === list.id ? optimistic : l));
+    this.selectedList.set(optimistic);
+
+    const ids = reordered.map(t => t.id);
+    this.taskApi.reorderTasks(list.id, ids).subscribe({
+      next: updatedTasks => {
+        // Use the server's canonical task ordering in case sortOrder landed differently
+        this.lists.update(ls => ls.map(l =>
+          l.id === list.id ? { ...l, tasks: updatedTasks } : l
+        ));
+        const refreshed = this.lists().find(l => l.id === list.id);
+        if (refreshed) this.selectedList.set(refreshed);
+      },
+      error: () => {
+        // On failure, reload from the server
+        this.loadLists();
+      },
+    });
   }
 
   protected toggleDueDatePopover(taskId: string): void {
