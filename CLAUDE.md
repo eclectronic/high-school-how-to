@@ -142,9 +142,11 @@ The IAM user needs these permissions:
 - **Auth flow**: JWT access token (15m TTL) + refresh token (7d TTL). `AuthInterceptor` attaches tokens to requests; `SessionStore` manages auth state with RxJS signals
 - **Content**: All content (infographics, videos, articles) is data-driven via the API. `ContentApiService` fetches cards, tags, and home layout. The home page, topic pages, and content viewer all load from the API — there are no static content resource files.
 - **Admin module**: Lazy-loaded at `/admin`. Includes tag manager, content list, content editor (Tiptap rich text for articles), and layout editor. Requires `isAdmin` signal from `SessionStore`.
+- **Hidden help content**: The `help-stickers` content card is intentionally set to `status='DRAFT'` (see `v5-help-accuracy-0065.sql`) so it is excluded from the public help page by `findByTagSlugResponses(slug, true)`'s `publishedOnly` filter. The stickers feature itself is dead code (`AppLauncherComponent`, `EditModeComponent`, `DailyQuoteComponent`, `ShortcutsRowComponent` are defined but never imported). When the stickers feature is wired back into the locker UI, flip `help-stickers` back to `PUBLISHED` via a new changeset.
 - **Static app assets**: UI images (logo, backgrounds, social cards) under `frontend/public/assets/images/`. These are checked into the repo and bundled with the app.
 - **Navigation**: Router uses `withInMemoryScrolling`
 - **Code style**: Prettier with 100-char print width, single quotes
+- **Page title / header styling**: The app background is a corkboard texture, so any standalone page title (`<h1>` or similar) rendered directly against the background must use a card treatment to remain legible. Use: `background: rgba(255, 254, 249, 0.9); border: 2px solid rgba(#2d1a10, 0.12); border-radius: 1.25rem; padding: 0.75rem 1.5rem; box-shadow: 0 8px 24px rgba(#2d1a10, 0.12);`. Titles that sit inside an already-styled card (e.g. the about page article card) don't need this applied again.
 
 ### Media Assets
 

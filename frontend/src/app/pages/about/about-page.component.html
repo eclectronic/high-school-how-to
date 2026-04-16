@@ -4,15 +4,18 @@
   <main class="about-page__main">
     @if (loading()) {
       <div class="about-page__loading" aria-live="polite">Loading…</div>
-    } @else {
-      <article class="about-page__article">
-        <h1 class="about-page__title">{{ title() }}</h1>
+    } @else if (card()) {
+      <article class="about-page__postit" [style.background-color]="postitColor">
+        <span class="about-page__pin"></span>
+        <h1 class="about-page__title">{{ card()!.title }}</h1>
         @if (bodyHtml()) {
           <div class="about-page__body" [innerHTML]="bodyHtml()"></div>
         } @else {
           <p class="about-page__empty">No content available.</p>
         }
       </article>
+    } @else {
+      <p class="about-page__empty">No content available.</p>
     }
   </main>
 </div>

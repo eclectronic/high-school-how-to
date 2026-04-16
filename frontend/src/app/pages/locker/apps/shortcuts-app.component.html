@@ -50,7 +50,7 @@
     }
 
     @if (shortcuts().length === 0 && !showAddForm()) {
-      <p class="shortcuts-app__empty">No shortcuts yet. Add one below.</p>
+      <p class="shortcuts-app__empty">No pins yet. Tap "+ Add Pin" below to pin a URL.</p>
     }
   </div>
 
@@ -88,7 +88,7 @@
   <div class="shortcuts-app__footer">
     @if (!showAddForm() && !editingId()) {
       <button type="button" class="shortcuts-app__add-btn" [style.color]="paletteColor" (click)="openAddForm()">
-        + Add Shortcut
+        + Add Pin
       </button>
     }
   </div>

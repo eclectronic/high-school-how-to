@@ -668,15 +668,16 @@ $color-tape: rgba(220, 220, 214, 0.92);
 
 .home__quote-label {
   margin: 0 0 0.75rem;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba($color-ink, 0.45);
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba($color-ink, 0.7);
 }
 
 .home__quote-text {
   margin: 0 0 0.6rem;
+  font-family: var(--font-body);
   font-size: clamp(0.95rem, 1.8vw, 1.1rem);
   font-style: italic;
   line-height: 1.65;
@@ -686,6 +687,7 @@ $color-tape: rgba(220, 220, 214, 0.92);
 
 .home__quote-attribution {
   margin: 0;
+  font-family: var(--font-body);
   font-size: 0.82rem;
   font-weight: 700;
   color: rgba($color-ink, 0.6);

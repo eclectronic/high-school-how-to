@@ -81,3 +81,21 @@ databaseChangeLog:
       file: db/changelog/v5-locker-color-0056.sql
   - include:
       file: db/changelog/v5-font-family-0057.sql
+  - include:
+      file: db/changelog/v5-about-mission-0058.sql
+  - include:
+      file: db/changelog/v5-help-signup-0059.sql
+  - include:
+      file: db/changelog/v5-about-mission-link-0060.sql
+  - include:
+      file: db/changelog/v5-help-pins-0061.sql
+  - include:
+      file: db/changelog/v5-help-updates-0062.sql
+  - include:
+      file: db/changelog/v5-about-mission-0063.sql
+  - include:
+      file: db/changelog/v5-help-colors-0064.sql
+  - include:
+      file: db/changelog/v5-help-accuracy-0065.sql
+  - include:
+      file: db/changelog/v5-help-show-nav-0066.sql

@@ -85,6 +85,13 @@ public class ContentCardService {
     }
 
     @Transactional(readOnly = true)
+    public List<ContentCardResponse> findByTagSlugResponses(String tagSlug, boolean publishedOnly) {
+        return findByTagSlug(tagSlug, publishedOnly).stream()
+                .map(ContentCardResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public ContentCard findBySlug(String slug) {
         return cardRepository.findBySlug(slug)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Card not found", "No card with slug: " + slug));

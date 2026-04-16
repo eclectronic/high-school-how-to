@@ -9,7 +9,7 @@ import { ContentCardAdmin } from '../../core/models/content.models';
 const TRIGGER_LABELS: Record<BadgeTriggerType, string> = {
   CHECKLIST_COMPLETE: 'Checklist Complete',
   FIRST_TODO_LIST: 'First To-Do List',
-  FIRST_SHORTCUT: 'First Shortcut',
+  FIRST_SHORTCUT: 'First Pin',
   FIRST_TIMER: 'First Timer',
   FIRST_NOTE: 'First Note',
   FIRST_STICKER: 'First Sticker',

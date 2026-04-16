@@ -29,14 +29,13 @@ class TagControllerTest {
 
     /** Regression: cardsByTag previously returned List<ContentCard>, causing a compile error. */
     @Test
-    void cardsByTag_mapsContentCardsToResponses() {
-        ContentCard card = new ContentCard();
-        card.setSlug("sat-vs-act-guide");
-        card.setTitle("SAT vs ACT Guide");
-        card.setCardType(CardType.VIDEO);
-        card.setStatus(CardStatus.PUBLISHED);
+    void cardsByTag_delegatesToServiceAndReturnsResponses() {
+        ContentCardResponse response = new ContentCardResponse(
+                1L, "sat-vs-act-guide", "SAT vs ACT Guide", null,
+                CardType.VIDEO, null, null, null, null, null, null, null,
+                false, CardStatus.PUBLISHED, List.of(), List.of(), List.of(), null, null);
 
-        when(cardService.findByTagSlug("tests-for-college", true)).thenReturn(List.of(card));
+        when(cardService.findByTagSlugResponses("tests-for-college", true)).thenReturn(List.of(response));
 
         List<ContentCardResponse> result = controller.cardsByTag("tests-for-college");
 
@@ -47,7 +46,7 @@ class TagControllerTest {
 
     @Test
     void cardsByTag_returnsEmptyListWhenNoCardsForTag() {
-        when(cardService.findByTagSlug("unknown-tag", true)).thenReturn(List.of());
+        when(cardService.findByTagSlugResponses("unknown-tag", true)).thenReturn(List.of());
 
         List<ContentCardResponse> result = controller.cardsByTag("unknown-tag");
 

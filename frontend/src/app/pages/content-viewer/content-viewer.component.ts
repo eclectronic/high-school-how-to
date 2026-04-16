@@ -41,6 +41,11 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   /** Slug of the tag currently used for prev/next navigation, or null for all content. */
   protected tagSlug = signal<string | null>(null);
 
+  /** True when the current card is tagged as a help article. */
+  protected isHelpArticle = computed(() => {
+    return this.card()?.tags.some((t) => t.slug === 'help') ?? false;
+  });
+
   /** Name of the active tag, resolved from the card's tag list. */
   protected tagName = computed(() => {
     const slug = this.tagSlug();

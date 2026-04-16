@@ -63,12 +63,14 @@ app-root {
 
   h2 {
     margin: 0;
+    font-family: var(--font-display);
     font-size: 1.75rem;
     color: #2d1a10;
   }
 
   p {
     margin: 0;
+    font-family: var(--font-body);
     color: #5f4f43;
   }
 
@@ -86,6 +88,7 @@ app-root {
   gap: 0.75rem;
 
   a {
+    font-family: var(--font-body);
     font-weight: 600;
     color: #ff5c77;
     text-decoration: none;
@@ -115,6 +118,7 @@ app-root {
   small {
     color: #ba1a1a;
     font-weight: 500;
+    font-family: var(--font-body);
   }
 }
 
@@ -143,6 +147,11 @@ app-root {
   padding: 0.75rem 1rem;
   border-radius: 12px;
   font-weight: 600;
+
+  p {
+    margin: 0 0 0.5rem;
+    &:last-child { margin-bottom: 0; }
+  }
 }
 
 .auth-alert--error {

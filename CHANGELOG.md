@@ -1,5 +1,45 @@
 # Changelog
 
+## [5.1.0] — 2026-04-16
+
+### Help Page Redesign — Post-It Bulletin Board
+
+The Help page (`/help`) has been rebuilt as a colorful bulletin board of **post-it notes**. Each help article is rendered as a tinted square with a slight rotation, a paper-fold corner, and a colored push pin at the top. Pin colors rotate randomly on every page load, while each post-it's color is stable per article (seeded in the database) so admins can override the color from the content editor when needed. The page title got a card treatment so it stands out against the corkboard background.
+
+### Help Articles — Logo, Back Button & Navigation
+
+Every help article (`/content/help-*`) now shows the **High School How To logo** in the upper-left, always linking back to the home page. A context-aware back button sits next to it: on a help article you get **← Back to Help**; on any other content card it stays as **← Home**. Internally this required flipping the `simple_layout` flag for help cards so the viewer-nav block actually renders.
+
+### Help Articles — Accuracy Pass
+
+All help articles were audited against the live locker UI and rewritten to match what the code actually does. The keyboard-shortcuts article now lists only the shortcuts that exist (`1`/`2`/`3`/`n`); references to dropped or never-implemented features (drag-to-reorder tasks, swipe-to-delete, the daily quote, the standalone shortcuts row, an `Edit Mode` keyboard toggle) were removed. The To-Do, Notes, Timer, Apps, Customizing-Your-Locker, and Mobile pages were rewritten to describe the real toolbar, panes, dividers, due-date picker, chime sound, Pomodoro gear icon, and four-app swipe layout. The orphaned **Stickers** article was hidden (set to `DRAFT`) since the stickers feature isn't yet wired into the UI.
+
+### New "Creating an Account" Help Article
+
+A new **Creating an Account** help article walks new users through signup, email verification, where to find the verification email, and how to troubleshoot common login problems. It links back to the relevant `/auth/*` pages.
+
+### Pins App Documentation
+
+The old **Shortcuts** help article was renamed and rewritten as **Pins**, matching the new in-locker terminology. The article describes the 📌 Pins app: how to add a pin, how to edit/delete with the ✏ and ✕ buttons, and how pins also surface as quick-tap icons across the top of the locker home screen.
+
+### Locker Color Help — Simplified
+
+The old **Color Palettes** help article became **Locker Color**, reflecting the simpler one-tap color picker that replaced the multi-palette system. It explains how a single color choice automatically derives coordinated accent tones for each app pane.
+
+### About Page — Post-It Design & Mission Polish
+
+The About page article now renders as a single large post-it with a pin, matching the new help-page aesthetic. The mission copy was refined — the duplicate "convenient" was cleaned up, and the closing line now includes a direct **Create an account** call to action so first-time visitors have a clear next step.
+
+### Home Page — Rotating Post-It Colors
+
+The hero tagline card and the **Quote of the Day** card on the home page now pick from the same post-it color palette as the help page, with a random offset per page load so the home page reads as a colorful bulletin board on every visit. The existing tape elements still ride on top of each card. The **Quote of the Day** label is now in Mira's display font at a larger size; the quote text and attribution use the standard site body font for readability.
+
+### Auth Dialog Typography
+
+The login, signup, forgot-password, and reset-password dialogs now use a consistent typographic hierarchy: **headers** (Sign up, Reset password, etc.) stay in Mira's display font, while **subtext** ("Log in to sync your checklists and keep the streak alive."), **helper text** ("Minimum 12 characters, include upper/lowercase, a number, and a symbol."), and **links** ("Already have an account? Log in") use the standard site body font (Nunito) so they're easy to read.
+
+---
+
 ## [5.0.0] — 2026-04-13
 
 ### New Site Structure

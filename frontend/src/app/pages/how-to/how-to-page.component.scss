@@ -30,6 +30,11 @@ $color-rose: #ff9fbf;
   font-family: var(--font-display);
   text-transform: uppercase;
   letter-spacing: 2px;
+  background: rgba(255, 254, 249, 0.9);
+  border: 2px solid rgba($color-ink, 0.12);
+  border-radius: 1.25rem;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 0 8px 24px rgba($color-ink, 0.12);
 }
 
 .how-to-page__loading,

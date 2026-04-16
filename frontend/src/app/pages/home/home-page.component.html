@@ -35,7 +35,7 @@
       <div class="home__note-stack">
         <div class="home__note-card" aria-label="High School How To note">
           <span class="home__note-card-tape" aria-hidden="true"></span>
-          <div class="note-card note-card--wide">
+          <div class="note-card note-card--wide" [style.background-color]="cardColor(0)">
             <p class="note-card__copy">
               <span class="note-card__line">Helping you navigate, organize, and lock in for school.</span>
             </p>
@@ -50,7 +50,7 @@
 
   <!-- ── Quote of the Day ── -->
   @if (quote()) {
-    <div class="home__quote-card">
+    <div class="home__quote-card" [style.background-color]="cardColor(1)">
       <span class="home__quote-card-tape" aria-hidden="true"></span>
       <p class="home__quote-label">Quote of the Day</p>
       <blockquote class="home__quote-text">"{{ quote()!.quoteText }}"</blockquote>

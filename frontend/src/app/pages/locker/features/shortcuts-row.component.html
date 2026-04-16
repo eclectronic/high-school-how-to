@@ -11,7 +11,7 @@
           <button
             type="button"
             class="shortcuts-row__delete-btn"
-            title="Remove shortcut"
+            title="Remove pin"
             (click)="deleteShortcut(shortcut)"
           >✕</button>
         }
@@ -19,7 +19,7 @@
     }
 
     @if (!showAddForm()) {
-      <button type="button" class="shortcuts-row__add-btn" (click)="openAddForm()" aria-label="Add shortcut">
+      <button type="button" class="shortcuts-row__add-btn" (click)="openAddForm()" aria-label="Add pin">
         <span class="shortcuts-row__add-icon">+</span>
         <span class="shortcuts-row__add-label">Add</span>
       </button>

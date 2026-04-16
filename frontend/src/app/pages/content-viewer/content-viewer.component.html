@@ -10,10 +10,14 @@
 
     @if (!simpleLayout()) {
       <div class="viewer-nav">
-        <a class="viewer-nav__logo" routerLink="/">
+        <a class="viewer-nav__logo" routerLink="/" aria-label="High School How To — Home">
           <img src="/assets/images/home-logo.png" alt="High School How To" />
         </a>
-        <a class="back-link" routerLink="/">Home</a>
+        @if (isHelpArticle()) {
+          <a class="back-link" routerLink="/help">← Back to Help</a>
+        } @else {
+          <a class="back-link" routerLink="/">← Home</a>
+        }
         @if (tagName()) {
           <div class="viewer-nav__tag-header">
             <h2 class="viewer-nav__tag-title">{{ tagName() }}</h2>

@@ -19,7 +19,7 @@ const APP_DEFS: { type: string; label: string; icon: string }[] = [
   { type: 'TODO',      label: 'To-do',     icon: '📋' },
   { type: 'NOTES',     label: 'Notes',     icon: '📝' },
   { type: 'TIMER',     label: 'Timer',     icon: '⏱' },
-  { type: 'SHORTCUTS', label: 'Shortcuts', icon: '🔗' },
+  { type: 'SHORTCUTS', label: 'Pins', icon: '📌' },
 ];
 
 @Component({
