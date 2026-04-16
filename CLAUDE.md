@@ -114,7 +114,7 @@ Set these under **Settings → Secrets and variables → Actions**:
 
 The IAM user needs these permissions:
 - ECR: `ecr:GetAuthorizationToken`, `ecr:BatchCheckLayerAvailability`, `ecr:PutImage`, `ecr:InitiateLayerUpload`, `ecr:UploadLayerPart`, `ecr:CompleteLayerUpload`
-- App Runner: `apprunner:StartDeployment`, `apprunner:ListServices`, `apprunner:DescribeService`
+- App Runner: `apprunner:StartDeployment`, `apprunner:ListServices`, `apprunner:DescribeService`, `apprunner:ResumeService`
 - S3: `s3:PutObject`, `s3:DeleteObject`, `s3:ListBucket` on the frontend bucket
 - CloudFront: `cloudfront:CreateInvalidation`
 

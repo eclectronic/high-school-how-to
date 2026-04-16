@@ -55,6 +55,67 @@ if [ -z "${SERVICE_ARN}" ] || [ "${SERVICE_ARN}" = "None" ]; then
   exit 1
 fi
 
+# Returns the current App Runner service status (RUNNING, PAUSED,
+# OPERATION_IN_PROGRESS, CREATE_FAILED, DELETE_FAILED, DELETED, ...).
+service_status() {
+  aws apprunner describe-service \
+    --service-arn "${SERVICE_ARN}" \
+    --region "${AWS_REGION}" \
+    --query 'Service.Status' \
+    --output text
+}
+
+# Polls service status until it equals the expected value or the wait budget
+# is exhausted. Args: $1 = expected status, $2 = max attempts (10s each).
+wait_for_status() {
+  local expected="$1"
+  local max_attempts="${2:-60}"   # default: ~10 minutes
+  local attempt=0
+  local current
+  while [ "${attempt}" -lt "${max_attempts}" ]; do
+    current="$(service_status)"
+    if [ "${current}" = "${expected}" ]; then
+      echo "==> Service is ${expected}."
+      return 0
+    fi
+    echo "    status=${current} (attempt $((attempt + 1))/${max_attempts}) — waiting 10s..."
+    sleep 10
+    attempt=$((attempt + 1))
+  done
+  echo "ERROR: Timed out waiting for service to reach ${expected} (last status: ${current})." >&2
+  return 1
+}
+
+echo "==> Checking service status before deployment..."
+STATUS="$(service_status)"
+echo "    current status: ${STATUS}"
+
+case "${STATUS}" in
+  RUNNING)
+    ;;
+  PAUSED)
+    echo "==> Service is PAUSED. Resuming..."
+    aws apprunner resume-service \
+      --service-arn "${SERVICE_ARN}" \
+      --region "${AWS_REGION}" \
+      --query 'Service.Status' \
+      --output text
+    wait_for_status RUNNING
+    ;;
+  OPERATION_IN_PROGRESS)
+    echo "==> Another operation is in progress. Waiting for it to finish..."
+    wait_for_status RUNNING
+    ;;
+  CREATE_FAILED|DELETE_FAILED|DELETED)
+    echo "ERROR: Service is in unrecoverable state '${STATUS}'. Fix it in the App Runner console and retry." >&2
+    exit 1
+    ;;
+  *)
+    echo "ERROR: Service is in unexpected state '${STATUS}'. Aborting deploy." >&2
+    exit 1
+    ;;
+esac
+
 echo "==> Triggering deployment for ${SERVICE_ARN}..."
 aws apprunner start-deployment \
   --service-arn "${SERVICE_ARN}" \
