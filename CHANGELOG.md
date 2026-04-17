@@ -1,5 +1,44 @@
 # Changelog
 
+## [6.0.0] — 2026-04-16
+
+### Content Viewer Redesign
+
+The content viewer (`/content/:slug`) has been fully redesigned around a **1200 px container** for a wider, more immersive reading experience. The old two-column arrow layout (side columns flanking the content) is gone. Navigation arrows now live in a compact **nav bar card** at the top of the page alongside the content title and description — everything on one line so no vertical real estate is wasted. The nav bar is identical across all content types (videos, articles, infographics, to-do lists) so the arrows always appear in the same screen position as you navigate.
+
+### Keyboard Arrow Navigation
+
+Press **← →** on any content page to jump to the previous or next item in the current browsing context (all How To content, or filtered by tag). A small animated pill — **← → arrow keys** — appears near the nav arrows on page load and fades out after a few seconds to let first-time visitors discover the shortcut. The Escape key closes the infographic lightbox when it is open. Arrow keys are suppressed when focus is inside a form field.
+
+### Page Title
+
+The browser tab title now reflects the current content item — e.g. **"How to Study for Your Driver's Test | High School How To"** — so tabs are identifiable at a glance and back/forward navigation is meaningful in browser history.
+
+### Infographic Lightbox
+
+Clicking an infographic image opens a fullscreen **lightbox viewer**. A toolbar at the top provides zoom-in (+), zoom-out (−), fit-to-screen (↺), and close (✕) controls. Mouse-wheel scrolling adjusts zoom at a fine-grained step so zooming feels precise rather than jumpy. When zoomed in, click and drag to pan the image. Cursor changes to a grab hand when panning is available. Press Escape or click ✕ to dismiss. Body scroll is locked while the lightbox is open.
+
+### Infographic Mobile Overlay
+
+On mobile, a translucent title overlay fades in over the infographic image on load and disappears after three seconds, giving visitors context before they start scrolling. Tapping the image opens the lightbox on all screen sizes.
+
+### How To & Topic Page — Corkboard Card Effects
+
+Content cards on the How To (`/how-to`) and Topic (`/topics/:slug`) pages now look like **notes pinned to a bulletin board**. Every fourth card cycles through tape, push-pin, and double-tape decorations rendered as CSS `::before` pseudo-elements. Cards have a slight random rotation (alternating left and right) and every second, third, and fourth card in a group picks up a soft pastel body color (pale yellow, pale blue, pale pink) so the grid reads as a colorful collection of post-its.
+
+### Navigation Cleanup
+
+- The generic **← Home** button was removed from all content pages — the site logo already links home, making the button redundant.
+- **← Back to Help** is preserved on help articles where it provides real contextual value.
+- `/content/about-mission` now redirects to `/about` so the About page is no longer reachable through the generic content viewer.
+- Help articles and the about-mission card are excluded from the arrow-key navigation sequence so users cycling through How To content don't accidentally land on meta pages.
+
+### Download / Print Fix
+
+The **Download / Print** button on infographic pages now reliably opens the browser print dialog. The previous implementation used an inline `onload` attribute that could be silently blocked; it now sets `win.onload` from the parent window context, which is not subject to the same restrictions.
+
+---
+
 ## [5.2.0] — 2026-04-16
 
 ### Notes App — Sort by Name, Date, or Custom Order
