@@ -9,40 +9,63 @@
   } @else if (card(); as card) {
 
     @if (!simpleLayout()) {
-      <div class="viewer-nav">
-        <a class="viewer-nav__logo" routerLink="/" aria-label="High School How To — Home">
-          <img src="/assets/images/home-logo.png" alt="High School How To" />
-        </a>
-        @if (isHelpArticle()) {
-          <a class="back-link" routerLink="/help">← Back to Help</a>
-        } @else {
-          <a class="back-link" routerLink="/">← Home</a>
-        }
-        @if (tagName()) {
-          <div class="viewer-nav__tag-header">
-            <h2 class="viewer-nav__tag-title">{{ tagName() }}</h2>
+      <app-site-nav [activeRoute]="isHelpArticle() ? 'help' : 'how-to'" />
+
+      <!--
+        Combined content nav + title card for VIDEO / ARTICLE / TODO_LIST.
+        For INFOGRAPHIC the title lives in the sidebar, so this stays slim.
+      -->
+      <div class="viewer-nav viewer-nav--combined">
+        <div class="viewer-nav__row">
+          @if (isHelpArticle()) {
+            <a class="back-link" routerLink="/help">← Back to Help</a>
+          }
+          @if (tagName()) {
+            <div class="viewer-nav__tag-header">
+              <h2 class="viewer-nav__tag-title">{{ tagName() }}</h2>
+            </div>
+          }
+          <div class="viewer-nav__title-group">
+            <h1 class="viewer-nav__title">{{ card.title }}</h1>
+            @if (card.description) {
+              <p class="viewer-desc">{{ card.description }}</p>
+            }
           </div>
-        }
+          <div class="viewer-nav__arrows">
+            @if (navHintVisible()) {
+              <span class="viewer-nav__hint" aria-hidden="true">← → arrow keys</span>
+            }
+            <button
+              class="viewer-arrow"
+              [disabled]="!prevCard()"
+              (click)="prevCard() && navigateTo(prevCard()!)"
+              [title]="prevCard()?.title ?? 'No previous item'"
+              [attr.aria-label]="prevCard() ? 'Previous: ' + prevCard()!.title : null">‹</button>
+            <button
+              class="viewer-arrow"
+              [disabled]="!nextCard()"
+              (click)="nextCard() && navigateTo(nextCard()!)"
+              [title]="nextCard()?.title ?? 'No next item'"
+              [attr.aria-label]="nextCard() ? 'Next: ' + nextCard()!.title : null">›</button>
+          </div>
+        </div>
       </div>
     }
 
-    <div class="viewer-stage" [class.viewer-stage--simple]="simpleLayout()">
-      <div class="viewer-arrow-col">
-        @if (!simpleLayout() && prevCard(); as prev) {
-          <button class="viewer-arrow" (click)="navigateTo(prev)" [title]="prev.title" aria-label="Previous: {{ prev.title }}">‹</button>
-        }
-      </div>
-
+    <div class="viewer-stage">
       <div class="viewer-content">
+
         <!-- VIDEO ─────────────────────────────────── -->
         @if (card.cardType === 'VIDEO') {
           <article class="viewer-article">
-            <header class="viewer-header">
-              <h1>{{ card.title }}</h1>
-              @if (card.description) {
-                <p class="viewer-desc">{{ card.description }}</p>
-              }
-            </header>
+            @if (simpleLayout()) {
+              <header class="viewer-header">
+                <h1>{{ card.title }}</h1>
+                @if (card.description) {
+                  <p class="viewer-desc">{{ card.description }}</p>
+                }
+              </header>
+            }
             @if (safeEmbed()) {
               <div class="video-frame">
                 <iframe
@@ -54,28 +77,63 @@
                 ></iframe>
               </div>
             }
+            @if (card.links.length > 0) {
+              <div class="viewer-related">
+                <h2 class="viewer-related__heading">Related</h2>
+                <ul class="viewer-related__list">
+                  @for (link of card.links; track link.id) {
+                    <li class="viewer-related__item">
+                      <span class="viewer-related__icon" aria-hidden="true">{{ cardTypeIcon(link.targetCardType) }}</span>
+                      <a [routerLink]="['/content', link.targetSlug]" class="viewer-related__link">
+                        {{ link.linkText }}
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
           </article>
         }
 
         <!-- INFOGRAPHIC ────────────────────────────── -->
         @if (card.cardType === 'INFOGRAPHIC') {
-          <article class="viewer-article">
-            <header class="viewer-header">
-              <h1>{{ card.title }}</h1>
-              @if (card.description) {
-                <p class="viewer-desc">{{ card.description }}</p>
-              }
-            </header>
+          <article class="viewer-article viewer-article--infographic">
             @if (card.mediaUrl) {
-              <div class="infographic-frame">
+              <div class="infographic-panel" (click)="openLightbox()">
+                <div
+                  class="infographic-overlay"
+                  [class.infographic-overlay--hidden]="!overlayVisible()"
+                  aria-hidden="true">
+                  <div class="infographic-overlay__content">
+                    <p class="infographic-overlay__title">{{ card.title }}</p>
+                    @if (card.description) {
+                      <p class="infographic-overlay__desc">{{ card.description }}</p>
+                    }
+                  </div>
+                </div>
                 <img [src]="card.mediaUrl" [alt]="card.title" loading="eager" />
               </div>
             }
             @if (card.printMediaUrl) {
               <div class="infographic-actions">
-                <a class="btn-print" [href]="card.printMediaUrl" target="_blank" rel="noreferrer">
+                <button class="btn-print" type="button" (click)="printMedia(card.printMediaUrl!)">
                   Download / Print
-                </a>
+                </button>
+              </div>
+            }
+            @if (card.links.length > 0) {
+              <div class="viewer-related">
+                <h2 class="viewer-related__heading">Related</h2>
+                <ul class="viewer-related__list">
+                  @for (link of card.links; track link.id) {
+                    <li class="viewer-related__item">
+                      <span class="viewer-related__icon" aria-hidden="true">{{ cardTypeIcon(link.targetCardType) }}</span>
+                      <a [routerLink]="['/content', link.targetSlug]" class="viewer-related__link">
+                        {{ link.linkText }}
+                      </a>
+                    </li>
+                  }
+                </ul>
               </div>
             }
           </article>
@@ -83,23 +141,40 @@
 
         <!-- ARTICLE ────────────────────────────────── -->
         @if (card.cardType === 'ARTICLE') {
-          <article class="viewer-article">
+          <article class="viewer-article viewer-article--article">
+            @if (simpleLayout()) {
+              <header class="viewer-header viewer-header--article">
+                <h1>{{ card.title }}</h1>
+                @if (card.description) {
+                  <p class="viewer-desc">{{ card.description }}</p>
+                }
+              </header>
+            }
             @if (card.coverImageUrl) {
               <div class="article-cover">
                 <img [src]="card.coverImageUrl" [alt]="card.title" loading="eager" />
               </div>
             }
-            <header class="viewer-header viewer-header--article">
-              <h1>{{ card.title }}</h1>
-              @if (card.description) {
-                <p class="viewer-desc">{{ card.description }}</p>
-              }
-            </header>
             @if (safeHtml()) {
               <div class="article-body"
                 [style.background-color]="card.backgroundColor || null"
                 [style.color]="card.textColor || null"
                 [innerHTML]="safeHtml()!"></div>
+            }
+            @if (card.links.length > 0) {
+              <div class="viewer-related">
+                <h2 class="viewer-related__heading">Related</h2>
+                <ul class="viewer-related__list">
+                  @for (link of card.links; track link.id) {
+                    <li class="viewer-related__item">
+                      <span class="viewer-related__icon" aria-hidden="true">{{ cardTypeIcon(link.targetCardType) }}</span>
+                      <a [routerLink]="['/content', link.targetSlug]" class="viewer-related__link">
+                        {{ link.linkText }}
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </div>
             }
           </article>
         }
@@ -107,12 +182,14 @@
         <!-- TODO_LIST ──────────────────────────────── -->
         @if (card.cardType === 'TODO_LIST') {
           <article class="viewer-article">
-            <header class="viewer-header">
-              <h1>{{ card.title }}</h1>
-              @if (card.description) {
-                <p class="viewer-desc">{{ card.description }}</p>
-              }
-            </header>
+            @if (simpleLayout()) {
+              <header class="viewer-header">
+                <h1>{{ card.title }}</h1>
+                @if (card.description) {
+                  <p class="viewer-desc">{{ card.description }}</p>
+                }
+              </header>
+            }
             <hr class="viewer-divider" />
             <ul class="todo-list-preview">
               @for (task of card.templateTasks; track task.id) {
@@ -145,32 +222,53 @@
                 </div>
               }
             </div>
+            @if (card.links.length > 0) {
+              <div class="viewer-related">
+                <h2 class="viewer-related__heading">Related</h2>
+                <ul class="viewer-related__list">
+                  @for (link of card.links; track link.id) {
+                    <li class="viewer-related__item">
+                      <span class="viewer-related__icon" aria-hidden="true">{{ cardTypeIcon(link.targetCardType) }}</span>
+                      <a [routerLink]="['/content', link.targetSlug]" class="viewer-related__link">
+                        {{ link.linkText }}
+                      </a>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
           </article>
         }
 
-        <!-- Related content links ───────────────────── -->
-        @if (card.links.length > 0) {
-          <div class="viewer-related">
-            <h2 class="viewer-related__heading">Related</h2>
-            <ul class="viewer-related__list">
-              @for (link of card.links; track link.id) {
-                <li class="viewer-related__item">
-                  <span class="viewer-related__icon">{{ cardTypeIcon(link.targetCardType) }}</span>
-                  <a [routerLink]="['/content', link.targetSlug]" class="viewer-related__link">
-                    {{ link.linkText }}
-                  </a>
-                </li>
-              }
-            </ul>
-          </div>
-        }
-      </div>
-
-      <div class="viewer-arrow-col">
-        @if (!simpleLayout() && nextCard(); as next) {
-          <button class="viewer-arrow" (click)="navigateTo(next)" [title]="next.title" aria-label="Next: {{ next.title }}">›</button>
-        }
       </div>
     </div>
+
+    <!-- Infographic lightbox ─────────────────────────────────── -->
+    @if (lightboxOpen() && card.mediaUrl) {
+      <div class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+        <div class="lightbox__toolbar">
+          <button class="lightbox__tool-btn" (click)="lightboxZoomOut()" [disabled]="lightboxZoom() <= 0.5" aria-label="Zoom out">−</button>
+          <span class="lightbox__zoom-label">{{ lightboxZoomPercent() }}%</span>
+          <button class="lightbox__tool-btn" (click)="lightboxZoomIn()" [disabled]="lightboxZoom() >= 5" aria-label="Zoom in">+</button>
+          <button class="lightbox__tool-btn" (click)="lightboxResetZoom()" aria-label="Fit to screen">↺</button>
+          <button class="lightbox__tool-btn lightbox__tool-btn--close" (click)="closeLightbox()" aria-label="Close (Esc)">✕</button>
+        </div>
+        <div class="lightbox__stage"
+             (wheel)="onLightboxWheel($event)"
+             (mousedown)="onLightboxDragStart($event)"
+             (mousemove)="onLightboxDragMove($event)"
+             (mouseup)="onLightboxDragEnd()"
+             (mouseleave)="onLightboxDragEnd()"
+             [class.lightbox__stage--grab]="lightboxZoom() > 1 && !lightboxDragging()"
+             [class.lightbox__stage--grabbing]="lightboxDragging()">
+          <img
+            class="lightbox__img"
+            [src]="card.mediaUrl"
+            [alt]="card.title"
+            [style.transform]="lightboxTransform()"
+            draggable="false" />
+        </div>
+      </div>
+    }
   }
 </div>

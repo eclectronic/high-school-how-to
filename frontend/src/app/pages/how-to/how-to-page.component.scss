@@ -3,6 +3,8 @@
 $color-ink: #2d1a10;
 $color-board: #ffe9cc;
 $color-rose: #ff9fbf;
+$tape-bg: rgba(255, 253, 212, 0.88);
+$tape-border: rgba($color-ink, 0.14);
 
 :host {
   display: block;
@@ -46,6 +48,7 @@ $color-rose: #ff9fbf;
 }
 
 // ── Tag navigation bar ───────────────────────────────────────────
+
 .tag-nav {
   display: flex;
   flex-wrap: wrap;
@@ -85,35 +88,50 @@ $color-rose: #ff9fbf;
 }
 
 // ── Card grid ────────────────────────────────────────────────────
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  gap: 1.5rem;
+  padding-top: 18px; // room for tape/pin decorations on top row
 
   @media (max-width: 600px) {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
+// ── Content card — base ──────────────────────────────────────────
+
 .content-card {
   display: flex;
   flex-direction: column;
   border-radius: 1.1rem;
-  overflow: hidden;
+  overflow: visible; // allows tape/pin to poke above the card top
   background: #fffef8;
   border: 2px solid rgba($color-ink, 0.12);
-  box-shadow: 0 8px 18px rgba($color-ink, 0.1);
+  box-shadow: 0 8px 18px rgba($color-ink, 0.13);
   text-decoration: none;
   color: $color-ink;
-  transition: transform 0.12s, box-shadow 0.12s;
+  position: relative;
+  will-change: transform;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+  }
 
   &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 14px 26px rgba($color-ink, 0.15);
+    transform: translateY(-5px) rotate(0deg);
+    box-shadow: 0 20px 36px rgba($color-ink, 0.2);
   }
 
   &__thumb-wrapper {
     position: relative;
+    border-radius: 1.1rem 1.1rem 0 0;
+    overflow: hidden;
   }
 
   &__thumb {
@@ -124,7 +142,7 @@ $color-rose: #ff9fbf;
 
     &--infographic {
       object-fit: contain;
-      background: #fffef8;
+      background: transparent;
       padding: 0.25rem;
     }
 
@@ -156,6 +174,8 @@ $color-rose: #ff9fbf;
     flex-direction: column;
     gap: 0.3rem;
     flex: 1;
+    border-radius: 0 0 1.1rem 1.1rem;
+    background: #fffef8;
   }
 
   &__type-badge {
@@ -186,4 +206,68 @@ $color-rose: #ff9fbf;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+}
+
+// ── Corkboard scatter: rotations + post-it body colors ───────────
+
+.card-grid > .content-card:nth-child(4n+1) { transform: rotate(-1.5deg); }
+.card-grid > .content-card:nth-child(4n+2) { transform: rotate(0.8deg); }
+.card-grid > .content-card:nth-child(4n+3) { transform: rotate(-0.6deg); }
+.card-grid > .content-card:nth-child(4n+4) { transform: rotate(1.2deg); }
+
+.card-grid > .content-card:nth-child(4n+2) .content-card__body { background: #fefde4; }
+.card-grid > .content-card:nth-child(4n+3) .content-card__body { background: #eef5ff; }
+.card-grid > .content-card:nth-child(4n+4) .content-card__body { background: #fef0f5; }
+
+// ── Tape and pin decorations ──────────────────────────────────────
+
+// 4n+1: tape strip, centered, slight left tilt
+.card-grid > .content-card:nth-child(4n+1)::before {
+  width: 58px;
+  height: 21px;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  background: $tape-bg;
+  border: 1px solid $tape-border;
+  border-radius: 2px;
+  box-shadow: 0 2px 5px rgba($color-ink, 0.12);
+}
+
+// 4n+2: thumbtack, centered
+.card-grid > .content-card:nth-child(4n+2)::before {
+  width: 18px;
+  height: 18px;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle at 38% 35%, #7ec8f8 0%, #3a9fd6 60%, #1a7ab5 100%);
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgba($color-ink, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+}
+
+// 4n+3: tape strip, right of center, slight right tilt
+.card-grid > .content-card:nth-child(4n+3)::before {
+  width: 52px;
+  height: 21px;
+  top: -10px;
+  left: 60%;
+  transform: rotate(3deg);
+  background: $tape-bg;
+  border: 1px solid $tape-border;
+  border-radius: 2px;
+  box-shadow: 0 2px 5px rgba($color-ink, 0.12);
+}
+
+// 4n+4: tape strip, left of center, slight left tilt
+.card-grid > .content-card:nth-child(4n+4)::before {
+  width: 60px;
+  height: 21px;
+  top: -10px;
+  left: 25%;
+  transform: rotate(-3deg);
+  background: $tape-bg;
+  border: 1px solid $tape-border;
+  border-radius: 2px;
+  box-shadow: 0 2px 5px rgba($color-ink, 0.12);
 }

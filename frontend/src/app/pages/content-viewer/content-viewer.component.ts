@@ -1,6 +1,7 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, signal, computed, inject } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
+import { SiteNavComponent } from '../../shared/site-nav/site-nav.component';
+import { DomSanitizer, SafeHtml, SafeResourceUrl, Title } from '@angular/platform-browser';
 import { Subscription, switchMap } from 'rxjs';
 import { ContentApiService } from '../../core/services/content-api.service';
 import { CardType, ContentCard, LockerStatusResponse, cardTypeIcon } from '../../core/models/content.models';
@@ -9,7 +10,7 @@ import { SessionStore } from '../../core/session/session.store';
 @Component({
   selector: 'app-content-viewer',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, SiteNavComponent],
   templateUrl: './content-viewer.component.html',
   styleUrl: './content-viewer.component.scss',
 })
@@ -18,8 +19,11 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
+  private readonly titleService = inject(Title);
   private readonly sessionStore = inject(SessionStore);
   private readonly subs = new Subscription();
+
+  private static readonly APP_TITLE = 'High School How To';
 
   protected readonly isAuthenticated = this.sessionStore.isAuthenticated;
 
@@ -31,6 +35,29 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   protected lockerStatus = signal<LockerStatusResponse | null>(null);
   protected lockerActionPending = signal(false);
   protected lockerAddedToast = signal(false);
+
+  /** Controls the mobile title overlay on infographic cards. Shown on load, fades after 3s. */
+  protected overlayVisible = signal(false);
+  private overlayFadeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Brief keyboard-hint tooltip shown near the nav arrows on first load. */
+  protected navHintVisible = signal(false);
+  private navHintTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // ── Infographic lightbox ─────────────────────────────────────────────────────
+  protected lightboxOpen = signal(false);
+  protected lightboxZoom = signal(1);
+  protected lightboxPanX = signal(0);
+  protected lightboxPanY = signal(0);
+  protected lightboxDragging = signal(false);
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private panAtDragStart = { x: 0, y: 0 };
+
+  protected lightboxTransform = computed(
+    () => `translate(${this.lightboxPanX()}px, ${this.lightboxPanY()}px) scale(${this.lightboxZoom()})`,
+  );
+  protected lightboxZoomPercent = computed(() => Math.round(this.lightboxZoom() * 100));
 
   /** True when the card should render without nav arrows, back link, or tag header. */
   protected simpleLayout = computed(() => {
@@ -79,7 +106,16 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
         const tag = qp.get('tag');
         this.tagSlug.set(tag);
         const list$ = tag ? this.api.getCardsByTag(tag) : this.api.getPublishedCards();
-        list$.subscribe({ next: (cards) => this.navCards.set(cards) });
+        list$.subscribe({
+          next: (cards) => {
+            const filtered = tag
+              ? cards
+              : cards.filter(
+                  (c) => c.slug !== 'about-mission' && !c.tags.some((t) => t.slug === 'help'),
+                );
+            this.navCards.set(filtered);
+          },
+        });
       }),
     );
 
@@ -115,6 +151,11 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
                 next: (status) => this.lockerStatus.set(status),
               });
             }
+            if (card.cardType === 'INFOGRAPHIC') {
+              this.startOverlayFade();
+            }
+            this.showNavHint();
+            this.titleService.setTitle(`${card.title} | ${ContentViewerComponent.APP_TITLE}`);
             this.loading.set(false);
           },
           error: () => {
@@ -150,6 +191,108 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subs.unsubscribe();
+    if (this.overlayFadeTimer) clearTimeout(this.overlayFadeTimer);
+    if (this.navHintTimer) clearTimeout(this.navHintTimer);
+    this.titleService.setTitle(ContentViewerComponent.APP_TITLE);
+    document.body.classList.remove('lightbox-open');
+  }
+
+  protected toggleOverlay(): void {
+    this.overlayVisible.update((v) => !v);
+  }
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────────
+
+  @HostListener('document:keydown', ['$event'])
+  protected onKeydown(event: KeyboardEvent): void {
+    // Never fire when typing in a form field
+    if (
+      event.target instanceof HTMLInputElement ||
+      event.target instanceof HTMLTextAreaElement
+    ) return;
+
+    if (this.lightboxOpen()) {
+      if (event.key === 'Escape') this.closeLightbox();
+      return;
+    }
+
+    if (event.key === 'ArrowLeft' && this.prevCard()) this.navigateTo(this.prevCard()!);
+    if (event.key === 'ArrowRight' && this.nextCard()) this.navigateTo(this.nextCard()!);
+  }
+
+  // ── Infographic lightbox ─────────────────────────────────────────────────────
+
+  protected openLightbox(): void {
+    this.lightboxOpen.set(true);
+    this.lightboxZoom.set(1);
+    this.lightboxPanX.set(0);
+    this.lightboxPanY.set(0);
+    document.body.classList.add('lightbox-open');
+  }
+
+  protected closeLightbox(): void {
+    this.lightboxOpen.set(false);
+    this.lightboxDragging.set(false);
+    document.body.classList.remove('lightbox-open');
+  }
+
+  protected lightboxZoomIn(): void {
+    this.lightboxZoom.update((z) => Math.min(z + 0.25, 5));
+  }
+
+  protected lightboxZoomOut(): void {
+    this.lightboxZoom.update((z) => {
+      const next = Math.max(z - 0.25, 0.5);
+      if (next <= 1) { this.lightboxPanX.set(0); this.lightboxPanY.set(0); }
+      return next;
+    });
+  }
+
+  protected lightboxResetZoom(): void {
+    this.lightboxZoom.set(1);
+    this.lightboxPanX.set(0);
+    this.lightboxPanY.set(0);
+  }
+
+  protected onLightboxWheel(event: WheelEvent): void {
+    event.preventDefault();
+    const step = event.deltaY < 0 ? 0.03 : -0.03;
+    this.lightboxZoom.update((z) => {
+      const next = Math.max(0.5, Math.min(5, z + step));
+      if (next <= 1) { this.lightboxPanX.set(0); this.lightboxPanY.set(0); }
+      return next;
+    });
+  }
+
+  protected onLightboxDragStart(event: MouseEvent): void {
+    if (this.lightboxZoom() <= 1) return;
+    this.lightboxDragging.set(true);
+    this.dragStartX = event.clientX;
+    this.dragStartY = event.clientY;
+    this.panAtDragStart = { x: this.lightboxPanX(), y: this.lightboxPanY() };
+    event.preventDefault();
+  }
+
+  protected onLightboxDragMove(event: MouseEvent): void {
+    if (!this.lightboxDragging()) return;
+    this.lightboxPanX.set(this.panAtDragStart.x + (event.clientX - this.dragStartX));
+    this.lightboxPanY.set(this.panAtDragStart.y + (event.clientY - this.dragStartY));
+  }
+
+  protected onLightboxDragEnd(): void {
+    this.lightboxDragging.set(false);
+  }
+
+  private showNavHint(): void {
+    if (this.navHintTimer) clearTimeout(this.navHintTimer);
+    this.navHintVisible.set(true);
+    this.navHintTimer = setTimeout(() => this.navHintVisible.set(false), 4000);
+  }
+
+  private startOverlayFade(): void {
+    if (this.overlayFadeTimer) clearTimeout(this.overlayFadeTimer);
+    this.overlayVisible.set(true);
+    this.overlayFadeTimer = setTimeout(() => this.overlayVisible.set(false), 3000);
   }
 
   protected switchTag(tag: string | null): void {
@@ -166,6 +309,19 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   }
 
   protected readonly cardTypeIcon = cardTypeIcon;
+
+  protected printMedia(url: string): void {
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(
+      `<!DOCTYPE html><html><head><title>Print</title>` +
+      `<style>*{margin:0;padding:0}body{display:flex;justify-content:center}` +
+      `img{max-width:100%;height:auto;display:block}</style></head>` +
+      `<body><img src="${url}"></body></html>`,
+    );
+    win.document.close();
+    win.onload = () => win.print();
+  }
 
   private buildEmbedUrl(url: string): string {
     const match = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);

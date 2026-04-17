@@ -64,6 +64,8 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/topic/topic-page.component').then((m) => m.TopicPageComponent),
   },
+  // about-mission has its own dedicated page — redirect away from the generic viewer
+  { path: 'content/about-mission', redirectTo: '/about', pathMatch: 'full' },
   {
     path: 'content/:slug',
     loadComponent: () =>
