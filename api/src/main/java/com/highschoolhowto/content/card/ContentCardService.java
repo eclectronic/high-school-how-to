@@ -184,7 +184,7 @@ public class ContentCardService {
         }
         taskItemRepository.saveAll(items);
 
-        return new TaskListResponse(savedList.getId(), savedList.getTitle(), savedList.getColor(), savedList.getTextColor(), List.of());
+        return new TaskListResponse(savedList.getId(), savedList.getTitle(), savedList.getColor(), savedList.getTextColor(), List.of(), savedList.getSortOrder());
     }
 
     @Transactional(readOnly = true)

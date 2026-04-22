@@ -72,7 +72,7 @@ class AuthFlowIntegSpec extends BaseIntegrationSpec {
         userRepository.findByEmailIgnoreCase(email).get().status.name() == "ACTIVE"
 
         when: "user logs in"
-        def loginResponse = postJson("/api/auth/login", [email: email, password: password])
+        def loginResponse = postJson("/api/auth/login", [email: email, password: password, rememberMe: true])
                 .andReturn().response
         def authBody = objectMapper.readValue(loginResponse.contentAsString, Map)
 
@@ -119,7 +119,7 @@ class AuthFlowIntegSpec extends BaseIntegrationSpec {
         legacyLoginResponse.status == 401
 
         when: "login with the new password succeeds"
-        def refreshedLoginResponse = postJson("/api/auth/login", [email: email, password: newPassword]).andReturn().response
+        def refreshedLoginResponse = postJson("/api/auth/login", [email: email, password: newPassword, rememberMe: true]).andReturn().response
         def refreshedAuthBody = objectMapper.readValue(refreshedLoginResponse.contentAsString, Map)
 
         then: "new credentials issue tokens"
