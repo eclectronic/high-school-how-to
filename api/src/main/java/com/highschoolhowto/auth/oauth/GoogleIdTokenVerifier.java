@@ -53,7 +53,7 @@ public class GoogleIdTokenVerifier {
         try {
             claims = jwtProcessor.process(idToken, null);
         } catch (Exception e) {
-            log.debug("Google ID token processing failed: {}", e.getMessage());
+            log.warn("Google ID token processing failed: {}: {}", e.getClass().getSimpleName(), e.getMessage(), e);
             throw new GoogleAuthException("Invalid Google ID token");
         }
 

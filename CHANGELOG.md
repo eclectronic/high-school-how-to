@@ -1,5 +1,11 @@
 # Changelog
 
+## [7.0.1] — 2026-04-22
+
+### Google Sign-In — diagnostic logging
+
+`GoogleIdTokenVerifier` now logs the underlying Nimbus exception (class name, message, and stack trace) at `WARN` when ID-token processing fails, instead of swallowing the details at `DEBUG`. End-user behavior is unchanged — a failed verification still returns `401 Unauthorized` with `detail: "Invalid Google ID token"` — but production logs now surface *why* verification failed (signature check, JWKS fetch failure, parse error, etc.), which is the difference between a five-minute investigation and a dead-end. No user-visible change.
+
 ## [7.0.0] — 2026-04-22
 
 ### Google Sign-In
