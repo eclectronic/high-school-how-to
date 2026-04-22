@@ -22,9 +22,19 @@ All three list views now support keyboard navigation: **↑ ↓** moves focus be
 
 Note cards now show a compact relative timestamp (e.g. "3d ago") in the lower-left corner. The date shown tracks your current sort mode — when sorted by **Created** it shows the creation date; otherwise it shows the last-updated date. Clicking the timestamp expands an inline info block showing the full creation and update datetimes.
 
+### Pins — Browse & Emoji Icons
+
+The Pins app has a new **Browse** panel, opened with the 🔍 button that sits next to the + button. The panel shows a curated library of ~30 commonly-used student sites (Google Workspace, Khan Academy, Quizlet, Desmos, Common App, and more) organized by category. Each site shows its favicon. Clicking a row opens the site; the ✓/+ button on the right toggles whether the pin is in your list. Adding a pin from Browse fills in the favicon automatically.
+
+When adding or editing a pin manually, you can now assign a **custom emoji icon** using an emoji picker — useful for sites without a recognizable favicon or for personal bookmarks. When you add a pin by URL without supplying a name, the app fetches the page title automatically and uses it as the pin name.
+
+### Locker Pane — Minimize and Maximize Removed
+
+The minimize and maximize buttons have been removed from locker pane headers. The locker layout is fixed-size by design, and those controls were vestigial — the done/collapse state is handled by the pane's natural interaction model instead.
+
 ### Locker UI Polish
 
-A consistent visual convention now governs all locker apps. The button that exits a detail view (done editing a note, done with a to-do list) is a **green circle ✓** — not a text button — matching the same green circle **+** used to create new items. The Pins browse panel now shows each pin row with the same semi-opaque white card background used in the main pin list, so rows are readable against the corkboard. Category headers in the browse panel use the app's brown palette instead of grey. The browse panel's close action is also a green circle ✓. Grey swatches were added to the color palette available for notes and to-do lists.
+A consistent visual convention now governs all locker apps. The button that exits a detail view (done editing a note, done with a to-do list) is a **green circle ✓** — not a text button — matching the same green circle **+** used to create new items. Category headers in the Pins browse panel use the app's brown palette instead of grey, and every browse row has the same semi-opaque white card background as the main pin list. Grey swatches were added to the color palette for notes and to-do lists. Note card previews are trimmed to a single line.
 
 ### Locker Opening Animation
 
