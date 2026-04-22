@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { HomePageComponent } from './home-page.component';
 import { SessionStore } from '../../core/session/session.store';
 import { QuoteApiService } from '../../core/services/quote-api.service';
@@ -33,6 +35,8 @@ describe('HomePageComponent', () => {
       providers: [
         { provide: SessionStore, useValue: sessionStoreMock },
         { provide: QuoteApiService, useValue: quoteApiMock },
+        provideHttpClient(),
+        provideHttpClientTesting(),
       ],
     }).compileComponents();
 

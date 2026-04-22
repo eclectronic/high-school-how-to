@@ -14,18 +14,27 @@
             class="notes-app__sort-btn"
             [class.notes-app__sort-btn--active]="sortMode() === 'name'"
             [attr.aria-checked]="sortMode() === 'name'"
-            title="Sort by name"
+            title="Sort by name A→Z"
             (click)="setSortMode('name')"
           >Name</button>
           <button
             type="button"
             role="radio"
             class="notes-app__sort-btn"
-            [class.notes-app__sort-btn--active]="sortMode() === 'date'"
-            [attr.aria-checked]="sortMode() === 'date'"
-            title="Sort by date added (newest first)"
-            (click)="setSortMode('date')"
-          >Date</button>
+            [class.notes-app__sort-btn--active]="sortMode() === 'created'"
+            [attr.aria-checked]="sortMode() === 'created'"
+            title="Sort by date created, newest first"
+            (click)="setSortMode('created')"
+          >Created</button>
+          <button
+            type="button"
+            role="radio"
+            class="notes-app__sort-btn"
+            [class.notes-app__sort-btn--active]="sortMode() === 'updated'"
+            [attr.aria-checked]="sortMode() === 'updated'"
+            title="Sort by date updated, newest first"
+            (click)="setSortMode('updated')"
+          >Updated</button>
           <button
             type="button"
             role="radio"
@@ -58,7 +67,9 @@
             [style.color]="note.textColor || '#2d1a10'"
             cdkDrag
             [cdkDragDisabled]="sortMode() !== 'custom'"
+            tabindex="0"
             (click)="openNote(note)"
+            (keydown)="onNoteCardKeydown($event, note)"
           >
             @if (sortMode() === 'custom') {
               <span
@@ -82,14 +93,25 @@
               @if (getContentPreview(note)) {
                 <p class="note-card__preview">{{ getContentPreview(note) }}</p>
               }
+              @if (formatNoteDate(note)) {
+                <span class="note-card__date" (click)="toggleNoteInfo(note.id, $event)">{{ formatNoteDate(note) }}</span>
+              }
             </div>
+            @if (infoNoteId() === note.id) {
+              <div class="note-card__info-pop" (click)="$event.stopPropagation()">
+                @for (line of noteInfoLines(note); track line.label) {
+                  <div class="note-card__info-line">
+                    <span class="note-card__info-label">{{ line.label }}</span>
+                    <span class="note-card__info-value">{{ line.value }}</span>
+                  </div>
+                }
+              </div>
+            }
           </div>
         }
       </div>
 
-      <button type="button" class="notes-app__new-btn" (click)="createNote()">
-        + New Note
-      </button>
+      <button type="button" class="notes-app__new-btn" (click)="createNote()" title="New note" aria-label="New note">+</button>
     </div>
   }
 
@@ -102,12 +124,14 @@
     >
 
       <!-- Floating toolbar — overlays content area -->
-      <div class="notes-app__detail-toolbar">
-        <button type="button" class="notes-app__back-btn" (click)="goBack()" aria-label="Back">← Back</button>
+      <div class="notes-app__detail-toolbar" [style.background]="toolbarBg(selectedNote()!.color)">
+        <button type="button" class="notes-app__back-btn" (click)="goBack()" title="Done" aria-label="Done">✓</button>
         <app-inline-title-edit
+          #noteTitle
           class="notes-app__note-title"
           [title]="selectedNote()!.title"
           (titleChange)="onTitleChange($event)"
+          (advanceFocus)="focusContentArea()"
         />
         <div class="notes-app__toolbar-actions">
           <button
@@ -122,13 +146,14 @@
             class="notes-app__delete-btn"
             title="Delete note"
             (click)="confirmDeleteNote(selectedNote()!)"
-          >🗑</button>
+          >✕</button>
         </div>
       </div>
 
       <!-- Content fills the full area -->
       <div class="notes-app__content-area">
         <textarea
+          #noteContent
           class="notes-app__textarea"
           [style.color]="selectedNote()!.textColor || '#2d1a10'"
           placeholder="Write your note here…"

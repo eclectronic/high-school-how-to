@@ -36,10 +36,31 @@ This repo will host both the Angular frontend and the Spring Boot backend for hi
 
 ### Backend API scope (user management)
 - User profiles: CRUD endpoints for user profile data tied to authenticated users.
-- Authentication: login endpoint issuing tokens/sessions.
+- Authentication: login endpoint issuing tokens/sessions; Google Sign-In via `POST /api/auth/google` (v7+).
 - Registration: sign-up endpoint (email-based), plus email confirmation flow.
 - Password reset: forgot-password endpoint to issue reset link/token; reset endpoint to set new password.
 - Consider adding rate limiting, email verification tokens with expiry, and audit logs for auth events.
+
+### Google Sign-In setup (one-time)
+
+The Google Sign-In flow (v7+) needs an OAuth Web Application Client ID provisioned in Google Cloud. A helper script automates everything that's automatable and walks you through the rest:
+
+```bash
+./api/scripts/google-signin-setup.sh
+```
+
+The script verifies your `gcloud` CLI login, lets you pick or create a GCP project, opens the OAuth consent screen and Credentials pages with prefilled values, and writes the resulting Client ID into `api/src/main/resources/application.yml` under `auth.google.client-id`.
+
+The Client ID is a **public value** (visible in browser network requests) and is committed to source — no secret is required because the v7 flow uses ID-token verification, not the OAuth authorization-code flow.
+
+The script registers these Authorized JavaScript origins for you:
+- `http://localhost:4200` — `npm start` (Angular dev server)
+- `http://localhost:4300` — `docker compose -f docker-compose.dev.yml up`
+- `https://highschoolhowto.com` — production
+
+While the OAuth consent screen is in **Testing** status, only emails listed under "Test users" in the consent screen config can sign in. Promote to "In production" before public release.
+
+See `docs/v7-auth-design.md` for the full design.
 
 ### Frontend scope (Angular)
 - Task Management: todo checklist with reminders.

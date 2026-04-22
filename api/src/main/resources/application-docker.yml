@@ -1,4 +1,4 @@
-spring:
+the spring:
   config:
     activate:
       on-profile: docker

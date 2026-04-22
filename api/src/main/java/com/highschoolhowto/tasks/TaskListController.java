@@ -8,6 +8,7 @@ import com.highschoolhowto.tasks.dto.TaskListResponse;
 import com.highschoolhowto.tasks.dto.UpdateTaskRequest;
 import com.highschoolhowto.tasks.dto.UpdateTaskListColorRequest;
 import com.highschoolhowto.tasks.dto.UpdateTaskListTitleRequest;
+import com.highschoolhowto.tasks.dto.ReorderListsRequest;
 import com.highschoolhowto.tasks.dto.ReorderTasksRequest;
 import com.highschoolhowto.tasks.dto.UpdateTaskResponse;
 import jakarta.validation.Valid;
@@ -80,6 +81,15 @@ public class TaskListController {
             @Valid @RequestBody UpdateTaskListColorRequest request) {
         UUID userId = principal.getUser().getId();
         return ResponseEntity.ok(taskListService.updateListColor(userId, listId, request.color(), request.textColor()));
+    }
+
+    @PutMapping("/reorder")
+    public ResponseEntity<Void> reorderLists(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody ReorderListsRequest request) {
+        UUID userId = principal.getUser().getId();
+        taskListService.reorderLists(userId, request.listIds());
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{listId}/tasks/reorder")

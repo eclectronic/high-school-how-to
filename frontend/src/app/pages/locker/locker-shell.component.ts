@@ -2,7 +2,7 @@ import {
   Component, OnInit, OnDestroy, signal, computed, HostListener, inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AppPreferencesApiService, AppPreferences } from '../../core/services/app-preferences-api.service';
+import { AppPreferencesApiService, AppPreferences, LockerTextSize } from '../../core/services/app-preferences-api.service';
 import { deriveThemeFromColor, getPaletteGradient, Palette } from './palettes';
 import { AppPaneLayoutComponent, FONT_OPTIONS } from './app-pane-layout.component';
 import { AppSwipeContainerComponent } from './app-swipe-container.component';
@@ -27,6 +27,18 @@ export class LockerShellComponent implements OnInit, OnDestroy {
     paletteName: 'ocean',
     lockerColor: null,
     fontFamily: null,
+    lockerTextSize: 'DEFAULT',
+    appColors: null,
+  });
+
+  protected readonly lockerScaleCss = computed(() => {
+    const scale: Record<LockerTextSize, number> = {
+      SMALL: 1,
+      DEFAULT: 1.15,
+      LARGE: 1.3,
+      XLARGE: 1.5,
+    };
+    return scale[this.preferences().lockerTextSize] ?? 1.15;
   });
 
   protected isMobile = signal(false);
@@ -91,6 +103,18 @@ export class LockerShellComponent implements OnInit, OnDestroy {
 
   protected onFontFamilyChange(fontFamily: string | null): void {
     this.onPreferencesChange({ ...this.preferences(), fontFamily });
+  }
+
+  protected onTextSizeChange(lockerTextSize: LockerTextSize): void {
+    this.onPreferencesChange({ ...this.preferences(), lockerTextSize });
+  }
+
+  protected onAppColorChange({ appType, color }: { appType: string; color: string | null }): void {
+    const current = this.preferences().appColors ?? {};
+    const updated = color ? { ...current, [appType]: color } : Object.fromEntries(
+      Object.entries(current).filter(([k]) => k !== appType)
+    );
+    this.onPreferencesChange({ ...this.preferences(), appColors: Object.keys(updated).length ? updated : null });
   }
 
   protected onPreferencesChange(prefs: AppPreferences): void {

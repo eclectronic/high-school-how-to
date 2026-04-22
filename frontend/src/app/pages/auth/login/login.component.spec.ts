@@ -40,16 +40,16 @@ describe('LoginComponent', () => {
   };
 
   it('logs in and navigates to return url', async () => {
-    await createComponent('/account/security');
+    await createComponent('/account/profile');
 
     authApi.login.and.returnValue(of({ accessToken: 'a', refreshToken: 'r', expiresIn: 10 }));
 
-    component['form'].setValue({ email: 'user@example.com', password: 'secret' });
+    component['form'].setValue({ email: 'user@example.com', password: 'secret', rememberMe: false });
     TestBed.runInInjectionContext(() => component['submit']());
 
-    expect(authApi.login).toHaveBeenCalledWith({ email: 'user@example.com', password: 'secret' });
+    expect(authApi.login).toHaveBeenCalledWith({ email: 'user@example.com', password: 'secret', rememberMe: false });
     expect(sessionStore.setSession).toHaveBeenCalled();
-    expect(router.navigateByUrl).toHaveBeenCalledWith('/account/security');
+    expect(router.navigateByUrl).toHaveBeenCalledWith('/account/profile');
   });
 
   it('logs in and navigates to dashboard when no returnUrl', async () => {
@@ -57,7 +57,7 @@ describe('LoginComponent', () => {
 
     authApi.login.and.returnValue(of({ accessToken: 'a', refreshToken: 'r', expiresIn: 10 }));
 
-    component['form'].setValue({ email: 'user@example.com', password: 'secret' });
+    component['form'].setValue({ email: 'user@example.com', password: 'secret', rememberMe: false });
     TestBed.runInInjectionContext(() => component['submit']());
 
     expect(router.navigateByUrl).toHaveBeenCalledWith('/locker');
@@ -70,7 +70,7 @@ describe('LoginComponent', () => {
       throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Unauthorized' }))
     );
 
-    component['form'].setValue({ email: 'user@example.com', password: 'wrong' });
+    component['form'].setValue({ email: 'user@example.com', password: 'wrong', rememberMe: false });
     TestBed.runInInjectionContext(() => component['submit']());
 
     expect(component['error']()).toContain('email/password');

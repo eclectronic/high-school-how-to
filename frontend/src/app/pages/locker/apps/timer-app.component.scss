@@ -6,6 +6,10 @@
   font-size: 0.9rem;
   color: #2d1a10;
   align-items: center;
+  // Fixed width so mode/state switches never change the pane width
+  width: 12.5rem;
+  align-self: center;
+  flex-shrink: 0;
 }
 
 .timer-app__loading {
@@ -37,7 +41,8 @@
   border-bottom: 3px solid transparent;
 
   &--active {
-    color: var(--tab-color, #0f9b8e);
+    color: #000;
+    font-weight: 700;
     border-bottom-color: var(--tab-color, #0f9b8e);
   }
 
@@ -62,23 +67,28 @@
   padding: 1.25rem 1rem;
   flex: 1;
   overflow-y: auto;
-  width: 100%;
 }
 
 .timer-app__display {
   font-size: 3.5rem;
-  font-weight: 700;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   cursor: pointer;
   transition: opacity 0.15s;
   text-align: center;
+  color: #2d1a10;
 
   &--done {
     font-size: 1.8rem;
+    min-width: unset;
   }
 
-  &:hover {
+  &--locked {
+    cursor: default;
+  }
+
+  &:hover:not(&--locked) {
     opacity: 0.8;
   }
 }
@@ -132,10 +142,11 @@
 }
 
 .spinner-input {
-  // Match the running display exactly
   width: 2ch;
+  min-width: 0;
   font-size: 3.5rem;
-  font-weight: 700;
+  font-weight: 800;
+  color: #2d1a10;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   font-family: inherit;
@@ -167,7 +178,8 @@
 
 .duration-sep {
   font-size: 3.5rem;  // match timer display
-  font-weight: 700;
+  font-weight: 800;
+  color: #2d1a10;
   line-height: 1;
   padding-bottom: 1.6rem; // push down to align with input digits (above label)
   opacity: 0.6;
@@ -189,6 +201,22 @@
   flex-wrap: wrap;
 }
 
+.timer-reset-link {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: rgba(45, 26, 16, 0.4);
+  cursor: pointer;
+  padding: 0.15rem 0.5rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: rgba(45, 26, 16, 0.7);
+  }
+}
+
 .timer-btn {
   padding: 0.55rem 1.35rem;
   border-radius: 8px;
@@ -205,6 +233,8 @@
 
   &--primary {
     color: #fff;
+    border: 2px solid rgba(45, 26, 16, 0.35);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
   }
 
   &--secondary {
@@ -236,11 +266,53 @@
 
 /* Pomodoro */
 
+.pomodoro-phase-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .pomodoro-phase {
   font-size: 1rem;
   font-weight: 700;
+  color: #2d1a10;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+}
+
+.pomodoro-settings-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  opacity: 0.5;
+  transition: opacity 0.12s, background 0.12s;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(45, 26, 16, 0.08);
+  }
+}
+
+/* Pomodoro preset select */
+
+.pomo-preset-select {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid rgba(45, 26, 16, 0.2);
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2d1a10;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+
+  &:focus { border-color: #2d1a10; }
 }
 
 .pomodoro-dots {
@@ -259,29 +331,24 @@
 
 /* Pomodoro settings */
 
-.pomodoro-settings__fields {
+.pomodoro-settings__grid {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.25rem 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 0.6rem;
 }
 
-.pomo-field {
+.pomo-cell {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: #555;
-  gap: 0.5rem;
-
-  span {
-    flex: 1;
-  }
 }
 
 .pomo-input {
-  width: 60px;
+  width: 100%;
   padding: 0.3rem 0.4rem;
   border: 1px solid rgba(45, 26, 16, 0.2);
   border-radius: 5px;

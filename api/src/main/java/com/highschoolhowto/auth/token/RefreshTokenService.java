@@ -20,12 +20,13 @@ public class RefreshTokenService {
     }
 
     @Transactional
-    public RefreshToken issue(User user) {
+    public RefreshToken issue(User user, boolean rememberMe) {
         RefreshToken token = new RefreshToken();
         token.setUser(user);
         token.setToken(UUID.randomUUID().toString());
-        token.setExpiresAt(Instant.now().plus(properties.getRefreshTokenTtl()));
+        token.setExpiresAt(Instant.now().plus(properties.getRememberMeRefreshTtl()));
         token.setRevoked(false);
+        token.setRememberMe(rememberMe);
         return repository.save(token);
     }
 

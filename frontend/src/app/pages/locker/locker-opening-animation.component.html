@@ -19,18 +19,41 @@
     <div class="locker-interior">
       <div class="locker-shelf locker-shelf--top"></div>
       <div class="locker-shelf locker-shelf--bottom"></div>
-      <!-- Bottom shelf items -->
-      <div class="locker-books">📚📓📒✏️</div>
-      <!-- Middle section items -->
-      <div class="locker-item" style="font-size:3rem;top:34%;left:6%">🧢</div>
-      <div class="locker-item" style="font-size:2.6rem;top:36%;right:8%">🎧</div>
-      <div class="locker-item" style="font-size:2.2rem;top:54%;left:10%">💧</div>
-      <div class="locker-item" style="font-size:2rem;top:52%;right:12%">📌</div>
-      <!-- Top section items -->
-      <div class="locker-item" style="font-size:3.5rem;top:2%;left:5%">🎒</div>
-      <div class="locker-item" style="font-size:2.5rem;top:4%;right:8%">⭐</div>
-      <div class="locker-item" style="font-size:2rem;top:14%;right:22%">📎</div>
-      <div class="locker-item" style="font-size:1.8rem;top:16%;left:22%">🖊️</div>
+
+      <!-- Hung items from hooks -->
+      <div class="locker-hang locker-hang--left">
+        <div class="locker-hang__hook"></div>
+        <span class="locker-hang__item">{{ hangLeft }}</span>
+      </div>
+      <div class="locker-hang locker-hang--right">
+        <div class="locker-hang__hook"></div>
+        <span class="locker-hang__item">{{ hangRight }}</span>
+      </div>
+
+      <!-- Dynamic interior items -->
+      @for (item of items; track $index) {
+        <div
+          class="locker-item"
+          [style.font-size]="item.fontSize"
+          [style.top]="item.top ?? null"
+          [style.bottom]="item.bottom ?? null"
+          [style.left]="item.left ?? null"
+          [style.right]="item.right ?? null"
+          [style.transform]="item.rotation ? 'rotate(' + item.rotation + 'deg)' : null"
+        >{{ item.emoji }}</div>
+      }
+
+      <!-- Book stack on bottom shelf -->
+      <div class="locker-book-stack">
+        @for (book of books; track $index) {
+          <div
+            class="locker-book"
+            [class.locker-book--bot]="$index === 0"
+            [class.locker-book--mid]="$index === 1"
+            [class.locker-book--top]="$index === 2"
+          >{{ book }}</div>
+        }
+      </div>
     </div>
 
     <!-- Animated door -->
@@ -62,6 +85,64 @@
         </div>
       </div>
     </div>
+
+    <!-- ── Surprise events (rendered outside locker-interior so they can escape) ── -->
+    @if (surprise) {
+      @switch (surprise) {
+        @case ('bird') {
+          <span class="locker-sx locker-sx--bird">🐦</span>
+        }
+        @case ('banana') {
+          <div class="locker-sx locker-sx--banana">
+            <span class="locker-sx__main">🍌</span>
+            <span class="locker-sx__puff locker-sx__puff--1">💨</span>
+            <span class="locker-sx__puff locker-sx__puff--2">💨</span>
+            <span class="locker-sx__puff locker-sx__puff--3">🤢</span>
+          </div>
+        }
+        @case ('lunchbox') {
+          <div class="locker-sx locker-sx--lunchbox">
+            <span class="locker-sx__main">🥡</span>
+            <span class="locker-sx__puff locker-sx__puff--1">💨</span>
+            <span class="locker-sx__puff locker-sx__puff--2">💨</span>
+            <span class="locker-sx__puff locker-sx__puff--3">😷</span>
+          </div>
+        }
+        @case ('sock') {
+          <div class="locker-sx locker-sx--sock">
+            <span class="locker-sx__main">🧦</span>
+            <span class="locker-sx__puff locker-sx__puff--1">💨</span>
+            <span class="locker-sx__puff locker-sx__puff--2">😷</span>
+          </div>
+        }
+        @case ('cat') {
+          <span class="locker-sx locker-sx--cat">🐱</span>
+        }
+        @case ('worm') {
+          <div class="locker-sx locker-sx--worm">
+            <span class="locker-sx__main">🐛</span>
+            <span class="locker-sx__puff locker-sx__puff--1">💨</span>
+          </div>
+        }
+        @case ('fish') {
+          <div class="locker-sx locker-sx--fish">
+            <span class="locker-sx__main">🐟</span>
+            <span class="locker-sx__puff locker-sx__puff--1">💨</span>
+            <span class="locker-sx__puff locker-sx__puff--2">💨</span>
+            <span class="locker-sx__puff locker-sx__puff--3">🤢</span>
+          </div>
+        }
+        @case ('spider') {
+          <div class="locker-sx locker-sx--spider">
+            <span class="locker-sx__thread"></span>
+            <span class="locker-sx__main">🕷️</span>
+          </div>
+        }
+        @case ('ghost') {
+          <span class="locker-sx locker-sx--ghost">👻</span>
+        }
+      }
+    }
   </div>
 
   <!-- Side bay 4 -->

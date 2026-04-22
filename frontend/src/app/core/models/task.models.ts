@@ -11,6 +11,7 @@ export interface TaskList {
   color: string;
   textColor?: string | null;
   tasks: TaskItem[];
+  sortOrder?: number;
   sourceContentCardId?: number | null;
 }
 
@@ -85,6 +86,17 @@ export interface Shortcut {
   faviconUrl?: string | null;
   emoji?: string | null;
   iconUrl?: string | null;
+}
+
+export interface RecommendedPin {
+  id: string;
+  name: string;
+  url: string;
+  emoji?: string | null;
+  faviconUrl?: string | null;
+  category?: string | null;
+  sortOrder: number;
+  active: boolean;
 }
 
 export interface Sticker {

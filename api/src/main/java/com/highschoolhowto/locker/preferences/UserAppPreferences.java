@@ -37,6 +37,12 @@ public class UserAppPreferences {
     @Column(name = "font_family", length = 50)
     private String fontFamily;
 
+    @Column(name = "locker_text_size", length = 16, nullable = false)
+    private String lockerTextSize = "DEFAULT";
+
+    @Column(name = "app_colors", columnDefinition = "TEXT")
+    private String appColors;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -109,6 +115,22 @@ public class UserAppPreferences {
 
     public void setFontFamily(String fontFamily) {
         this.fontFamily = fontFamily;
+    }
+
+    public String getLockerTextSize() {
+        return lockerTextSize;
+    }
+
+    public void setLockerTextSize(String lockerTextSize) {
+        this.lockerTextSize = lockerTextSize;
+    }
+
+    public String getAppColors() {
+        return appColors;
+    }
+
+    public void setAppColors(String appColors) {
+        this.appColors = appColors;
     }
 
     public Instant getCreatedAt() {

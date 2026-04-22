@@ -24,7 +24,7 @@ export class EditModeComponent implements OnInit {
   @Output() save = new EventEmitter<AppPreferences>();
   @Output() close = new EventEmitter<void>();
 
-  protected draft = signal<AppPreferences>({ activeApps: [], paneOrder: null, paletteName: 'ocean', lockerColor: null, fontFamily: null });
+  protected draft = signal<AppPreferences>({ activeApps: [], paneOrder: null, paletteName: 'ocean', lockerColor: null, fontFamily: null, lockerTextSize: 'DEFAULT', appColors: null });
   protected readonly appDefs = APP_DEFS;
 
   protected readonly defaultLockerColor = DEFAULT_LOCKER_COLOR;

@@ -2,6 +2,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of } from 'rxjs';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { HowToPageComponent } from './how-to-page.component';
 import { ContentApiService } from '../../core/services/content-api.service';
 import { ContentCard } from '../../core/models/content.models';
@@ -83,7 +85,11 @@ describe('HowToPageComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [HowToPageComponent, RouterTestingModule],
-      providers: [{ provide: ContentApiService, useValue: contentApiSpy }],
+      providers: [
+        { provide: ContentApiService, useValue: contentApiSpy },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
       schemas: [NO_ERRORS_SCHEMA],
     }).compileComponents();
 

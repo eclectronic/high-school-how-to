@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, signal, computed, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TimerApiService } from '../../../core/services/timer-api.service';
@@ -7,6 +7,12 @@ import { Timer } from '../../../core/models/task.models';
 
 type TimerMode = 'BASIC' | 'POMODORO';
 type PomodoroPhase = 'focus' | 'short-break' | 'long-break';
+
+const POMODORO_PRESETS: { name: string; focus: number; shortBreak: number; longBreak: number; sessions: number }[] = [
+  { name: 'Classic', focus: 25, shortBreak: 5, longBreak: 15, sessions: 4 },
+  { name: 'Short Sprint', focus: 15, shortBreak: 3, longBreak: 10, sessions: 4 },
+  { name: 'Deep Work', focus: 50, shortBreak: 10, longBreak: 30, sessions: 3 },
+];
 
 @Component({
   selector: 'app-timer-app',
@@ -32,11 +38,11 @@ export class TimerAppComponent implements OnInit, OnDestroy {
   protected running = signal(false);
   protected done = signal(false);
 
-  // Basic timer edit fields (in minutes/seconds)
-  protected editHours = 0;
+  // Basic timer edit fields — hours folded into minutes (0–99)
   protected editMinutes = 25;
   protected editSeconds = 0;
   protected editingDuration = signal(false);
+  private editingFromRemaining = 0;
 
   // Pomodoro state
   protected pomodoroPhase = signal<PomodoroPhase>('focus');
@@ -45,6 +51,7 @@ export class TimerAppComponent implements OnInit, OnDestroy {
   protected pomodoroRunning = signal(false);
   protected pomodoroDone = signal(false);
   protected showPomodoroSettings = signal(false);
+  protected readonly pomodoroPresets = POMODORO_PRESETS;
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -108,8 +115,7 @@ export class TimerAppComponent implements OnInit, OnDestroy {
   private initBasicTimer(t: Timer): void {
     const total = t.basicDurationSeconds;
     this.remainingSeconds.set(total);
-    this.editHours = Math.floor(total / 3600);
-    this.editMinutes = Math.floor((total % 3600) / 60);
+    this.editMinutes = Math.floor(total / 60);
     this.editSeconds = total % 60;
   }
 
@@ -185,12 +191,16 @@ export class TimerAppComponent implements OnInit, OnDestroy {
   }
 
   protected startEditDuration(): void {
-    this.pauseBasic();
+    if (this.running()) return;
+    this.editingFromRemaining = this.remainingSeconds();
+    const total = this.timer()?.basicDurationSeconds ?? this.remainingSeconds();
+    this.editMinutes = Math.floor(total / 60);
+    this.editSeconds = total % 60;
     this.editingDuration.set(true);
   }
 
   protected saveDuration(): void {
-    const total = (this.editHours * 3600) + (this.editMinutes * 60) + this.editSeconds;
+    const total = (this.editMinutes * 60) + this.editSeconds;
     if (total <= 0) return;
     this.editingDuration.set(false);
     this.remainingSeconds.set(total);
@@ -205,28 +215,19 @@ export class TimerAppComponent implements OnInit, OnDestroy {
 
   protected cancelEditDuration(): void {
     this.editingDuration.set(false);
-    const t = this.timer();
-    if (t) this.initBasicTimer(t);
-  }
-
-  protected adjustHours(delta: number): void {
-    this.editHours = ((this.editHours + delta) + 24) % 24;
+    this.remainingSeconds.set(this.editingFromRemaining);
   }
 
   protected adjustMinutes(delta: number): void {
-    this.editMinutes = ((this.editMinutes + delta) + 60) % 60;
+    this.editMinutes = Math.max(0, Math.min(99, this.editMinutes + delta));
   }
 
   protected adjustSeconds(delta: number): void {
     this.editSeconds = ((this.editSeconds + delta) + 60) % 60;
   }
 
-  protected clampHours(): void {
-    this.editHours = Math.max(0, Math.min(23, Math.floor(this.editHours) || 0));
-  }
-
   protected clampMinutes(): void {
-    this.editMinutes = Math.max(0, Math.min(59, Math.floor(this.editMinutes) || 0));
+    this.editMinutes = Math.max(0, Math.min(99, Math.floor(this.editMinutes) || 0));
   }
 
   protected clampSeconds(): void {
@@ -307,6 +308,72 @@ export class TimerAppComponent implements OnInit, OnDestroy {
 
   // ---- Pomodoro settings ----
 
+  protected openPomodoroSettings(): void {
+    if (!this.pomodoroRunning()) {
+      this.showPomodoroSettings.set(true);
+    }
+  }
+
+  private static readonly CUSTOM_SETTINGS_KEY = 'pomo-custom-settings';
+
+  protected saveCustomSettingsToStorage(t: Timer): void {
+    if (t.presetName) return; // only snapshot when currently on custom
+    localStorage.setItem(TimerAppComponent.CUSTOM_SETTINGS_KEY, JSON.stringify({
+      focusDuration: t.focusDuration,
+      shortBreakDuration: t.shortBreakDuration,
+      longBreakDuration: t.longBreakDuration,
+      sessionsBeforeLongBreak: t.sessionsBeforeLongBreak,
+    }));
+  }
+
+  protected onPresetSelectChange(name: string): void {
+    const t = this.timer();
+    if (!t) return;
+    const preset = this.pomodoroPresets.find(p => p.name === name);
+    if (preset) {
+      this.saveCustomSettingsToStorage(t);
+      this.applyPreset(preset);
+    } else {
+      this.restoreCustomSettings();
+    }
+  }
+
+  private restoreCustomSettings(): void {
+    const t = this.timer();
+    if (!t) return;
+    const raw = localStorage.getItem(TimerAppComponent.CUSTOM_SETTINGS_KEY);
+    if (!raw) return;
+    try {
+      const saved = JSON.parse(raw);
+      t.focusDuration = saved.focusDuration ?? t.focusDuration;
+      t.shortBreakDuration = saved.shortBreakDuration ?? t.shortBreakDuration;
+      t.longBreakDuration = saved.longBreakDuration ?? t.longBreakDuration;
+      t.sessionsBeforeLongBreak = saved.sessionsBeforeLongBreak ?? t.sessionsBeforeLongBreak;
+      t.presetName = undefined;
+      this.savePomodoroSettings();
+      this.initPomodoroTimer(t);
+    } catch {
+      // corrupted storage — ignore
+    }
+  }
+
+  protected applyPreset(preset: typeof POMODORO_PRESETS[0]): void {
+    const t = this.timer();
+    if (!t) return;
+    t.focusDuration = preset.focus;
+    t.shortBreakDuration = preset.shortBreak;
+    t.longBreakDuration = preset.longBreak;
+    t.sessionsBeforeLongBreak = preset.sessions;
+    t.presetName = preset.name;
+    this.savePomodoroSettings();
+    this.initPomodoroTimer(t);
+  }
+
+  protected clearPresetName(): void {
+    const t = this.timer();
+    if (t) t.presetName = undefined;
+  }
+
   protected savePomodoroSettings(): void {
     const t = this.timer();
     if (!t) return;
@@ -316,7 +383,44 @@ export class TimerAppComponent implements OnInit, OnDestroy {
       shortBreakDuration: t.shortBreakDuration,
       longBreakDuration: t.longBreakDuration,
       sessionsBeforeLongBreak: t.sessionsBeforeLongBreak,
+      presetName: t.presetName ?? null,
     }).subscribe({ next: updated => this.timer.set(updated) });
+  }
+
+  protected savePomodoroSettingsAndClose(): void {
+    this.savePomodoroSettings();
+    this.showPomodoroSettings.set(false);
+  }
+
+  protected closePomodoroSettings(): void {
+    this.showPomodoroSettings.set(false);
+  }
+
+  @HostListener('keydown.enter', ['$event'])
+  onEnter(event: Event): void {
+    const el = event.target as HTMLElement;
+    const tag = el.tagName;
+
+    if (this.mode() === 'BASIC') {
+      if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'TEXTAREA') return;
+      if (this.editingDuration()) this.saveDuration();
+      else if (!this.running()) this.startBasic();
+    } else {
+      if (this.showPomodoroSettings()) {
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return; // inputs handle themselves
+        if (el.classList.contains('btn--cancel')) return;  // cancel handles itself
+        this.savePomodoroSettingsAndClose();
+      } else {
+        if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'TEXTAREA') return;
+        if (!this.pomodoroRunning()) this.startPomodoro();
+      }
+    }
+  }
+
+  @HostListener('keydown.escape')
+  onEscape(): void {
+    if (this.editingDuration()) this.cancelEditDuration();
+    if (this.showPomodoroSettings()) this.closePomodoroSettings();
   }
 
   // ---- Helpers ----

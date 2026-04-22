@@ -153,6 +153,25 @@ public class ShortcutService {
     }
 
     @Transactional
+    public void seedDefaultGoogleShortcuts(User user) {
+        record DefaultPin(String url, String name, String emoji) {}
+        var defaults = List.of(
+            new DefaultPin("https://mail.google.com", "Gmail", "📧"),
+            new DefaultPin("https://drive.google.com", "Google Drive", "📁")
+        );
+        int sortOrder = 0;
+        for (DefaultPin pin : defaults) {
+            Shortcut shortcut = new Shortcut();
+            shortcut.setUser(user);
+            shortcut.setUrl(pin.url());
+            shortcut.setName(pin.name());
+            shortcut.setEmoji(pin.emoji());
+            shortcut.setSortOrder(sortOrder++);
+            shortcutRepository.save(shortcut);
+        }
+    }
+
+    @Transactional
     public void reorderShortcuts(UUID userId, ReorderShortcutsRequest req) {
         List<Shortcut> owned = shortcutRepository.findByUserIdOrderBySortOrderAsc(userId);
         java.util.Map<UUID, Shortcut> byId = new java.util.HashMap<>();

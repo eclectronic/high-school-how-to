@@ -31,8 +31,31 @@ spring init \
 
 ### Authentication + session handling
 - Use Spring Security 6 with stateless JWTs (signed with an asymmetric key so tokens can be validated independently across instances).
-- Keep token TTL short (15m) and issue refresh tokens stored in Postgres so compromised access tokens have limited blast radius.
+- Access token TTL is 1 hour (bumped from 15 min in v7); refresh tokens stored in Postgres rotate on every refresh so compromised tokens have limited blast radius.
+- Google Sign-In available alongside the password flow via `POST /api/auth/google` — see "Google Sign-In setup" below.
 - Multi-factor is out-of-scope for v1, but design the DB schema so an `mfa_enrolled` flag and secret columns can be added without remodels.
+
+### Google Sign-In setup
+
+`POST /api/auth/google` accepts a Google ID token (obtained client-side via Google Identity Services), verifies it against Google's JWKS, and returns the same `AuthenticationResponse` shape as `/api/auth/login`. Required configuration:
+
+```yaml
+auth:
+  google:
+    client-id: <your-client-id>.apps.googleusercontent.com
+```
+
+The Client ID is provisioned in Google Cloud Console. The repo includes a helper script that walks you through the setup and writes the value into `application.yml`:
+
+```bash
+./scripts/google-signin-setup.sh
+```
+
+Notes:
+- Only the **Client ID** is needed (public value, safe to commit). No client secret — the v7 flow uses ID-token verification, not the OAuth authorization-code flow.
+- The backend uses the existing `nimbus-jose-jwt` dependency for ID-token signature verification (no additional Google API client library needed).
+- Google JWKS are cached for 1 hour and force-refreshed on unknown `kid`.
+- See `docs/v7-auth-design.md` for the full design including account linking rules, security considerations, and the `Remember Me` / `POST /api/auth/logout` additions.
 
 ### Email (verification + reset)
 - Microsoft Graph sender: set `notifications.graph.enabled=true` plus `notifications.graph.tenant-id`, `client-id`, `client-secret`, and `from-address` (the mailbox to send from).

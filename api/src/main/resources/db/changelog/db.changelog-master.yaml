@@ -101,3 +101,23 @@ databaseChangeLog:
       file: db/changelog/v5-help-show-nav-0066.sql
   - include:
       file: db/changelog/v5-note-order-0067.sql
+  - include:
+      file: db/changelog/v7-google-auth-0068.sql
+  - include:
+      file: db/changelog/v7-remember-me-0069.sql
+  - include:
+      file: db/changelog/v7-locker-prefs-0070.sql
+  - include:
+      file: db/changelog/v7-app-colors-0071.sql
+  - include:
+      file: db/changelog/v7-recommended-shortcuts-0072.sql
+  - include:
+      file: db/changelog/v7-recommended-shortcuts-seed-0073.sql
+  - include:
+      file: db/changelog/v7-google-favicon-fix-0074.sql
+  - include:
+      file: db/changelog/v7-recommended-shortcuts-manual-0075.sql
+  - include:
+      file: db/changelog/v7-grey-palette-0076.sql
+  - include:
+      file: db/changelog/v7-tasklist-order-0077.sql

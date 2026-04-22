@@ -3,11 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import {
   AuthenticationResponse,
   ForgotPasswordRequest,
+  GoogleSignInRequest,
   LoginRequest,
+  LogoutRequest,
   RefreshRequest,
   RegistrationRequest,
   ResetPasswordRequest,
   UpdatePasswordRequest,
+  UserProfile,
   VerificationResponse
 } from '../models/auth.models';
 
@@ -46,6 +49,18 @@ export class AuthApiService {
   verifyEmail(token: string) {
     const params = new HttpParams().set('token', token);
     return this.http.get<VerificationResponse>('/api/auth/verify-email', { params });
+  }
+
+  googleSignIn(payload: GoogleSignInRequest) {
+    return this.http.post<AuthenticationResponse>('/api/auth/google', payload);
+  }
+
+  logout(payload: LogoutRequest) {
+    return this.http.post<void>('/api/auth/logout', payload, { observe: 'response' });
+  }
+
+  getProfile() {
+    return this.http.get<UserProfile>('/api/users/me');
   }
 
   updatePassword(payload: UpdatePasswordRequest) {

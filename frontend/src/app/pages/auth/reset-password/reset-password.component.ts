@@ -32,7 +32,7 @@ export class ResetPasswordComponent {
 
   protected readonly form = this.fb.nonNullable.group(
     {
-      newPassword: ['', [Validators.required, Validators.minLength(12)]],
+      newPassword: ['', [Validators.required, Validators.minLength(10)]],
       confirmPassword: ['', [Validators.required]]
     },
     { validators: control => this.matchPasswords(control) }

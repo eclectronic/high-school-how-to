@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, AfterViewChecked, signal, computed, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -7,9 +7,9 @@ import { Note } from '../../../core/models/task.models';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog.component';
 import { InlineTitleEditComponent } from '../../../shared/inline-title-edit/inline-title-edit.component';
 import { SwatchPickerComponent } from '../../../shared/swatch-picker/swatch-picker.component';
-import { autoContrastColor } from '../../../shared/color-picker/color-utils';
+import { autoContrastColor, DEFAULT_PALETTE } from '../../../shared/color-picker/color-utils';
 
-export type NotesSortMode = 'name' | 'date' | 'custom';
+export type NotesSortMode = 'name' | 'created' | 'updated' | 'custom';
 
 const SORT_MODE_STORAGE_KEY = 'notes.sortMode';
 const DEFAULT_SORT_MODE: NotesSortMode = 'custom';
@@ -28,12 +28,16 @@ const DEFAULT_SORT_MODE: NotesSortMode = 'custom';
   templateUrl: './notes-app.component.html',
   styleUrl: './notes-app.component.scss',
 })
-export class NotesAppComponent implements OnInit {
+export class NotesAppComponent implements OnInit, AfterViewChecked {
   @Input() paletteColor = '#1a8a6e';
   @Output() subtitleChange = new EventEmitter<string>();
   @Output() headerColorChange = new EventEmitter<string | null>();
 
+  @ViewChild('noteTitle') noteTitleRef?: InlineTitleEditComponent;
+  @ViewChild('noteContent') noteContentRef?: ElementRef<HTMLTextAreaElement>;
+
   private readonly noteApi = inject(NoteApiService);
+  private pendingNoteTitleFocus = false;
 
   protected notes = signal<Note[]>([]);
   protected view = signal<'list' | 'detail'>('list');
@@ -46,6 +50,7 @@ export class NotesAppComponent implements OnInit {
   protected editTitle = '';
   protected editContent = '';
   protected deleteTarget = signal<Note | null>(null);
+  protected infoNoteId = signal<string | null>(null);
   protected showColorPickerForNote = signal<string | null>(null);
   protected colorPickerNote = computed(() => {
     const id = this.showColorPickerForNote();
@@ -56,6 +61,17 @@ export class NotesAppComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadNotes();
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.pendingNoteTitleFocus && this.noteTitleRef) {
+      this.pendingNoteTitleFocus = false;
+      this.noteTitleRef.startEdit();
+    }
+  }
+
+  protected focusContentArea(): void {
+    setTimeout(() => this.noteContentRef?.nativeElement?.focus());
   }
 
   private loadNotes(): void {
@@ -72,7 +88,7 @@ export class NotesAppComponent implements OnInit {
   private readStoredSortMode(): NotesSortMode {
     try {
       const raw = localStorage.getItem(SORT_MODE_STORAGE_KEY);
-      if (raw === 'name' || raw === 'date' || raw === 'custom') return raw;
+      if (raw === 'name' || raw === 'created' || raw === 'updated' || raw === 'custom') return raw;
     } catch {
       // localStorage unavailable (SSR / privacy mode) — fall through to default
     }
@@ -86,11 +102,16 @@ export class NotesAppComponent implements OnInit {
         return copy.sort((a, b) =>
           a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
         );
-      case 'date':
-        // Newest first
+      case 'created':
         return copy.sort((a, b) => {
           const ta = a.createdAt ? Date.parse(a.createdAt) : 0;
           const tb = b.createdAt ? Date.parse(b.createdAt) : 0;
+          return tb - ta;
+        });
+      case 'updated':
+        return copy.sort((a, b) => {
+          const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+          const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0;
           return tb - ta;
         });
       case 'custom':
@@ -143,9 +164,14 @@ export class NotesAppComponent implements OnInit {
     this.editTitle = note.title;
     this.editContent = note.content ?? '';
     this.showColorPickerForNote.set(null);
+    this.infoNoteId.set(null);
     this.view.set('detail');
-    this.subtitleChange.emit(note.title);
     this.headerColorChange.emit(note.color);
+  }
+
+  protected toolbarBg(color: string | null | undefined): string {
+    if (!color) return 'rgba(255, 255, 255, 0.35)';
+    return `color-mix(in srgb, ${color} 88%, #000)`;
   }
 
   protected goBack(): void {
@@ -155,16 +181,18 @@ export class NotesAppComponent implements OnInit {
     this.editTitle = '';
     this.editContent = '';
     this.showColorPickerForNote.set(null);
-    this.subtitleChange.emit('List');
     this.headerColorChange.emit(null);
   }
 
   protected createNote(): void {
-    this.noteApi.createNote({ title: 'New Note', color: '#fffef8' }).subscribe({
+    const color = DEFAULT_PALETTE[Math.floor(Math.random() * DEFAULT_PALETTE.length)];
+    const textColor = autoContrastColor(color);
+    this.noteApi.createNote({ title: 'New Note', color, textColor }).subscribe({
       next: result => {
         const note: Note = result;
         this.notes.update(ns => [note, ...ns]);
         this.openNote(note);
+        this.pendingNoteTitleFocus = true;
       },
     });
   }
@@ -203,7 +231,6 @@ export class NotesAppComponent implements OnInit {
         this.notes.update(ns => ns.map(n => n.id === updated.id ? updated : n));
         this.selectedNote.set(updated);
         this.editTitle = updated.title;
-        this.subtitleChange.emit(updated.title);
       },
     });
   }
@@ -259,8 +286,84 @@ export class NotesAppComponent implements OnInit {
     this.deleteTarget.set(null);
   }
 
+  protected onNoteCardKeydown(event: KeyboardEvent, note: Note): void {
+    switch (event.key) {
+      case ' ':
+      case 'Enter':
+        event.preventDefault();
+        this.openNote(note);
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        this.focusAdjacentNote(event.currentTarget as HTMLElement, 1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.focusAdjacentNote(event.currentTarget as HTMLElement, -1);
+        break;
+    }
+  }
+
+  private focusAdjacentNote(current: HTMLElement, dir: 1 | -1): void {
+    const cards = Array.from(
+      current.closest('.notes-app__drop-list')?.querySelectorAll<HTMLElement>('.note-card') ?? []
+    );
+    const idx = cards.indexOf(current);
+    cards[idx + dir]?.focus();
+  }
+
+  protected toggleNoteInfo(id: string, event: MouseEvent): void {
+    event.stopPropagation();
+    this.infoNoteId.update(cur => cur === id ? null : id);
+  }
+
+  protected noteInfoLines(note: Note): { label: string; value: string }[] {
+    const fmt = (raw: string | null | undefined) =>
+      raw ? new Date(raw).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit',
+      }) : null;
+    const lines: { label: string; value: string }[] = [];
+    const created = fmt(note.createdAt);
+    if (created) lines.push({ label: 'Created', value: created });
+    const updated = fmt(note.updatedAt);
+    if (updated && updated !== created) lines.push({ label: 'Updated', value: updated });
+    return lines;
+  }
+
   protected getContentPreview(note: Note): string {
-    const c = note.content ?? '';
-    return c.length > 80 ? c.slice(0, 80) + '…' : c;
+    return (note.content ?? '').replace(/\s+/g, ' ').trim();
+  }
+
+  protected formatNoteDate(note: Note): string {
+    const raw = this.sortMode() === 'created'
+      ? (note.createdAt ?? note.updatedAt)
+      : (note.updatedAt ?? note.createdAt);
+    if (!raw) return '';
+    const date = new Date(raw);
+    const now = Date.now();
+    const diffMs = now - date.getTime();
+    const diffMin = Math.floor(diffMs / 60_000);
+    const diffHrs = Math.floor(diffMs / 3_600_000);
+    const diffDays = Math.floor(diffMs / 86_400_000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  protected formatNoteTooltip(note: Note): string {
+    const fmt = (raw: string | null | undefined) =>
+      raw ? new Date(raw).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit',
+      }) : '';
+    const created = fmt(note.createdAt);
+    const updated = fmt(note.updatedAt);
+    if (created && updated && created !== updated) {
+      return `Created ${created}\nEdited ${updated}`;
+    }
+    return created ? `Created ${created}` : '';
   }
 }

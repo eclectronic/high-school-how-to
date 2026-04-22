@@ -8,6 +8,8 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
+    Optional<RefreshToken> findByToken(String token);
+
     Optional<RefreshToken> findByTokenAndRevokedFalse(String token);
 
     List<RefreshToken> findByUserAndRevokedFalseAndExpiresAtAfter(User user, Instant timestamp);

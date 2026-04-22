@@ -36,6 +36,7 @@
 .locker-interior {
   position: absolute;
   inset: 0;
+  z-index: 0;
   background:
     radial-gradient(ellipse 90% 18% at 50% 0%, rgba(255, 255, 255, 0.09) 0%, transparent 100%),
     linear-gradient(180deg, #2c3540 0%, #1e2830 55%, #141c22 100%);
@@ -62,17 +63,26 @@
   &--bottom { bottom: 22%; }
 }
 
-.locker-books {
+.locker-book-stack {
   position: absolute;
   bottom: 22%;
   left: 50%;
-  transform: translate(-50%, -100%);
-  font-size: clamp(2.4rem, 4.5vw, 4rem);
-  line-height: 1;
-  white-space: nowrap;
-  letter-spacing: -0.05em;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
   user-select: none;
+}
+
+.locker-book {
+  font-size: clamp(3.5rem, 6vw, 5.5rem);
+  line-height: 0.9;
+  display: block;
+
+  &--bot { transform: rotate(-5deg); }
+  &--mid { transform: rotate(4deg);  margin-top: -0.2em; }
+  &--top { transform: rotate(-2deg); margin-top: -0.2em; }
 }
 
 .locker-item {
@@ -86,6 +96,7 @@
 .locker-door {
   position: absolute;
   inset: 0;
+  z-index: 1;
   background-image: repeating-linear-gradient(
     90deg,
     transparent 0px, transparent 49px,
@@ -243,4 +254,280 @@
   height: 8px;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 2px;
+}
+
+/* ── Hung items ── */
+.locker-hang {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.7));
+
+  &--left  { left: 18%;  }
+  &--right { right: 16%; }
+}
+
+.locker-hang__hook {
+  width: 5px;
+  height: clamp(14px, 2.5%, 22px);
+  background: linear-gradient(to bottom, #9ca3af, #6b7280);
+  border-radius: 3px 3px 0 0;
+}
+
+.locker-hang__item {
+  font-size: clamp(3.5rem, 7vw, 6.5rem);
+  line-height: 0.9;
+  user-select: none;
+  transform: rotate(3deg);
+  transform-origin: top center;
+
+  .locker-hang--right & { transform: rotate(-4deg); }
+}
+
+/* ── Surprise base ── */
+.locker-sx {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  z-index: 50;
+}
+
+/* ── Bird flies out ── */
+.locker-sx--bird {
+  top: 28%;
+  left: 25%;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  opacity: 0;
+  animation: sxBirdFly 1.9s ease-in forwards;
+  animation-delay: 1.45s;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes sxBirdFly {
+  0%   { opacity: 0; transform: scale(0.5); }
+  10%  { opacity: 1; transform: scale(1) rotate(-8deg); }
+  50%  { transform: translate(calc(12vw), calc(-18vh)) scale(1.3) rotate(-18deg); opacity: 1; }
+  100% { transform: translate(calc(48vw), calc(-46vh)) scale(2.2) rotate(-32deg); opacity: 0; }
+}
+
+/* ── Banana (stinky) ── */
+.locker-sx--banana {
+  bottom: 23%;
+  left: 8%;
+}
+
+.locker-sx--banana .locker-sx__main {
+  display: block;
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  transform: rotate(-28deg);
+  opacity: 0;
+  animation: sxFadeIn 0.35s ease forwards;
+  animation-delay: 1.5s;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+}
+
+/* ── Lunchbox (stinky) ── */
+.locker-sx--lunchbox {
+  top: 20%;
+  right: 5%;
+}
+
+.locker-sx--lunchbox .locker-sx__main {
+  display: block;
+  font-size: clamp(3rem, 6vw, 5rem);
+  opacity: 0;
+  animation: sxFadeIn 0.35s ease forwards;
+  animation-delay: 1.5s;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+}
+
+/* ── Sock falls ── */
+.locker-sx--sock {
+  top: 0;
+  right: 18%;
+}
+
+.locker-sx--sock .locker-sx__main {
+  display: block;
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  opacity: 0;
+  transform-origin: top center;
+  animation: sxSockFall 1.4s cubic-bezier(0.55, 0, 0.45, 1) forwards;
+  animation-delay: 1.45s;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+
+@keyframes sxSockFall {
+  0%   { opacity: 0; transform: rotate(-15deg) translateY(-10px); }
+  8%   { opacity: 1; }
+  65%  { transform: rotate(50deg) translateY(clamp(100px,20vh,200px)); opacity: 1; }
+  75%  { transform: rotate(44deg) translateY(clamp(94px,19vh,190px)) scaleY(0.82); }
+  100% { transform: rotate(46deg) translateY(clamp(96px,19.5vh,196px)); opacity: 0.6; }
+}
+
+/* ── Cat peeks ── */
+.locker-sx--cat {
+  font-size: clamp(3.5rem, 7vw, 6rem);
+  top: 0;
+  left: 50%;
+  opacity: 0;
+  animation: sxCatPeek 2.8s ease-in-out forwards;
+  animation-delay: 1.4s;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.75));
+}
+
+@keyframes sxCatPeek {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-120%); }
+  14%  { opacity: 1; transform: translateX(-50%) translateY(15%); }
+  20%  { transform: translateX(-50%) translateY(8%) rotate(5deg); }
+  30%  { transform: translateX(-50%) translateY(10%) rotate(-3deg); }
+  68%  { opacity: 1; transform: translateX(-50%) translateY(10%) rotate(0deg); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-120%); }
+}
+
+/* ── Worm peeks from behind books ── */
+.locker-sx--worm {
+  bottom: 24%;
+  left: 50%;
+  transform: translateX(-30%);
+}
+
+.locker-sx--worm .locker-sx__main {
+  display: block;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  opacity: 0;
+  animation: sxWormPeek 2.2s ease-in-out forwards;
+  animation-delay: 1.5s;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.7));
+}
+
+@keyframes sxWormPeek {
+  0%   { opacity: 0; transform: translateY(16px) rotate(0deg); }
+  14%  { opacity: 1; transform: translateY(-8px) rotate(12deg); }
+  28%  { transform: translateY(0px) rotate(-6deg); }
+  50%  { transform: translateY(-10px) rotate(10deg); opacity: 1; }
+  72%  { transform: translateY(0px) rotate(0deg); opacity: 1; }
+  88%  { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 0; }
+}
+
+/* ── Fish (old & stinky) ── */
+.locker-sx--fish {
+  top: 31%;
+  left: 5%;
+}
+
+.locker-sx--fish .locker-sx__main {
+  display: block;
+  font-size: clamp(2.8rem, 5.5vw, 5rem);
+  transform: rotate(12deg);
+  opacity: 0;
+  animation: sxFadeIn 0.35s ease forwards;
+  animation-delay: 1.5s;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+}
+
+/* ── Shared fade-in ── */
+@keyframes sxFadeIn {
+  to { opacity: 1; }
+}
+
+/* ── Stink puffs (shared) ── */
+.locker-sx__puff {
+  position: absolute;
+  opacity: 0;
+  font-size: 1.4rem;
+}
+
+/* banana puffs */
+.locker-sx--banana .locker-sx__puff--1 { left: 50%;  top: -28px; animation: sxPuff 1.1s ease-out forwards; animation-delay: 1.72s; }
+.locker-sx--banana .locker-sx__puff--2 { left: 80%;  top: -16px; font-size: 1.1rem; animation: sxPuff 1.3s ease-out forwards; animation-delay: 1.92s; }
+.locker-sx--banana .locker-sx__puff--3 { left: 20%;  top: -36px; font-size: 1.8rem; animation: sxPuff 1.5s ease-out forwards; animation-delay: 2.05s; }
+
+/* lunchbox puffs */
+.locker-sx--lunchbox .locker-sx__puff--1 { left: 30%;  top: -28px; animation: sxPuff 1.2s ease-out forwards; animation-delay: 1.72s; }
+.locker-sx--lunchbox .locker-sx__puff--2 { left: 65%;  top: -18px; font-size: 1.1rem; animation: sxPuff 1.35s ease-out forwards; animation-delay: 1.95s; }
+.locker-sx--lunchbox .locker-sx__puff--3 { left: 5%;   top: -40px; font-size: 1.9rem; animation: sxPuff 1.5s ease-out forwards; animation-delay: 2.1s; }
+
+/* sock puffs */
+.locker-sx--sock .locker-sx__puff--1 { left: 110%; top: 60%; animation: sxPuff 1.1s ease-out forwards; animation-delay: 1.9s; }
+.locker-sx--sock .locker-sx__puff--2 { left: 120%; top: 30%; font-size: 1.7rem; animation: sxPuff 1.3s ease-out forwards; animation-delay: 2.05s; }
+
+/* worm puff */
+.locker-sx--worm .locker-sx__puff--1 { left: 100%; top: 0; font-size: 1.1rem; animation: sxPuff 1.0s ease-out forwards; animation-delay: 1.95s; }
+
+/* fish puffs */
+.locker-sx--fish .locker-sx__puff--1 { left: 70%;  top: -26px; animation: sxPuff 1.2s ease-out forwards; animation-delay: 1.75s; }
+.locker-sx--fish .locker-sx__puff--2 { left: 95%;  top: -14px; font-size: 1.1rem; animation: sxPuff 1.35s ease-out forwards; animation-delay: 1.95s; }
+.locker-sx--fish .locker-sx__puff--3 { left: 45%;  top: -38px; font-size: 1.8rem; animation: sxPuff 1.5s ease-out forwards; animation-delay: 2.1s; }
+
+@keyframes sxPuff {
+  0%   { opacity: 0; transform: translateY(0) scale(0.4); }
+  22%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-55px) scale(1.3); }
+}
+
+/* ── Spider descends on thread ── */
+.locker-sx--spider {
+  top: 0;
+  left: 60%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  animation: sxSpiderDrop 2.6s ease-in-out forwards;
+  animation-delay: 1.4s;
+}
+
+.locker-sx--spider .locker-sx__thread {
+  display: block;
+  width: 2px;
+  background: rgba(200, 200, 200, 0.55);
+  height: 0;
+  animation: sxThreadGrow 1s ease-out forwards;
+  animation-delay: 1.4s;
+}
+
+.locker-sx--spider .locker-sx__main {
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+}
+
+@keyframes sxSpiderDrop {
+  0%   { opacity: 0; transform: translateY(-20px); }
+  10%  { opacity: 1; }
+  45%  { transform: translateY(clamp(60px,12vh,130px)); }
+  60%  { transform: translateY(clamp(55px,11vh,120px)) rotate(8deg); }
+  75%  { transform: translateY(clamp(58px,11.5vh,125px)) rotate(-6deg); }
+  88%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-30px); }
+}
+
+@keyframes sxThreadGrow {
+  0%   { height: 0; }
+  50%  { height: clamp(40px, 8vh, 90px); }
+  85%  { height: clamp(40px, 8vh, 90px); }
+  100% { height: 0; }
+}
+
+/* ── Ghost floats through ── */
+.locker-sx--ghost {
+  top: 20%;
+  left: -10%;
+  font-size: clamp(4rem, 8vw, 7rem);
+  opacity: 0;
+  animation: sxGhostFloat 2.2s ease-in-out forwards;
+  animation-delay: 1.4s;
+  filter: drop-shadow(0 0 18px rgba(200, 230, 255, 0.8));
+}
+
+@keyframes sxGhostFloat {
+  0%   { opacity: 0; transform: translate(0, 0) rotate(-5deg); }
+  15%  { opacity: 0.9; }
+  50%  { transform: translate(60%, -8%) rotate(5deg); opacity: 0.9; }
+  80%  { transform: translate(120%, 4%) rotate(-3deg); opacity: 0.5; }
+  100% { transform: translate(160%, -5%) rotate(8deg); opacity: 0; }
 }

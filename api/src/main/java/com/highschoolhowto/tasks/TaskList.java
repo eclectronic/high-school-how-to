@@ -44,6 +44,9 @@ public class TaskList {
     @Column(name = "source_content_card_id")
     private Long sourceContentCardId;
 
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -111,6 +114,14 @@ public class TaskList {
 
     public Set<TaskItem> getTasks() {
         return tasks;
+    }
+
+    public int getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(int sortOrder) {
+        this.sortOrder = sortOrder;
     }
 
     public Long getSourceContentCardId() {

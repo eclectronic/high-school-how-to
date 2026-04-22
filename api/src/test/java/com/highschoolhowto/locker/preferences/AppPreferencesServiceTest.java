@@ -87,7 +87,7 @@ class AppPreferencesServiceTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
         UpdateAppPreferencesRequest request = new UpdateAppPreferencesRequest(
-                List.of("TODO", "NOTES"), null, "forest", "#a0c8f0", null);
+                List.of("TODO", "NOTES"), null, "forest", "#a0c8f0", null, null, null);  // appColors = null
 
         AppPreferencesResponse response = service.updatePreferences(userId, request);
 
@@ -111,7 +111,7 @@ class AppPreferencesServiceTest {
 
         // 1 app is valid — min is 1
         UpdateAppPreferencesRequest request = new UpdateAppPreferencesRequest(
-                List.of("TIMER"), null, "ocean", null, null);
+                List.of("TIMER"), null, "ocean", null, null, null, null);
 
         AppPreferencesResponse response = service.updatePreferences(userId, request);
 
@@ -123,7 +123,7 @@ class AppPreferencesServiceTest {
     void updatePreferences_rejectsInvalidAppIdentifier() {
         UUID userId = UUID.randomUUID();
         UpdateAppPreferencesRequest request = new UpdateAppPreferencesRequest(
-                List.of("TODO", "INVALID"), null, "ocean", null, null);
+                List.of("TODO", "INVALID"), null, "ocean", null, null, null, null);
 
         assertThatThrownBy(() -> service.updatePreferences(userId, request))
                 .isInstanceOf(ApiException.class)
@@ -137,7 +137,7 @@ class AppPreferencesServiceTest {
     void updatePreferences_rejectsDuplicateApps() {
         UUID userId = UUID.randomUUID();
         UpdateAppPreferencesRequest request = new UpdateAppPreferencesRequest(
-                List.of("TODO", "TODO"), null, "ocean", null, null);
+                List.of("TODO", "TODO"), null, "ocean", null, null, null, null);
 
         assertThatThrownBy(() -> service.updatePreferences(userId, request))
                 .isInstanceOf(ApiException.class)

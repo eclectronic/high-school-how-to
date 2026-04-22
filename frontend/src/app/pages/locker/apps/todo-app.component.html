@@ -6,48 +6,83 @@
   <!-- LIST VIEW -->
   @if (!loading() && view() === 'list') {
     <div class="todo-app__list-view">
+      @if (lists().length > 0) {
+        <div class="todo-app__sort-bar" role="radiogroup" aria-label="Sort lists">
+          <button
+            type="button"
+            role="radio"
+            class="todo-app__sort-btn"
+            [class.todo-app__sort-btn--active]="sortMode() === 'name'"
+            [attr.aria-checked]="sortMode() === 'name'"
+            title="Sort by name A→Z"
+            (click)="setSortMode('name')"
+          >Name</button>
+          <button
+            type="button"
+            role="radio"
+            class="todo-app__sort-btn"
+            [class.todo-app__sort-btn--active]="sortMode() === 'custom'"
+            [attr.aria-checked]="sortMode() === 'custom'"
+            title="Custom order — drag to arrange"
+            (click)="setSortMode('custom')"
+          >Custom</button>
+        </div>
+      }
+
       @if (lists().length === 0) {
         <div class="todo-app__empty">
           <p>No task lists yet.</p>
         </div>
       }
 
-      @for (list of lists(); track list.id) {
-        <div class="todo-list-row">
-          <button
-            type="button"
-            class="todo-list-row__btn"
-            [style.background]="list.color"
-            [style.color]="list.textColor || '#2d1a10'"
-            (click)="openList(list)"
+      <div
+        cdkDropList
+        [cdkDropListDisabled]="sortMode() !== 'custom'"
+        (cdkDropListDropped)="onDropList($event)"
+      >
+        @for (list of sortedLists(); track list.id) {
+          <div
+            class="todo-list-row"
+            [class.todo-list-row--draggable]="sortMode() === 'custom'"
+            cdkDrag
+            [cdkDragDisabled]="sortMode() !== 'custom'"
           >
-            <span class="todo-list-row__title">{{ list.title }}</span>
-            <span class="todo-list-row__count">
-              {{ getCompletedCount(list) }}/{{ list.tasks.length }}
-            </span>
-          </button>
+            @if (sortMode() === 'custom') {
+              <span class="todo-list-row__drag-handle" cdkDragHandle title="Drag to reorder">⋮⋮</span>
+            }
+            <button
+              type="button"
+              class="todo-list-row__btn"
+              [style.background]="list.color"
+              [style.color]="list.textColor || '#2d1a10'"
+              (click)="openList(list)"
+              (keydown)="onListBtnKeydown($event)"
+            >
+              <span class="todo-list-row__title">{{ list.title }}</span>
+              <span class="todo-list-row__count">
+                {{ getCompletedCount(list) }}/{{ list.tasks.length }}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            class="todo-list-row__color-btn"
-            [style.background]="list.color"
-            title="Change color"
-            (click)="toggleColorPicker(list.id); $event.stopPropagation()"
-          ></button>
+            <button
+              type="button"
+              class="todo-list-row__color-btn"
+              [style.background]="list.color"
+              title="Change color"
+              (click)="toggleColorPicker(list.id); $event.stopPropagation()"
+            ></button>
 
-          <button
-            type="button"
-            class="todo-list-row__delete-btn"
-            title="Delete list"
-            (click)="confirmDeleteList(list); $event.stopPropagation()"
-          >🗑</button>
+            <button
+              type="button"
+              class="todo-list-row__delete-btn"
+              title="Delete list"
+              (click)="confirmDeleteList(list); $event.stopPropagation()"
+            >✕</button>
+          </div>
+        }
+      </div>
 
-        </div>
-      }
-
-      <button type="button" class="todo-app__new-btn" (click)="createList()">
-        + New List
-      </button>
+      <button type="button" class="todo-app__new-btn" (click)="createList()" title="New list" aria-label="New list">+</button>
     </div>
   }
 
@@ -57,13 +92,16 @@
       class="todo-app__detail-view"
       [style.background]="selectedList()!.color"
       [style.color]="selectedList()!.textColor || '#2d1a10'"
+      (keydown)="onDetailKeydown($event)"
     >
-      <div class="todo-app__detail-header">
-        <button type="button" class="todo-app__back-btn" (click)="goBack()" aria-label="Back">← Back</button>
+      <div class="todo-app__detail-header" [style.background]="toolbarBg(selectedList()!.color)">
+        <button type="button" class="todo-app__back-btn" (click)="goBack()" title="Done" aria-label="Done">✓</button>
         <app-inline-title-edit
+          #listTitle
           class="todo-app__list-title"
           [title]="selectedList()!.title"
           (titleChange)="onListTitleChange(selectedList()!, $event)"
+          (advanceFocus)="focusTaskInput()"
         />
         <div class="todo-app__header-actions">
           <button
@@ -78,7 +116,7 @@
             class="todo-list-row__delete-btn"
             title="Delete list"
             (click)="confirmDeleteList(selectedList()!)"
-          >🗑</button>
+          >✕</button>
         </div>
       </div>
 
@@ -97,6 +135,8 @@
             [class.todo-task--done]="task.completed"
             cdkDrag
             [cdkDragLockAxis]="'y'"
+            tabindex="0"
+            (keydown)="onTaskKeydown($event, task)"
           >
             <span
               class="todo-task__drag-handle"
@@ -145,23 +185,25 @@
             </div>
           </div>
         }
-      </div>
 
-      <div class="todo-app__add-task">
-        <input
-          type="text"
-          class="todo-app__task-input"
-          placeholder="Add a to-do…"
-          [(ngModel)]="newTaskDesc"
-          (keydown.enter)="addTask()"
-        />
-        <button
-          type="button"
-          class="todo-app__add-task-btn"
-          [style.background]="paletteColor"
-          [disabled]="!newTaskDesc.trim()"
-          (click)="addTask()"
-        >Add</button>
+        <div class="todo-app__add-task">
+          <input
+            #taskInput
+            type="text"
+            class="todo-app__task-input"
+            placeholder="Add a to-do…"
+            [(ngModel)]="newTaskDesc"
+            (keydown.enter)="addTask()"
+          />
+          <button
+            type="button"
+            class="todo-app__add-task-btn"
+            [disabled]="!newTaskDesc.trim()"
+            title="Add task"
+            aria-label="Add task"
+            (click)="addTask()"
+          >+</button>
+        </div>
       </div>
 
       <!-- Due date overlay — covers the app area to avoid clipping -->

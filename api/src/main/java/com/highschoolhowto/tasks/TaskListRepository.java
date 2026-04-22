@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TaskListRepository extends JpaRepository<TaskList, UUID> {
     @EntityGraph(attributePaths = "tasks")
-    List<TaskList> findByUserIdOrderByCreatedAt(UUID userId);
+    List<TaskList> findByUserIdOrderBySortOrderAscCreatedAtAsc(UUID userId);
 
     @EntityGraph(attributePaths = "tasks")
     Optional<TaskList> findByIdAndUserId(UUID id, UUID userId);

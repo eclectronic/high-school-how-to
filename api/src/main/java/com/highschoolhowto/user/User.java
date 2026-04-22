@@ -25,8 +25,14 @@ public class User {
     @Column(nullable = false, unique = true, length = 320)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
+
+    @Column(name = "google_id", length = 255, unique = true)
+    private String googleId;
+
+    @Column(name = "avatar_url", length = 512)
+    private String avatarUrl;
 
     @Column(name = "first_name", length = 100)
     private String firstName;
@@ -157,6 +163,22 @@ public class User {
 
     public void setEmailVerifiedAt(Instant emailVerifiedAt) {
         this.emailVerifiedAt = emailVerifiedAt;
+    }
+
+    public String getGoogleId() {
+        return googleId;
+    }
+
+    public void setGoogleId(String googleId) {
+        this.googleId = googleId;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public Instant getCreatedAt() {

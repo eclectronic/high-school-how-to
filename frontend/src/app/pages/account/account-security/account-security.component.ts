@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -7,21 +7,27 @@ import {
   ValidationErrors,
   Validators
 } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthApiService } from '../../../core/services/auth-api.service';
+import { UserProfile } from '../../../core/models/auth.models';
+import { SiteNavComponent } from '../../../shared/site-nav/site-nav.component';
 
 @Component({
   selector: 'app-account-security',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, SiteNavComponent],
   templateUrl: './account-security.component.html',
   styleUrl: './account-security.component.scss'
 })
-export class AccountSecurityComponent {
+export class AccountSecurityComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authApi = inject(AuthApiService);
   private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly profile = signal<UserProfile | null>(null);
+  protected readonly profileError = signal<string | null>(null);
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -30,11 +36,27 @@ export class AccountSecurityComponent {
   protected readonly form = this.fb.nonNullable.group(
     {
       currentPassword: ['', [Validators.required]],
-      newPassword: ['', [Validators.required, Validators.minLength(12)]],
+      newPassword: ['', [Validators.required, Validators.minLength(10)]],
       confirmPassword: ['', [Validators.required]]
     },
     { validators: control => this.matchPasswords(control) }
   );
+
+  ngOnInit(): void {
+    this.authApi.getProfile()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: p => this.profile.set(p),
+        error: () => this.profileError.set('Could not load account information.'),
+      });
+  }
+
+  protected get displayName(): string {
+    const p = this.profile();
+    if (!p) return '';
+    const full = [p.firstName, p.lastName].filter(Boolean).join(' ');
+    return full || p.email;
+  }
 
   protected submit(): void {
     if (this.form.invalid || this.loading()) {

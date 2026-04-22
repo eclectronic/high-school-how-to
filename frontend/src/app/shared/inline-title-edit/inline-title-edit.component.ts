@@ -16,7 +16,7 @@ import { FormsModule } from '@angular/forms';
     } @else {
       <span class="title-edit">
         <input #titleInput class="title-input" [class.title-input--error]="hasError()"
-               [(ngModel)]="draft" (keydown.enter)="commit()" (keydown.escape)="cancel()"
+               [(ngModel)]="draft" (keydown.enter)="commitAndAdvance()" (keydown.tab)="onTab($event)" (keydown.escape)="cancel()"
                (blur)="onBlur()" [placeholder]="placeholder || 'Enter a title'" />
         <button type="button" class="title-commit-btn" (click)="commit()" title="Save" [attr.aria-label]="'Save title'">✓</button>
       </span>
@@ -78,6 +78,8 @@ export class InlineTitleEditComponent implements AfterViewInit {
   @Input() placeholder?: string;
   @Output() titleChange = new EventEmitter<string>();
 
+  @Output() advanceFocus = new EventEmitter<void>();
+
   @ViewChild('titleInput') titleInputRef?: ElementRef<HTMLInputElement>;
 
   protected editing = signal(false);
@@ -98,6 +100,16 @@ export class InlineTitleEditComponent implements AfterViewInit {
     this.editing.set(true);
     // Focus on next tick after view updates
     setTimeout(() => this.focusInput());
+  }
+
+  commitAndAdvance(): void {
+    this.commit();
+    this.advanceFocus.emit();
+  }
+
+  protected onTab(event: Event): void {
+    event.preventDefault();
+    this.commitAndAdvance();
   }
 
   commit(): void {

@@ -8,8 +8,8 @@ import org.springframework.core.io.Resource;
 public class JwtProperties {
 
     private String issuer = "highschoolhowto-api";
-    private Duration accessTokenTtl = Duration.ofMinutes(15);
-    private Duration refreshTokenTtl = Duration.ofDays(7);
+    private Duration accessTokenTtl = Duration.ofHours(1);
+    private Duration rememberMeRefreshTtl = Duration.ofDays(60);
     private Duration verificationTokenTtl = Duration.ofHours(24);
     private Duration resetTokenTtl = Duration.ofMinutes(15);
     private Resource privateKeyPath;
@@ -31,12 +31,12 @@ public class JwtProperties {
         this.accessTokenTtl = accessTokenTtl;
     }
 
-    public Duration getRefreshTokenTtl() {
-        return refreshTokenTtl;
+    public Duration getRememberMeRefreshTtl() {
+        return rememberMeRefreshTtl;
     }
 
-    public void setRefreshTokenTtl(Duration refreshTokenTtl) {
-        this.refreshTokenTtl = refreshTokenTtl;
+    public void setRememberMeRefreshTtl(Duration rememberMeRefreshTtl) {
+        this.rememberMeRefreshTtl = rememberMeRefreshTtl;
     }
 
     public Duration getVerificationTokenTtl() {

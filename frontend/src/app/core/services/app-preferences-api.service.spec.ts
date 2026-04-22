@@ -9,6 +9,8 @@ const stubPreferences: AppPreferences = {
   paletteName: 'ocean',
   lockerColor: null,
   fontFamily: null,
+  lockerTextSize: 'DEFAULT',
+  appColors: null,
 };
 
 describe('AppPreferencesApiService', () => {

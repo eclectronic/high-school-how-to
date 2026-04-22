@@ -98,6 +98,8 @@ export const DEFAULT_PALETTE: string[] = [
   // Locker colors
   '#3d8ed4', '#d42e2e', '#28a855', '#e07820',
   '#7048c0', '#1898a8', '#c8a810', '#6878a0',
+  // Greys
+  '#d1d5db', '#9ca3af',
   // Pastels (no white)
   '#fef3c7', '#fde68a', '#fcd34d', '#fef2f2',
   '#fecdd3', '#fda4af', '#fbcfe8', '#ede9fe',

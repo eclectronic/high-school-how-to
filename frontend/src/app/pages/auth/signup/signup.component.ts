@@ -1,34 +1,56 @@
 import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TimeoutError, finalize, timeout } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthApiService } from '../../../core/services/auth-api.service';
+import { SessionStore } from '../../../core/session/session.store';
+import { GoogleButtonComponent } from '../google-button/google-button.component';
 
 @Component({
   selector: 'app-signup',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, GoogleButtonComponent],
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss'
 })
 export class SignupComponent {
   private readonly fb = inject(FormBuilder);
   private readonly authApi = inject(AuthApiService);
+  private readonly sessionStore = inject(SessionStore);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly complete = signal(false);
+  protected readonly nonce = crypto.randomUUID();
 
   protected readonly form = this.fb.nonNullable.group({
     firstName: ['', [Validators.required]],
     lastName: ['', [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(12)]]
+    password: ['', [Validators.required, Validators.minLength(10)]],
+    rememberMe: [false]
   });
+
+  protected onGoogleIdToken(idToken: string): void {
+    if (this.loading()) return;
+    this.loading.set(true);
+    this.error.set(null);
+    this.authApi
+      .googleSignIn({ idToken, nonce: this.nonce, rememberMe: this.form.getRawValue().rememberMe })
+      .pipe(takeUntilDestroyed(this.destroyRef), timeout(15000), finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: response => {
+          this.sessionStore.setSession(response);
+          this.router.navigateByUrl('/locker');
+        },
+        error: err => this.error.set(this.humanizeError(err))
+      });
+  }
 
   protected submit(): void {
     if (this.form.invalid || this.loading()) {
@@ -37,8 +59,9 @@ export class SignupComponent {
     }
     this.loading.set(true);
     this.error.set(null);
+    const { firstName, lastName, email, password } = this.form.getRawValue();
     this.authApi
-      .register(this.form.getRawValue())
+      .register({ firstName, lastName, email, password })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         timeout(15000),

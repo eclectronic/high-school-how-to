@@ -5,6 +5,7 @@
     class="locker-shell__content"
     [style.background]="preferences().lockerColor || '#f5ede0'"
     [style.font-family]="fontCss()"
+    [style.--locker-scale]="lockerScaleCss()"
   >
     @if (isMobile()) {
       <!-- Mobile: swipeable app pages -->
@@ -20,9 +21,13 @@
         [createNewItemTrigger]="createNewItemSignal()"
         [lockerColor]="preferences().lockerColor"
         [fontFamily]="preferences().fontFamily"
+        [lockerTextSize]="preferences().lockerTextSize"
+        [appColors]="preferences().appColors"
         (appsReorder)="onAppsReorder($event)"
         (lockerColorChange)="onLockerColorChange($event)"
         (fontFamilyChange)="onFontFamilyChange($event)"
+        (textSizeChange)="onTextSizeChange($event)"
+        (appColorChange)="onAppColorChange($event)"
       />
     }
   </main>

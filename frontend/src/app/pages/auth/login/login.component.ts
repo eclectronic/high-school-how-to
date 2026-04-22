@@ -7,11 +7,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TimeoutError, finalize, timeout } from 'rxjs';
 import { AuthApiService } from '../../../core/services/auth-api.service';
 import { SessionStore } from '../../../core/session/session.store';
+import { GoogleButtonComponent } from '../google-button/google-button.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, GoogleButtonComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
@@ -26,10 +27,12 @@ export class LoginComponent {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly info = signal<string | null>(null);
+  protected readonly nonce = crypto.randomUUID();
 
   protected readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required]]
+    password: ['', [Validators.required]],
+    rememberMe: [false]
   });
 
   constructor() {
@@ -42,6 +45,22 @@ export class LoginComponent {
     } else if (reason === 'expired') {
       this.info.set('Your session timed out. Please sign in again to continue.');
     }
+  }
+
+  protected onGoogleIdToken(idToken: string): void {
+    if (this.loading()) return;
+    this.loading.set(true);
+    this.error.set(null);
+    this.authApi
+      .googleSignIn({ idToken, nonce: this.nonce, rememberMe: this.form.getRawValue().rememberMe })
+      .pipe(takeUntilDestroyed(this.destroyRef), timeout(15000), finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: response => {
+          this.sessionStore.setSession(response);
+          this.router.navigateByUrl(this.returnUrl());
+        },
+        error: err => this.error.set(this.humanizeError(err))
+      });
   }
 
   protected submit(): void {

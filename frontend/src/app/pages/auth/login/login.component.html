@@ -1,6 +1,5 @@
 <section class="auth-form">
   <h2>Log in</h2>
-  <p class="auth-form__intro">Sign in to access your saved goals and recommendations.</p>
 
   <div *ngIf="info()" class="auth-alert auth-alert--success" role="status">
     {{ info() }}
@@ -8,6 +7,14 @@
 
   <div *ngIf="error()" class="auth-alert auth-alert--error" role="status">
     {{ error() }}
+  </div>
+
+  <div class="auth-form__google">
+    <app-google-button [nonce]="nonce" (idTokenReceived)="onGoogleIdToken($event)" />
+  </div>
+
+  <div class="auth-form__divider">
+    <span>or</span>
   </div>
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
@@ -35,6 +42,11 @@
       <small *ngIf="form.controls.password.invalid && form.controls.password.touched">
         Password is required.
       </small>
+    </label>
+
+    <label class="form-field form-field--checkbox">
+      <input type="checkbox" formControlName="rememberMe" />
+      <span>Remember me on this device</span>
     </label>
 
     <button type="submit" class="auth-button" [disabled]="loading()">

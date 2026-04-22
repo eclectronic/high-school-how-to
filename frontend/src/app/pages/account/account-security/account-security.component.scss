@@ -1,19 +1,115 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.account-page {
+  flex: 1;
   padding: 3rem 1rem;
 }
 
-.account-security {
+.account-profile {
   margin: 0 auto;
   max-width: 560px;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 24px;
   padding: 2rem;
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+  gap: 0;
+}
+
+.profile-section {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid rgba(45, 26, 16, 0.1);
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  h2 {
+    margin: 0 0 1rem;
+  }
+}
+
+.profile-loading {
+  color: rgba(45, 26, 16, 0.5);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.profile-row {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  font-size: 0.95rem;
+}
+
+.profile-label {
+  width: 4rem;
+  flex-shrink: 0;
+  color: rgba(45, 26, 16, 0.55);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.profile-value {
+  color: #2d1a10;
+  word-break: break-all;
+}
+
+.profile-badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.profile-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+
+  &--google {
+    background: rgba(66, 133, 244, 0.12);
+    color: #1a56b0;
+    border: 1px solid rgba(66, 133, 244, 0.3);
+  }
+
+  &--password {
+    background: rgba(45, 26, 16, 0.08);
+    color: rgba(45, 26, 16, 0.7);
+    border: 1px solid rgba(45, 26, 16, 0.15);
+  }
+}
+
+.profile-google-note {
+  font-size: 0.9rem;
+  color: rgba(45, 26, 16, 0.65);
+  margin: 0;
+  line-height: 1.5;
+
+  a {
+    color: #2d1a10;
+  }
 }
 
 @media (max-width: 600px) {
-  .account-security {
+  .account-profile {
     padding: 1.5rem;
   }
 }

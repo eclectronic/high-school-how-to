@@ -1,26 +1,56 @@
 import { HttpResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { RouterTestingModule } from '@angular/router/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { AuthApiService } from '../../../core/services/auth-api.service';
+import { UserProfile } from '../../../core/models/auth.models';
 import { AccountSecurityComponent } from './account-security.component';
 
-// Ensures password update submits payload and sets success/error flags appropriately.
+const stubProfile: UserProfile = {
+  id: 'abc',
+  email: 'test@example.com',
+  firstName: 'Test',
+  lastName: 'User',
+  googleLinked: false,
+  hasPassword: true,
+};
+
 describe('AccountSecurityComponent', () => {
   let fixture: ComponentFixture<AccountSecurityComponent>;
   let component: AccountSecurityComponent;
   let authApi: jasmine.SpyObj<AuthApiService>;
 
   beforeEach(async () => {
-    authApi = jasmine.createSpyObj<AuthApiService>('AuthApiService', ['updatePassword']);
+    authApi = jasmine.createSpyObj<AuthApiService>('AuthApiService', ['getProfile', 'updatePassword']);
+    authApi.getProfile.and.returnValue(of(stubProfile));
 
     await TestBed.configureTestingModule({
-      imports: [AccountSecurityComponent],
-      providers: [{ provide: AuthApiService, useValue: authApi }]
+      imports: [AccountSecurityComponent, RouterTestingModule],
+      providers: [
+        { provide: AuthApiService, useValue: authApi },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(AccountSecurityComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  });
+
+  it('loads and displays profile on init', () => {
+    expect(authApi.getProfile).toHaveBeenCalled();
+    expect(component['profile']()?.email).toBe('test@example.com');
+  });
+
+  it('shows Google badge when googleLinked', () => {
+    authApi.getProfile.and.returnValue(of({ ...stubProfile, googleLinked: true }));
+    fixture = TestBed.createComponent(AccountSecurityComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    expect(component['profile']()?.googleLinked).toBeTrue();
   });
 
   it('updates password and resets form on success', () => {

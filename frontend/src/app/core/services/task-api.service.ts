@@ -47,6 +47,10 @@ export class TaskApiService {
     return this.http.post<TaskList>('/api/tasklists', payload);
   }
 
+  reorderLists(listIds: string[]): Observable<void> {
+    return this.http.put<void>('/api/tasklists/reorder', { listIds });
+  }
+
   updateListTitle(listId: string, title: string): Observable<TaskList> {
     return this.http.put<TaskList>(`/api/tasklists/${listId}/title`, { title });
   }

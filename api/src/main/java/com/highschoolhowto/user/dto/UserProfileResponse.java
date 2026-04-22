@@ -10,4 +10,6 @@ public record UserProfileResponse(
         String gradeLevel,
         String bio,
         String interests,
+        boolean googleLinked,
+        boolean hasPassword,
         Instant updatedAt) {}

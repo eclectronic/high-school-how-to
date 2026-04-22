@@ -34,6 +34,9 @@ public class RefreshToken {
     @Column(nullable = false)
     private boolean revoked;
 
+    @Column(name = "remember_me", nullable = false)
+    private boolean rememberMe;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -76,6 +79,14 @@ public class RefreshToken {
 
     public void setRevoked(boolean revoked) {
         this.revoked = revoked;
+    }
+
+    public boolean isRememberMe() {
+        return rememberMe;
+    }
+
+    public void setRememberMe(boolean rememberMe) {
+        this.rememberMe = rememberMe;
     }
 
     public Instant getCreatedAt() {

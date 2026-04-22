@@ -52,9 +52,7 @@
 }
 
 .pane-header__tooltip {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
+  position: fixed;
   background: #fffef8;
   color: #2d1a10;
   border-radius: 8px;
@@ -89,6 +87,23 @@
   }
 }
 
+.pane-header__color-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.12s, border-color 0.12s;
+  margin-left: 2px;
+
+  &:hover {
+    transform: scale(1.2);
+    border-color: rgba(0, 0, 0, 0.45);
+  }
+}
+
 .titlebar-btns {
   display: flex;
   align-items: center;
@@ -117,9 +132,7 @@
     background: rgba(255, 255, 255, 0.45);
   }
 
-  &--minimize:hover { background: #f5c400; color: #000; }
-  &--maximize:hover { background: #2ea44f; color: #fff; }
-  &--close:hover    { background: #e5534b; color: #fff; }
+  &--close:hover { background: #e5534b; color: #fff; }
 
   &:disabled {
     opacity: 0.35;

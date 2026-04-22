@@ -1,65 +1,160 @@
 <div class="shortcuts-app">
-  <div class="shortcuts-list">
-    @for (sc of shortcuts(); track sc.id) {
-      @if (editingId() === sc.id) {
-        <div class="shortcut-form shortcut-form--inline" (click)="$event.stopPropagation()">
-          <input
-            type="url"
-            class="shortcut-form__input"
-            placeholder="https://example.com"
-            [(ngModel)]="editUrl"
-            (keydown.enter)="submitEdit()"
-            (keydown.escape)="cancelEdit()"
-            autofocus
-          />
-          <input
-            type="text"
-            class="shortcut-form__input"
-            placeholder="Name"
-            [(ngModel)]="editName"
-            (keydown.enter)="submitEdit()"
-            (keydown.escape)="cancelEdit()"
-          />
-          <div class="shortcut-form__actions">
-            <button type="button" class="sc-btn sc-btn--cancel" (click)="cancelEdit()">Cancel</button>
-            <button type="button" class="sc-btn sc-btn--save" [disabled]="!editUrl.trim()" (click)="submitEdit()">Save</button>
+  @if (!showBrowse()) {
+    <div class="shortcuts-app__list-view">
+    @if (shortcuts().length > 0) {
+      <div class="shortcuts-app__sort-bar" role="radiogroup" aria-label="Sort pins">
+        <button
+          type="button"
+          role="radio"
+          class="shortcuts-app__sort-btn"
+          [class.shortcuts-app__sort-btn--active]="sortMode() === 'name'"
+          [attr.aria-checked]="sortMode() === 'name'"
+          title="Sort by name A→Z"
+          (click)="setSortMode('name')"
+        >Name</button>
+        <button
+          type="button"
+          role="radio"
+          class="shortcuts-app__sort-btn"
+          [class.shortcuts-app__sort-btn--active]="sortMode() === 'custom'"
+          [attr.aria-checked]="sortMode() === 'custom'"
+          title="Custom order — drag to arrange"
+          (click)="setSortMode('custom')"
+        >Custom</button>
+      </div>
+    }
+    <div class="shortcuts-list"
+      cdkDropList
+      [cdkDropListDisabled]="sortMode() !== 'custom'"
+      (cdkDropListDropped)="onDrop($event)"
+    >
+      @for (sc of sortedShortcuts(); track sc.id) {
+        @if (editingId() === sc.id) {
+          <div class="shortcut-form shortcut-form--inline" (click)="$event.stopPropagation()">
+            <input
+              type="text"
+              class="shortcut-form__input"
+              placeholder="gmail.com"
+              [(ngModel)]="editUrl"
+              (keydown.enter)="submitEdit()"
+              (keydown.escape)="cancelEdit()"
+              autofocus
+            />
+            <input
+              type="text"
+              class="shortcut-form__input"
+              placeholder="Name"
+              [(ngModel)]="editName"
+              (keydown.enter)="submitEdit()"
+              (keydown.escape)="cancelEdit()"
+            />
+            <div class="shortcut-form__emoji-row">
+              <button
+                type="button"
+                class="shortcut-form__emoji-btn"
+                [title]="editEmoji ? 'Change icon' : 'Choose icon'"
+                (click)="showEmojiPickerFor.set(showEmojiPickerFor() === 'edit' ? null : 'edit')"
+              >{{ editEmoji || '😊' }} Icon</button>
+              @if (showEmojiPickerFor() === 'edit') {
+                <app-emoji-picker
+                  (emojiSelected)="onEmojiSelected($event, 'edit')"
+                  (dismissed)="showEmojiPickerFor.set(null)"
+                />
+              }
+            </div>
+            <div class="shortcut-form__actions">
+              <button type="button" class="sc-btn sc-btn--cancel" (click)="cancelEdit()">Cancel</button>
+              <button type="button" class="sc-btn sc-btn--save" [disabled]="!editUrl.trim()" (click)="submitEdit()">Save</button>
+            </div>
           </div>
-        </div>
-      } @else {
-        <div class="shortcut-row" (click)="openShortcut(sc.url)" role="link" tabindex="0" (keydown.enter)="openShortcut(sc.url)">
-          <span class="shortcut-row__icon">
-            @if (sc.emoji) {
-              <span class="shortcut-row__emoji">{{ sc.emoji }}</span>
-            } @else {
-              <img
-                class="shortcut-row__favicon"
-                [src]="getFaviconSrc(sc)"
-                alt=""
-                (error)="$any($event.target).style.display='none'"
-              />
-              <span class="shortcut-row__fallback">🔗</span>
+        } @else {
+          <div class="shortcut-row" cdkDrag [cdkDragLockAxis]="'y'" [cdkDragDisabled]="sortMode() !== 'custom'" (click)="openShortcut(sc.url)" role="link" tabindex="0" (keydown.enter)="openShortcut(sc.url)" (keydown)="onShortcutRowKeydown($event, sc)">
+            @if (sortMode() === 'custom') {
+              <span class="shortcut-row__drag-handle" cdkDragHandle title="Drag to reorder">⋮⋮</span>
             }
-          </span>
-          <span class="shortcut-row__name">{{ sc.name }}</span>
-          <div class="shortcut-row__actions" (click)="$event.stopPropagation()">
-            <button type="button" class="shortcut-row__action-btn" title="Edit" (click)="startEdit(sc)">✏</button>
-            <button type="button" class="shortcut-row__action-btn shortcut-row__action-btn--delete" title="Delete" (click)="deleteShortcut(sc.id)">✕</button>
+            <span class="shortcut-row__icon">
+              @if (sc.emoji) {
+                <span class="shortcut-row__emoji">{{ sc.emoji }}</span>
+              } @else {
+                <img
+                  class="shortcut-row__favicon"
+                  [src]="getFaviconSrc(sc)"
+                  alt=""
+                  (error)="$any($event.target).style.display='none'"
+                />
+                <span class="shortcut-row__fallback">📌</span>
+              }
+            </span>
+            <span class="shortcut-row__name">{{ sc.name }}</span>
+            <div class="shortcut-row__actions" (click)="$event.stopPropagation()">
+              <button type="button" class="shortcut-row__action-btn" title="Edit" (click)="startEdit(sc)">✏</button>
+              <button type="button" class="shortcut-row__action-btn shortcut-row__action-btn--delete" title="Delete" (click)="deleteShortcut(sc.id)">✕</button>
+            </div>
           </div>
-        </div>
+        }
       }
-    }
 
-    @if (shortcuts().length === 0 && !showAddForm()) {
-      <p class="shortcuts-app__empty">No pins yet. Tap "+ Add Pin" below to pin a URL.</p>
+      @if (shortcuts().length === 0 && !showAddForm()) {
+        <p class="shortcuts-app__empty">No pins yet. Use the + button below to add one.</p>
+      }
+    </div>
+    @if (!showAddForm() && !editingId()) {
+      <div class="shortcuts-app__btn-row">
+        <button type="button" class="shortcuts-app__add-btn" (click)="openAddForm()" title="New pin" aria-label="New pin">+</button>
+        <button type="button" class="shortcuts-app__browse-btn" title="Browse recommended pins" aria-label="Browse recommended pins" (click)="openBrowse()">🔍</button>
+      </div>
     }
-  </div>
+    </div>
+  }
+
+  @if (showBrowse()) {
+    <div class="shortcuts-browse" (click)="$event.stopPropagation()">
+      <div class="shortcuts-browse__header">
+        <button type="button" class="shortcuts-browse__title" (click)="closeBrowse()" title="Close browse panel">Browse Pins</button>
+        <button #doneBtn type="button" class="shortcuts-browse__done-btn" title="Done" aria-label="Done" (click)="closeBrowse()">✓</button>
+      </div>
+      <div class="shortcuts-browse__list">
+        @if (recommendedPins().length === 0) {
+          <p class="shortcuts-browse__empty">Loading…</p>
+        }
+        @for (cat of recommendedCategories; track cat) {
+          @if (cat) {
+            <div class="shortcuts-browse__category">{{ cat }}</div>
+          }
+          @for (pin of pinsInCategory(cat); track pin.id) {
+            <div class="shortcuts-browse__row" tabindex="0" (click)="openShortcut(pin.url)" (keydown.enter)="openShortcut(pin.url)" (keydown)="onBrowseRowKeydown($event, pin)">
+              <span class="shortcuts-browse__icon">
+                @if (pin.faviconUrl) {
+                  <img [src]="pin.faviconUrl" [alt]="pin.name" class="shortcuts-browse__favicon"
+                    (error)="$any($event.target).style.display='none'" />
+                } @else if (pin.emoji) {
+                  {{ pin.emoji }}
+                } @else {
+                  📌
+                }
+              </span>
+              <span class="shortcuts-browse__name">{{ pin.name }}</span>
+              <button
+                type="button"
+                class="shortcuts-browse__add-btn"
+                [disabled]="addingRecommendedId() === pin.id"
+                [class.shortcuts-browse__add-btn--added]="isAlreadyAdded(pin)"
+                [title]="isAlreadyAdded(pin) ? 'Remove pin' : 'Add pin'"
+                (click)="$event.stopPropagation(); toggleRecommended(pin)"
+              >{{ isAlreadyAdded(pin) ? '✓' : '+' }}</button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
 
   @if (showAddForm()) {
     <div class="shortcut-form" (click)="$event.stopPropagation()">
       <input
-        type="url"
+        type="text"
         class="shortcut-form__input"
-        placeholder="https://example.com"
+        placeholder="gmail.com"
         [(ngModel)]="newUrl"
         (keydown.enter)="submitAdd()"
         (keydown.escape)="cancelAdd()"
@@ -73,6 +168,20 @@
         (keydown.enter)="submitAdd()"
         (keydown.escape)="cancelAdd()"
       />
+      <div class="shortcut-form__emoji-row">
+        <button
+          type="button"
+          class="shortcut-form__emoji-btn"
+          [title]="newEmoji ? 'Change icon' : 'Choose icon'"
+          (click)="showEmojiPickerFor.set(showEmojiPickerFor() === 'add' ? null : 'add')"
+        >{{ newEmoji || '😊' }} Icon</button>
+        @if (showEmojiPickerFor() === 'add') {
+          <app-emoji-picker
+            (emojiSelected)="onEmojiSelected($event, 'add')"
+            (dismissed)="showEmojiPickerFor.set(null)"
+          />
+        }
+      </div>
       <div class="shortcut-form__actions">
         <button type="button" class="sc-btn sc-btn--cancel" (click)="cancelAdd()">Cancel</button>
         <button
@@ -85,11 +194,4 @@
     </div>
   }
 
-  <div class="shortcuts-app__footer">
-    @if (!showAddForm() && !editingId()) {
-      <button type="button" class="shortcuts-app__add-btn" [style.color]="paletteColor" (click)="openAddForm()">
-        + Add Pin
-      </button>
-    }
-  </div>
 </div>

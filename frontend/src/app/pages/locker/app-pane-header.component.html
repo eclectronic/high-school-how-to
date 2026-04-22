@@ -15,45 +15,46 @@
         class="pane-header__icon-btn"
         [style.color]="textColor"
         aria-label="App help"
-        (click)="toggleTooltip(); $event.stopPropagation()"
+        (click)="toggleTooltip($event); $event.stopPropagation()"
       >ℹ</button>
 
-      @if (showTooltip()) {
-        <div class="pane-header__tooltip" (click)="$event.stopPropagation()">
+      @if (showTooltip() && tooltipPos()) {
+        <div
+          class="pane-header__tooltip"
+          [style.top]="tooltipPos()!.top"
+          [style.left]="tooltipPos()!.left"
+          (click)="$event.stopPropagation()"
+        >
           <p>{{ appDef.helpText }}</p>
           <button type="button" class="pane-header__tooltip-close" (click)="hideTooltip()">✕</button>
         </div>
       }
     </div>
 
-    <!-- Windows-style title bar buttons -->
+    <!-- Per-app color dot -->
+    @if (appColor) {
+      <button
+        type="button"
+        class="pane-header__color-btn"
+        [style.background]="appColor"
+        title="Change color"
+        aria-label="Change app color"
+        (click)="colorPickerRequest.emit(); $event.stopPropagation()"
+      ></button>
+    }
+
+    <!-- Close button -->
     @if (showWindowButtons) {
-    <div class="titlebar-btns" (click)="$event.stopPropagation()">
-      <button
-        type="button"
-        class="titlebar-btn titlebar-btn--minimize"
-        aria-label="Restore"
-        title="Restore"
-        [disabled]="!isMaximized || !canMinimize"
-        (click)="minimize.emit()"
-      >&#x2013;</button>
-      <button
-        type="button"
-        class="titlebar-btn titlebar-btn--maximize"
-        aria-label="Maximize"
-        title="Maximize"
-        [disabled]="isMaximized"
-        (click)="maximize.emit()"
-      >&#x2610;</button>
-      <button
-        type="button"
-        class="titlebar-btn titlebar-btn--close"
-        aria-label="Close"
-        title="Close"
-        [disabled]="!canClose"
-        (click)="close.emit()"
-      >&#x2715;</button>
-    </div>
+      <div class="titlebar-btns" (click)="$event.stopPropagation()">
+        <button
+          type="button"
+          class="titlebar-btn titlebar-btn--close"
+          aria-label="Close"
+          title="Close"
+          [disabled]="!canClose"
+          (click)="close.emit()"
+        >&#x2715;</button>
+      </div>
     }
   </div>
 </header>

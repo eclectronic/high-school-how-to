@@ -19,7 +19,7 @@ public class LoggingNotificationService implements NotificationService {
     @Override
     public void sendVerificationEmail(User user, String verificationLink) {
         log.warn(
-                "DEV MODE: notifications.ses.enabled=false, so no real email sent. Verification link for {} -> {}",
+                "DEV MODE: notifications.ses.enabled=false, so no real email sent. Verification link fo{} -> {}",
                 user.getEmail(),
                 verificationLink);
     }

@@ -29,7 +29,7 @@ export const routes: Routes = [
     ]
   },
   {
-    path: 'account/security',
+    path: 'account/profile',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/account/account-security/account-security.component').then(

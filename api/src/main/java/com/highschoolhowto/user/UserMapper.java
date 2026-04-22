@@ -15,6 +15,8 @@ public class UserMapper {
                 user.getGradeLevel(),
                 user.getBio(),
                 user.getInterests(),
+                user.getGoogleId() != null,
+                user.getPasswordHash() != null,
                 user.getUpdatedAt());
     }
 }

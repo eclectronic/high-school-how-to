@@ -32,7 +32,8 @@ describe('SignupComponent', () => {
       firstName: 'A',
       lastName: 'B',
       email: 'a@b.com',
-      password: 'longenoughpass'
+      password: 'longenoughpass',
+      rememberMe: false,
     });
 
     TestBed.runInInjectionContext(() => component['submit']());
@@ -50,7 +51,8 @@ describe('SignupComponent', () => {
       firstName: 'A',
       lastName: 'B',
       email: 'a@b.com',
-      password: 'longenoughpass'
+      password: 'longenoughpass',
+      rememberMe: false,
     });
 
     TestBed.runInInjectionContext(() => component['submit']());

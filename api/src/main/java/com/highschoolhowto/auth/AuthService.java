@@ -101,10 +101,13 @@ public class AuthService {
             throw unauthorized("Invalid credentials");
         }
         String accessToken = jwtService.generateAccessToken(user);
-        RefreshToken refreshToken = refreshTokenService.issue(user);
-        auditService.record(AuditEventType.LOGIN_SUCCESS, user, user.getEmail(), null);
         long expiresIn = jwtProperties.getAccessTokenTtl().toSeconds();
-        return new AuthenticationResponse(accessToken, refreshToken.getToken(), expiresIn);
+        auditService.record(AuditEventType.LOGIN_SUCCESS, user, user.getEmail(), null);
+        if (request.rememberMe()) {
+            RefreshToken refreshToken = refreshTokenService.issue(user, true);
+            return new AuthenticationResponse(accessToken, refreshToken.getToken(), expiresIn, user.getAvatarUrl(), user.getFirstName());
+        }
+        return new AuthenticationResponse(accessToken, null, expiresIn, user.getAvatarUrl(), user.getFirstName());
     }
 
     @Transactional
@@ -226,6 +229,20 @@ public class AuthService {
     }
 
     @Transactional
+    public void logout(UUID userId, String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return;
+        }
+        refreshTokenRepository.findByTokenAndRevokedFalse(refreshToken).ifPresent(token -> {
+            if (token.getUser().getId().equals(userId)) {
+                token.setRevoked(true);
+                refreshTokenRepository.save(token);
+                auditService.record(AuditEventType.LOGOUT, token.getUser(), token.getUser().getEmail(), null);
+            }
+        });
+    }
+
+    @Transactional
     public void updatePassword(UUID userId, UpdatePasswordRequest request) {
         validatePassword(request.newPassword());
         User user = userRepository
@@ -278,6 +295,13 @@ public class AuthService {
 
     @Transactional
     public AuthenticationResponse refresh(String refreshToken) {
+        // Check if token exists at all (revoked or not) for theft detection
+        RefreshToken anyToken = refreshTokenRepository.findByToken(refreshToken).orElse(null);
+        if (anyToken != null && anyToken.isRevoked()) {
+            // Revoked token reuse = likely theft — blow out all sessions
+            refreshTokenService.revokeAllActive(anyToken.getUser());
+            throw unauthorized("Refresh token reuse detected");
+        }
         RefreshToken token = refreshTokenRepository
                 .findByTokenAndRevokedFalse(refreshToken)
                 .orElseThrow(() -> unauthorized("Invalid refresh token"));
@@ -292,14 +316,15 @@ public class AuthService {
             refreshTokenRepository.save(token);
             throw unauthorized("User inactive");
         }
+        boolean wasRememberMe = token.isRememberMe();
         token.setRevoked(true);
         refreshTokenRepository.save(token);
 
         String accessToken = jwtService.generateAccessToken(user);
-        RefreshToken newRefresh = refreshTokenService.issue(user);
-        auditService.record(AuditEventType.LOGIN_SUCCESS, user, user.getEmail(), "refresh");
         long expiresIn = jwtProperties.getAccessTokenTtl().toSeconds();
-        return new AuthenticationResponse(accessToken, newRefresh.getToken(), expiresIn);
+        auditService.record(AuditEventType.LOGIN_SUCCESS, user, user.getEmail(), "refresh");
+        RefreshToken newRefresh = refreshTokenService.issue(user, wasRememberMe);
+        return new AuthenticationResponse(accessToken, newRefresh.getToken(), expiresIn, user.getAvatarUrl(), user.getFirstName());
     }
 
     private void validatePassword(String password) {

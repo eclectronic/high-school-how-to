@@ -4,6 +4,8 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { signal } from '@angular/core';
 import { of, Subject } from 'rxjs';
 import { Title } from '@angular/platform-browser';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ContentViewerComponent } from './content-viewer.component';
 import { ContentApiService } from '../../core/services/content-api.service';
 import { SessionStore } from '../../core/session/session.store';
@@ -67,6 +69,8 @@ describe('ContentViewerComponent', () => {
       providers: [
         { provide: ContentApiService, useValue: apiMock },
         { provide: SessionStore, useValue: sessionStoreMock },
+        provideHttpClient(),
+        provideHttpClientTesting(),
         {
           provide: ActivatedRoute,
           useValue: {

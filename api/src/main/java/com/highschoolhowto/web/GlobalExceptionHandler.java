@@ -25,6 +25,11 @@ public class GlobalExceptionHandler {
         return buildResponse(ex.getStatus(), ex.getTitle(), ex.getMessage(), List.of());
     }
 
+    @ExceptionHandler(com.highschoolhowto.auth.oauth.GoogleAuthException.class)
+    ResponseEntity<ProblemDetails> handleGoogleAuth(com.highschoolhowto.auth.oauth.GoogleAuthException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Unauthorized", ex.getMessage(), List.of());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ProblemDetails> handleValidation(MethodArgumentNotValidException ex) {
         List<ProblemDetails.Violation> violations = ex.getBindingResult().getFieldErrors().stream()

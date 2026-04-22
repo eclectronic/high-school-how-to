@@ -35,9 +35,10 @@
             type="button"
             class="timer-app__display"
             [class.timer-app__display--done]="done()"
-            [style.color]="paletteColor"
+            [class.timer-app__display--locked]="running()"
+            [disabled]="running()"
             (click)="startEditDuration()"
-            title="Click to change duration"
+            [title]="running() ? 'Reset timer to change duration' : 'Click to change duration'"
           >
             @if (done()) {
               <span class="timer-app__done-text">Done!</span>
@@ -48,54 +49,39 @@
         } @else {
           <div class="timer-app__duration-edit">
             <div class="duration-spinners">
-              <!-- Hours -->
+              <!-- Minutes (0–99, absorbs hours) -->
               <div class="duration-spinner">
-                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustHours(1)">▲</button>
+                <button type="button" class="spinner-btn" (click)="adjustMinutes(1)">▲</button>
                 <input
                   type="number"
                   class="spinner-input"
-                  [style.color]="paletteColor"
-                  [min]="0" [max]="23"
-                  [(ngModel)]="editHours"
-                  (blur)="clampHours()"
-                />
-                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustHours(-1)">▼</button>
-                <span class="spinner-label">h</span>
-              </div>
-              <span class="duration-sep" [style.color]="paletteColor">:</span>
-              <!-- Minutes -->
-              <div class="duration-spinner">
-                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustMinutes(1)">▲</button>
-                <input
-                  type="number"
-                  class="spinner-input"
-                  [style.color]="paletteColor"
-                  [min]="0" [max]="59"
+                  [min]="0" [max]="99"
                   [(ngModel)]="editMinutes"
                   (blur)="clampMinutes()"
+                  (keydown.enter)="saveDuration()"
                 />
-                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustMinutes(-1)">▼</button>
+                <button type="button" class="spinner-btn" (click)="adjustMinutes(-1)">▼</button>
                 <span class="spinner-label">m</span>
               </div>
-              <span class="duration-sep" [style.color]="paletteColor">:</span>
+              <span class="duration-sep">:</span>
               <!-- Seconds -->
               <div class="duration-spinner">
-                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustSeconds(1)">▲</button>
+                <button type="button" class="spinner-btn" (click)="adjustSeconds(1)">▲</button>
                 <input
                   type="number"
                   class="spinner-input"
-                  [style.color]="paletteColor"
                   [min]="0" [max]="59"
                   [(ngModel)]="editSeconds"
                   (blur)="clampSeconds()"
+                  (keydown.enter)="saveDuration()"
                 />
-                <button type="button" class="spinner-btn" [style.color]="paletteColor" (click)="adjustSeconds(-1)">▼</button>
+                <button type="button" class="spinner-btn" (click)="adjustSeconds(-1)">▼</button>
                 <span class="spinner-label">s</span>
               </div>
             </div>
             <div class="duration-actions">
               <button type="button" class="btn btn--cancel" (click)="cancelEditDuration()">Cancel</button>
-              <button type="button" class="btn btn--save" [style.background]="paletteColor" (click)="saveDuration()">Set</button>
+              <button type="button" class="btn btn--save" [style.background]="paletteColor" (click)="saveDuration()">Save</button>
             </div>
           </div>
         }
@@ -116,12 +102,8 @@
               (click)="pauseBasic()"
             >Pause</button>
           }
-          <button
-            type="button"
-            class="timer-btn timer-btn--ghost"
-            (click)="resetBasic()"
-          >Reset</button>
         </div>
+        <button type="button" class="timer-reset-link" (click)="resetBasic()">Reset</button>
       </div>
     }
 
@@ -129,50 +111,57 @@
     @if (mode() === 'POMODORO') {
       <div class="timer-app__pomodoro">
 
-        <!-- Settings gear — top-right -->
-        @if (timer()) {
-          <button
-            type="button"
-            class="pomodoro-settings-btn"
-            [class.pomodoro-settings-btn--active]="showPomodoroSettings()"
-            [style.color]="showPomodoroSettings() ? paletteColor : null"
-            title="Settings"
-            (click)="showPomodoroSettings.set(!showPomodoroSettings())"
-          >⚙</button>
-        }
-
         @if (showPomodoroSettings() && timer()) {
-          <!-- Settings panel — replaces the display area -->
-          <div class="pomodoro-settings__fields">
-            <label class="pomo-field">
+          <!-- Settings panel -->
+          <select class="pomo-preset-select"
+            [ngModel]="timer()!.presetName ?? ''"
+            (ngModelChange)="onPresetSelectChange($event)"
+          >
+            @for (preset of pomodoroPresets; track preset.name) {
+              <option [value]="preset.name">{{ preset.name }}</option>
+            }
+            <option value="">Custom</option>
+          </select>
+
+          <div class="pomodoro-settings__grid">
+            <label class="pomo-cell">
               <span>Focus (min)</span>
               <input type="number" class="pomo-input" [min]="1"
-                [(ngModel)]="timer()!.focusDuration" (change)="savePomodoroSettings()" />
+                [(ngModel)]="timer()!.focusDuration" (change)="clearPresetName(); saveCustomSettingsToStorage(timer()!); savePomodoroSettings()" (keydown.enter)="savePomodoroSettingsAndClose()" (keydown.escape)="closePomodoroSettings()" />
             </label>
-            <label class="pomo-field">
-              <span>Short break (min)</span>
+            <label class="pomo-cell">
+              <span>Short break</span>
               <input type="number" class="pomo-input" [min]="1"
-                [(ngModel)]="timer()!.shortBreakDuration" (change)="savePomodoroSettings()" />
+                [(ngModel)]="timer()!.shortBreakDuration" (change)="clearPresetName(); saveCustomSettingsToStorage(timer()!); savePomodoroSettings()" (keydown.enter)="savePomodoroSettingsAndClose()" (keydown.escape)="closePomodoroSettings()" />
             </label>
-            <label class="pomo-field">
-              <span>Long break (min)</span>
+            <label class="pomo-cell">
+              <span>Long break</span>
               <input type="number" class="pomo-input" [min]="1"
-                [(ngModel)]="timer()!.longBreakDuration" (change)="savePomodoroSettings()" />
+                [(ngModel)]="timer()!.longBreakDuration" (change)="clearPresetName(); saveCustomSettingsToStorage(timer()!); savePomodoroSettings()" (keydown.enter)="savePomodoroSettingsAndClose()" (keydown.escape)="closePomodoroSettings()" />
             </label>
-            <label class="pomo-field">
-              <span>Sessions before long break</span>
+            <label class="pomo-cell">
+              <span>Cycles</span>
               <input type="number" class="pomo-input" [min]="1"
-                [(ngModel)]="timer()!.sessionsBeforeLongBreak" (change)="savePomodoroSettings()" />
+                [(ngModel)]="timer()!.sessionsBeforeLongBreak" (change)="clearPresetName(); saveCustomSettingsToStorage(timer()!); savePomodoroSettings()" (keydown.enter)="savePomodoroSettingsAndClose()" (keydown.escape)="closePomodoroSettings()" />
             </label>
           </div>
           <div class="duration-actions">
+            <button type="button" class="btn btn--cancel" (click)="closePomodoroSettings()">Cancel</button>
             <button type="button" class="btn btn--save" [style.background]="paletteColor"
-              (click)="showPomodoroSettings.set(false)">Done</button>
+              (click)="savePomodoroSettingsAndClose()">Save</button>
           </div>
         } @else {
-          <!-- Phase indicator -->
-          <div class="pomodoro-phase" [style.color]="paletteColor">
-            {{ phaseLabel() }}
+          <!-- Phase indicator + settings button -->
+          <div class="pomodoro-phase-row">
+            <div class="pomodoro-phase">{{ phaseLabel() }}</div>
+            @if (!pomodoroRunning()) {
+              <button
+                type="button"
+                class="pomodoro-settings-btn"
+                title="Timer settings"
+                (click)="openPomodoroSettings()"
+              >⚙️</button>
+            }
           </div>
 
           <!-- Session dots -->
@@ -193,7 +182,6 @@
           <div
             class="timer-app__display"
             [class.timer-app__display--done]="pomodoroDone()"
-            [style.color]="paletteColor"
           >
             @if (pomodoroDone()) {
               <span class="timer-app__done-text">
@@ -206,8 +194,8 @@
         }
 
         <!-- Controls (always visible) -->
-        <div class="timer-app__controls">
-          @if (!showPomodoroSettings()) {
+        @if (!showPomodoroSettings()) {
+          <div class="timer-app__controls">
             @if (!pomodoroRunning()) {
               <button
                 type="button"
@@ -221,11 +209,16 @@
                 class="timer-btn timer-btn--secondary"
                 (click)="pausePomodoro()"
               >Pause</button>
+              <button
+                type="button"
+                class="timer-btn timer-btn--ghost"
+                (click)="skipPhase()"
+                title="Skip to next phase"
+              >Skip</button>
             }
-            <button type="button" class="timer-btn timer-btn--ghost" (click)="resetPomodoro()">Reset</button>
-            <button type="button" class="timer-btn timer-btn--ghost" (click)="skipPhase()" title="Skip to next phase">Skip</button>
-          }
-        </div>
+          </div>
+          <button type="button" class="timer-reset-link" (click)="resetPomodoro()">Reset</button>
+        }
       </div>
     }
   }

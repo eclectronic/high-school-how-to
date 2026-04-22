@@ -133,6 +133,25 @@ The IAM user needs these permissions:
 - **Database**: Amazon Aurora PostgreSQL at `highschoolhowto.c388sauoez7e.us-west-2.rds.amazonaws.com`
 - **Media**: S3 bucket `highschoolhowto`, path `media/`, served via same CloudFront distribution
 
+## Release Process
+
+Preparing and cutting a release is a manual, deliberate sequence. The actual deployment to S3 / ECR / App Runner happens automatically via `deploy.yml` when `main` advances — but the release itself (version bump, changelog, tag, GitHub release) is human-driven so every release is intentional and documented.
+
+Run these steps **in order** when wrapping a version:
+
+1. **Update `CHANGELOG.md`** — add a new `## [X.Y.Z] — YYYY-MM-DD` section at the top, summarizing user-facing changes grouped by theme (see existing entries for tone — prose paragraphs, not bullet-points-only). Copy wording from the PR descriptions that shipped during the cycle.
+2. **Commit the changelog + any outstanding code changes** with a descriptive message. Good template: `X.Y.Z <one-line summary of the release theme>`. (e.g. "7.0.0 Google Sign-In + Remember-Me + locker polish"). Do **not** bump the version yet — that's the next commit.
+3. **Bump the version in `api/build.gradle.kts`** — change the `version = "X.Y.Z"` line (around line 13). Commit with message `X.Y.Z bump version`. Keeping the version bump in its own commit makes the tag point at a clean "this is X.Y.Z" state, separate from the feature/changelog work.
+4. **Push to `main`** — `deploy.yml` auto-deploys both API and frontend. Watch the Actions tab until both jobs are green.
+5. **Tag the release**: `git tag -a vX.Y.Z -m "X.Y.Z"` then `git push origin vX.Y.Z`. Use the `v` prefix on tags (matches existing `v5.2.0`, `v4.0.0` etc.).
+6. **Create the GitHub release**: `gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(awk '/^## \[X.Y.Z\]/,/^## \[/' CHANGELOG.md | sed '$d')"` — this extracts the matching CHANGELOG section and posts it as the release body. Verify the rendered release page before moving on.
+
+**Frontend version**: `frontend/package.json` also has a `version` field, but current practice is to keep it in sync with `api/build.gradle.kts`. Bump both in the same commit as step 3 if the value has drifted.
+
+**Hotfixes**: same sequence, patch-level bump (e.g. 7.0.0 → 7.0.1). Still run the full 6 steps — skipping the CHANGELOG or tag means the release history can't be reconstructed later.
+
+**Never**: tag before the deploy jobs succeed. A tag on a broken commit is hard to retract cleanly once released.
+
 ## Architecture
 
 ### Frontend
@@ -146,6 +165,7 @@ The IAM user needs these permissions:
 - **Static app assets**: UI images (logo, backgrounds, social cards) under `frontend/public/assets/images/`. These are checked into the repo and bundled with the app.
 - **Navigation**: Router uses `withInMemoryScrolling`
 - **Code style**: Prettier with 100-char print width, single quotes
+- **Locker app "done" button**: When a locker app has a detail view (e.g. open note, open to-do list), the button that commits and exits back to the list view must be a green circle check button — not a "Back" or "Save" text button. Use a `<button>` with a `✓` character, `title="Done"`, `aria-label="Done"`, and these styles: `background: #22c55e; border: none; color: #fff; width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; opacity: 0.9; box-shadow: 0 2px 6px rgba(0,0,0,0.25);` with hover `opacity: 1; transform: scale(1.1); box-shadow: 0 3px 10px rgba(0,0,0,0.3)`.
 - **Page title / header styling**: The app background is a corkboard texture, so any standalone page title (`<h1>` or similar) rendered directly against the background must use a card treatment to remain legible. Use: `background: rgba(255, 254, 249, 0.9); border: 2px solid rgba(#2d1a10, 0.12); border-radius: 1.25rem; padding: 0.75rem 1.5rem; box-shadow: 0 8px 24px rgba(#2d1a10, 0.12);`. Titles that sit inside an already-styled card (e.g. the about page article card) don't need this applied again.
 
 ### Media Assets
@@ -194,8 +214,16 @@ For example, if you add a new table in a changeset, the rollback should drop tha
 1. Registration: `POST /api/auth/register` → creates user + sends verification email via SES
 2. Email verification: `GET /api/auth/verify-email?token=...` → redirects to frontend login
 3. Login: `POST /api/auth/login` → returns `{ accessToken, refreshToken }`
-4. Token refresh: `POST /api/auth/refresh` with `RefreshRequest` body
-5. Password reset: `POST /api/auth/forgot-password` → sends email; `POST /api/auth/reset-password?token=...`
+4. Google Sign-In (v7+): `POST /api/auth/google` with `{ idToken, nonce, rememberMe }` → returns `AuthenticationResponse`
+5. Logout (v7+): `POST /api/auth/logout` → revokes the refresh token server-side
+6. Token refresh: `POST /api/auth/refresh` with `RefreshRequest` body (rotates the token in v7+)
+7. Password reset: `POST /api/auth/forgot-password` → sends email; `POST /api/auth/reset-password?token=...`
+
+### Google Sign-In setup
+
+The Google OAuth Web Client ID is provisioned via `./api/scripts/google-signin-setup.sh` (one-time, interactive). It writes `auth.google.client-id` into `api/src/main/resources/application.yml`. The Client ID is a public value and is committed to source — no secret is required because the flow uses ID-token verification, not the OAuth authorization-code flow.
+
+Full design: `docs/v7-auth-design.md`.
 
 ### Configuration
 

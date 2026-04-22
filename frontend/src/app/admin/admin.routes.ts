@@ -45,6 +45,13 @@ export const adminRoutes: Routes = [
             (m) => m.ColorPaletteEditorComponent,
           ),
       },
+      {
+        path: 'recommended-pins',
+        loadComponent: () =>
+          import('./recommended-pins/recommended-pins.component').then(
+            (m) => m.RecommendedPinsComponent,
+          ),
+      },
     ],
   },
 ];

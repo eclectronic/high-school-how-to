@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, AfterViewChecked, signal, computed, inject, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -8,7 +8,7 @@ import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-d
 import { InlineTitleEditComponent } from '../../../shared/inline-title-edit/inline-title-edit.component';
 import { SwatchPickerComponent } from '../../../shared/swatch-picker/swatch-picker.component';
 import { DueDatePopoverComponent } from '../../../shared/due-date-popover/due-date-popover.component';
-import { autoContrastColor } from '../../../shared/color-picker/color-utils';
+import { autoContrastColor, DEFAULT_PALETTE } from '../../../shared/color-picker/color-utils';
 
 @Component({
   selector: 'app-todo-app',
@@ -25,19 +25,35 @@ import { autoContrastColor } from '../../../shared/color-picker/color-utils';
   templateUrl: './todo-app.component.html',
   styleUrl: './todo-app.component.scss',
 })
-export class TodoAppComponent implements OnInit {
+export class TodoAppComponent implements OnInit, AfterViewChecked {
   @Input() paletteColor = '#1a6fa0';
   @Output() subtitleChange = new EventEmitter<string>();
   @Output() headerColorChange = new EventEmitter<string | null>();
 
   private readonly taskApi = inject(TaskApiService);
 
+  @ViewChild('listTitle') listTitleRef?: InlineTitleEditComponent;
+  @ViewChild('taskInput') taskInputRef?: ElementRef<HTMLInputElement>;
+
   protected lists = signal<TaskList[]>([]);
+  protected sortMode = signal<'name' | 'custom'>(this.readStoredSortMode());
+  protected readonly sortedLists = computed(() => {
+    const list = this.lists();
+    if (this.sortMode() === 'name') {
+      return list.slice().sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
+    }
+    return list.slice().sort((a, b) => {
+      const sa = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      const sb = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      return sa - sb;
+    });
+  });
   protected view = signal<'list' | 'detail'>('list');
   protected selectedList = signal<TaskList | null>(null);
   protected loading = signal(false);
 
   protected newTaskDesc = '';
+  private pendingListTitleFocus = false;
   protected deleteListTarget = signal<TaskList | null>(null);
   protected deleteTaskTarget = signal<{ listId: string; taskId: string; desc: string } | null>(null);
   protected showColorPickerForList = signal<string | null>(null);
@@ -53,9 +69,42 @@ export class TodoAppComponent implements OnInit {
     return this.lists().find(l => l.id === id) ?? null;
   });
 
+  ngAfterViewChecked(): void {
+    if (this.pendingListTitleFocus && this.listTitleRef) {
+      this.pendingListTitleFocus = false;
+      this.listTitleRef.startEdit();
+    }
+  }
+
   ngOnInit(): void {
     this.subtitleChange.emit('');
     this.loadLists();
+  }
+
+  private readStoredSortMode(): 'name' | 'custom' {
+    try {
+      const raw = localStorage.getItem('todo.sortMode');
+      if (raw === 'name' || raw === 'custom') return raw;
+    } catch { /* non-fatal */ }
+    return 'custom';
+  }
+
+  protected setSortMode(mode: 'name' | 'custom'): void {
+    this.sortMode.set(mode);
+    try { localStorage.setItem('todo.sortMode', mode); } catch { /* non-fatal */ }
+  }
+
+  protected onDropList(event: CdkDragDrop<TaskList[]>): void {
+    if (this.sortMode() !== 'custom') return;
+    if (event.previousIndex === event.currentIndex) return;
+    const reordered = this.sortedLists().slice();
+    moveItemInArray(reordered, event.previousIndex, event.currentIndex);
+    const withOrder = reordered.map((l, i) => ({ ...l, sortOrder: i }));
+    const byId = new Map(withOrder.map(l => [l.id, l]));
+    this.lists.update(ls => ls.map(l => byId.get(l.id) ?? l));
+    this.taskApi.reorderLists(withOrder.map(l => l.id)).subscribe({
+      error: () => this.loadLists(),
+    });
   }
 
   private loadLists(): void {
@@ -77,25 +126,35 @@ export class TodoAppComponent implements OnInit {
   protected openList(list: TaskList): void {
     this.selectedList.set(list);
     this.view.set('detail');
-    this.subtitleChange.emit(list.title);
     this.headerColorChange.emit(list.color);
+  }
+
+  protected toolbarBg(color: string | null | undefined): string {
+    if (!color) return 'rgba(255, 255, 255, 0.35)';
+    return `color-mix(in srgb, ${color} 88%, #000)`;
   }
 
   protected goBack(): void {
     this.view.set('list');
     this.selectedList.set(null);
     this.newTaskDesc = '';
-    this.subtitleChange.emit('');
     this.headerColorChange.emit(null);
   }
 
   protected createList(): void {
-    this.taskApi.createList('New List').subscribe({
+    const color = DEFAULT_PALETTE[Math.floor(Math.random() * DEFAULT_PALETTE.length)];
+    const textColor = autoContrastColor(color);
+    this.taskApi.createList('New List', color, textColor).subscribe({
       next: list => {
         this.lists.update(l => [...l, list]);
         this.openList(list);
+        this.pendingListTitleFocus = true;
       },
     });
+  }
+
+  protected focusTaskInput(): void {
+    setTimeout(() => this.taskInputRef?.nativeElement?.focus());
   }
 
   protected onListTitleChange(list: TaskList, newTitle: string): void {
@@ -104,7 +163,6 @@ export class TodoAppComponent implements OnInit {
         this.lists.update(ls => ls.map(l => l.id === updated.id ? updated : l));
         if (this.selectedList()?.id === updated.id) {
           this.selectedList.set(updated);
-          this.subtitleChange.emit(updated.title);
         }
       },
     });
@@ -261,6 +319,53 @@ export class TodoAppComponent implements OnInit {
         this.loadLists();
       },
     });
+  }
+
+  protected onListBtnKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const dir = event.key === 'ArrowDown' ? 1 : -1;
+    const btns = Array.from(
+      (event.currentTarget as HTMLElement)
+        .closest('.todo-app__list-view')
+        ?.querySelectorAll<HTMLElement>('.todo-list-row__btn') ?? []
+    );
+    const idx = btns.indexOf(event.currentTarget as HTMLElement);
+    btns[idx + dir]?.focus();
+  }
+
+  protected onTaskKeydown(event: KeyboardEvent, task: TaskItem): void {
+    switch (event.key) {
+      case ' ':
+        event.preventDefault();
+        this.toggleTask(task);
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        this.focusAdjacentTask(event.currentTarget as HTMLElement, 1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.focusAdjacentTask(event.currentTarget as HTMLElement, -1);
+        break;
+    }
+  }
+
+  protected onDetailKeydown(event: KeyboardEvent): void {
+    const tag = (event.target as HTMLElement).tagName.toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
+    if (event.key === 'a' || event.key === 'A' || event.key === '+') {
+      event.preventDefault();
+      this.focusTaskInput();
+    }
+  }
+
+  private focusAdjacentTask(current: HTMLElement, dir: 1 | -1): void {
+    const tasks = Array.from(
+      current.closest('.todo-app__tasks')?.querySelectorAll<HTMLElement>('.todo-task') ?? []
+    );
+    const idx = tasks.indexOf(current);
+    tasks[idx + dir]?.focus();
   }
 
   protected toggleDueDatePopover(taskId: string): void {

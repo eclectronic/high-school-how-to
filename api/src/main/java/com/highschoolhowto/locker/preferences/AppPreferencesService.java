@@ -7,6 +7,7 @@ import com.highschoolhowto.locker.preferences.dto.UpdateAppPreferencesRequest;
 import com.highschoolhowto.web.ApiException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -50,6 +51,10 @@ public class AppPreferencesService {
         prefs.setPaletteName(request.paletteName().trim());
         prefs.setLockerColor(request.lockerColor() != null ? request.lockerColor().trim() : null);
         prefs.setFontFamily(request.fontFamily() != null ? request.fontFamily().trim() : null);
+        if (request.lockerTextSize() != null) {
+            prefs.setLockerTextSize(request.lockerTextSize());
+        }
+        prefs.setAppColors(request.appColors() != null ? toJson(request.appColors()) : null);
 
         UserAppPreferences saved = preferencesRepository.save(prefs);
         return toResponse(saved);
@@ -87,7 +92,16 @@ public class AppPreferencesService {
     private AppPreferencesResponse toResponse(UserAppPreferences prefs) {
         List<String> activeApps = parseList(prefs.getActiveApps());
         List<String> paneOrder = prefs.getPaneOrder() != null ? parseList(prefs.getPaneOrder()) : null;
-        return new AppPreferencesResponse(activeApps, paneOrder, prefs.getPaletteName(), prefs.getLockerColor(), prefs.getFontFamily());
+        Map<String, String> appColors = prefs.getAppColors() != null
+                ? parseMap(prefs.getAppColors()) : null;
+        return new AppPreferencesResponse(
+                activeApps,
+                paneOrder,
+                prefs.getPaletteName(),
+                prefs.getLockerColor(),
+                prefs.getFontFamily(),
+                prefs.getLockerTextSize() != null ? prefs.getLockerTextSize() : "DEFAULT",
+                appColors);
     }
 
     private List<String> parseList(String json) {
@@ -99,9 +113,18 @@ public class AppPreferencesService {
         }
     }
 
-    private String toJson(List<String> list) {
+    private Map<String, String> parseMap(String json) {
         try {
-            return objectMapper.writeValueAsString(list);
+            return objectMapper.readValue(json, new TypeReference<Map<String, String>>() {});
+        } catch (Exception e) {
+            throw new ApiException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Preference parse error", "Failed to parse stored preferences");
+        }
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
         } catch (Exception e) {
             throw new ApiException(
                     HttpStatus.INTERNAL_SERVER_ERROR, "Preference serialize error", "Failed to serialize preferences");

@@ -1,0 +1,137 @@
+<div class="admin-page">
+  <div class="admin-page__header">
+    <h1>Recommended Pins</h1>
+    <button class="btn btn--primary" (click)="openNew()">+ Add Pin</button>
+  </div>
+
+  @if (error()) {
+    <div class="admin-error">{{ error() }}</div>
+  }
+
+  @if (showForm()) {
+    <div class="admin-card form-card">
+      <h2>{{ editingPin() ? 'Edit Pin' : 'New Pin' }}</h2>
+
+      <div class="form-row">
+        <label>Name</label>
+        <input [(ngModel)]="form.name" placeholder="Gmail" maxlength="255" />
+      </div>
+
+      <div class="form-row">
+        <label>URL</label>
+        <input [(ngModel)]="form.url" placeholder="https://mail.google.com" maxlength="2048" />
+      </div>
+
+      <div class="form-row">
+        <label>Emoji Icon (optional)</label>
+        <input [(ngModel)]="form.emoji" placeholder="📧" maxlength="10" />
+      </div>
+
+      <div class="form-row">
+        <label>Favicon URL (optional)</label>
+        <input [(ngModel)]="form.faviconUrl" placeholder="/assets/favicons/gmail.png" maxlength="512" />
+      </div>
+
+      <div class="form-row">
+        <label>Category (optional)</label>
+        <input [(ngModel)]="form.category" placeholder="Google" maxlength="100" />
+      </div>
+
+      <div class="form-row">
+        <label>Sort Order</label>
+        <input type="number" [(ngModel)]="form.sortOrder" min="0" />
+      </div>
+
+      <div class="form-row form-row--inline">
+        <label>
+          <input type="checkbox" [(ngModel)]="form.active" />
+          Active (visible to users)
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn--secondary" (click)="cancel()">Cancel</button>
+        <button class="btn btn--primary" [disabled]="!form.name.trim() || !form.url.trim()" (click)="save()">
+          Save
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <p>Loading...</p>
+  } @else {
+    @if (categories.length > 0) {
+      @for (cat of categories; track cat) {
+        <h3 class="category-heading">{{ cat }}</h3>
+        <div class="pin-list">
+          @for (pin of pins(); track pin.id) {
+            @if ((pin.category ?? '') === cat) {
+              <div class="admin-card pin-card" [class.pin-card--inactive]="!pin.active">
+                <div class="pin-card__icon">
+                  @if (pin.faviconUrl) {
+                    <img [src]="pin.faviconUrl" [alt]="pin.name" />
+                  } @else if (pin.emoji) {
+                    <span>{{ pin.emoji }}</span>
+                  } @else {
+                    <span>📌</span>
+                  }
+                </div>
+                <div class="pin-card__info">
+                  <strong>{{ pin.name }}</strong>
+                  <span class="pin-card__url">{{ pin.url }}</span>
+                  @if (!pin.active) {
+                    <span class="pin-card__badge pin-card__badge--inactive">Inactive</span>
+                  }
+                </div>
+                <div class="pin-card__order">#{{ pin.sortOrder }}</div>
+                <div class="pin-card__actions">
+                  <button class="btn btn--secondary btn--sm" (click)="openEdit(pin)">Edit</button>
+                  <button class="btn btn--danger btn--sm" (click)="delete(pin)">Delete</button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+    }
+
+    <!-- Uncategorized -->
+    @if (hasUncategorized) {
+      <h3 class="category-heading">Uncategorized</h3>
+      <div class="pin-list">
+        @for (pin of pins(); track pin.id) {
+          @if (!pin.category) {
+            <div class="admin-card pin-card" [class.pin-card--inactive]="!pin.active">
+              <div class="pin-card__icon">
+                @if (pin.emoji) {
+                  <span>{{ pin.emoji }}</span>
+                } @else if (pin.faviconUrl) {
+                  <img [src]="pin.faviconUrl" [alt]="pin.name" />
+                } @else {
+                  <span>📌</span>
+                }
+              </div>
+              <div class="pin-card__info">
+                <strong>{{ pin.name }}</strong>
+                <span class="pin-card__url">{{ pin.url }}</span>
+                @if (!pin.active) {
+                  <span class="pin-card__badge pin-card__badge--inactive">Inactive</span>
+                }
+              </div>
+              <div class="pin-card__order">#{{ pin.sortOrder }}</div>
+              <div class="pin-card__actions">
+                <button class="btn btn--secondary btn--sm" (click)="openEdit(pin)">Edit</button>
+                <button class="btn btn--danger btn--sm" (click)="delete(pin)">Delete</button>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    @if (pins().length === 0) {
+      <p class="admin-empty">No recommended pins yet. Click "+ Add Pin" to create one.</p>
+    }
+  }
+</div>

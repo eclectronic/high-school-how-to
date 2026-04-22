@@ -1,5 +1,37 @@
 # Changelog
 
+## [7.0.0] — 2026-04-22
+
+### Google Sign-In
+
+You can now sign in with your Google account directly from the login page. A **Sign in with Google** button appears on the login and signup screens. First-time Google users get an account created automatically; returning users are matched by email. The flow uses ID-token verification — no redirect dance, no server-side OAuth secret — just a credential token from the Google One Tap UI validated against Google's public keys. The Google Web Client ID is a public value committed to source; no additional secrets are required.
+
+### Remember Me & Session Management
+
+The login form now has a **Remember me** checkbox. When checked, your session stays active for 30 days instead of the default 7. This applies to both password login and Google Sign-In. Refresh tokens are now rotated on every use — each call to `/api/auth/refresh` issues a new token and invalidates the old one — so long-lived sessions are still safe. A new **Sign out** option is available from the account menu and revokes the refresh token server-side, so signing out on one device doesn't silently leave an active session elsewhere.
+
+### Locker Apps — Sort & Custom Order
+
+All three locker apps — **Notes**, **To-do Lists**, and **Pins** — now have a sort bar at the top of the list. Notes supports sorting by **Name**, **Created**, **Updated**, or **Custom**; To-do Lists and Pins support **Name** and **Custom**. Custom mode reveals ⋮⋮ drag handles so you can reorder items freely; the new order is persisted server-side. Sort preference is remembered per browser in localStorage. A new `sort_order` column on `task_lists` backs the to-do reordering, mirroring the pattern already used for notes and pins.
+
+### Locker Apps — Keyboard Navigation
+
+All three list views now support keyboard navigation: **↑ ↓** moves focus between items, **Space** activates the focused item (opens a note or pin, toggles a to-do task), **Enter** also opens the item. In the to-do detail view, pressing **A** or **+** from anywhere outside a text field jumps focus to the add-task input. The Pins browse panel additionally supports **Space**, **A**, or **+** to toggle the focused pin, and ↑ ↓ to move between browse rows.
+
+### Notes — Timestamps & Info
+
+Note cards now show a compact relative timestamp (e.g. "3d ago") in the lower-left corner. The date shown tracks your current sort mode — when sorted by **Created** it shows the creation date; otherwise it shows the last-updated date. Clicking the timestamp expands an inline info block showing the full creation and update datetimes.
+
+### Locker UI Polish
+
+A consistent visual convention now governs all locker apps. The button that exits a detail view (done editing a note, done with a to-do list) is a **green circle ✓** — not a text button — matching the same green circle **+** used to create new items. The Pins browse panel now shows each pin row with the same semi-opaque white card background used in the main pin list, so rows are readable against the corkboard. Category headers in the browse panel use the app's brown palette instead of grey. The browse panel's close action is also a green circle ✓. Grey swatches were added to the color palette available for notes and to-do lists.
+
+### Locker Opening Animation
+
+The locker interior is now fully randomized on every open — **31 items** picked from themed pools (sports gear, electronics, snacks, clothes, toiletries, books, and more) fill the shelves, floor, and two hook positions. Item sizes vary widely, from tiny accent pieces to large statement items. There is now a **60% chance of a surprise event** on each open: a 🐦 bird that flies out diagonally across the screen, a 🍌 rotting banana or 🥡 lunchbox with floating stink clouds, a 🧦 sock falling from above, a 🐱 cat that peeks from the top and retreats, a 🐛 worm bobbing out of the books, an old 🐟 fish, a 🕷️ spider descending on a thread, or a 👻 ghost drifting through.
+
+---
+
 ## [6.0.0] — 2026-04-16
 
 ### Content Viewer Redesign

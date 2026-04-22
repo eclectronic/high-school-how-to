@@ -1,5 +1,6 @@
 package com.highschoolhowto.config;
 
+import com.highschoolhowto.auth.oauth.GoogleAuthException;
 import com.highschoolhowto.security.JwtAuthenticationFilter;
 import com.highschoolhowto.security.UserDetailsServiceImpl;
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ public class SecurityConfig {
                 "/api/auth/resend-verification",
                 "/api/auth/forgot-password",
                 "/api/auth/reset-password",
+                "/api/auth/google",
                 "/actuator/health",
                 "/actuator/health/**",
                 "/actuator/info"));

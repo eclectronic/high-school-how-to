@@ -4,6 +4,7 @@ import com.highschoolhowto.security.UserPrincipal;
 import com.highschoolhowto.shortcut.dto.CreateShortcutRequest;
 import com.highschoolhowto.shortcut.dto.ImportShortcutsRequest;
 import com.highschoolhowto.shortcut.dto.ImportShortcutsResponse;
+import com.highschoolhowto.shortcut.dto.RecommendedShortcutResponse;
 import com.highschoolhowto.shortcut.dto.ReorderShortcutsRequest;
 import com.highschoolhowto.shortcut.dto.ShortcutMetadataResponse;
 import com.highschoolhowto.shortcut.dto.ShortcutResponse;
@@ -32,12 +33,15 @@ public class ShortcutController {
 
     private final ShortcutService shortcutService;
     private final ShortcutMetadataService shortcutMetadataService;
+    private final RecommendedShortcutService recommendedShortcutService;
 
     public ShortcutController(
             ShortcutService shortcutService,
-            ShortcutMetadataService shortcutMetadataService) {
+            ShortcutMetadataService shortcutMetadataService,
+            RecommendedShortcutService recommendedShortcutService) {
         this.shortcutService = shortcutService;
         this.shortcutMetadataService = shortcutMetadataService;
+        this.recommendedShortcutService = recommendedShortcutService;
     }
 
     @GetMapping
@@ -102,5 +106,10 @@ public class ShortcutController {
             @AuthenticationPrincipal UserPrincipal principal) {
         UUID userId = principal.getUser().getId();
         return ResponseEntity.ok(shortcutService.exportShortcuts(userId));
+    }
+
+    @GetMapping("/recommended")
+    public ResponseEntity<List<RecommendedShortcutResponse>> recommended() {
+        return ResponseEntity.ok(recommendedShortcutService.listActive());
     }
 }

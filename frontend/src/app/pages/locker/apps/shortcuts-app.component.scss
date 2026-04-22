@@ -1,32 +1,61 @@
-.shortcuts-app {
+:host {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
-.shortcuts-list {
+.shortcuts-app {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.shortcuts-app__list-view {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   overflow-y: auto;
-  padding: 0.5rem 0;
+  padding: 0.4rem 0;
+}
+
+.shortcuts-list {
+  padding: 0;
 }
 
 .shortcut-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.55rem 1rem;
+  padding: 0.5rem 0.75rem;
   cursor: pointer;
   transition: background 0.1s;
-  border-radius: 0;
+  border-radius: 8px;
+  margin: 2px 0.5rem;
+  background: rgba(255, 255, 255, 0.55);
 
   &:hover {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.82);
 
     .shortcut-row__actions {
       opacity: 1;
     }
   }
+}
+
+.shortcut-row__drag-handle {
+  cursor: grab;
+  color: rgba(45, 26, 16, 0.2);
+  font-size: 0.75rem;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+  padding: 0 2px;
+  transition: color 0.1s;
+
+  &:hover { color: rgba(45, 26, 16, 0.6); }
 }
 
 .shortcut-row__icon {
@@ -137,6 +166,33 @@
   }
 }
 
+.shortcut-form__emoji-row {
+  position: relative;
+}
+
+.shortcut-form__emoji-btn {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(45, 26, 16, 0.2);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: inherit;
+  background: #fff;
+  color: #2d1a10;
+  cursor: pointer;
+  transition: border-color 0.1s;
+
+  &:hover {
+    border-color: rgba(45, 26, 16, 0.5);
+  }
+}
+
+app-emoji-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+}
+
 .shortcut-form__actions {
   display: flex;
   gap: 0.5rem;
@@ -167,22 +223,262 @@
   text-align: center;
 }
 
-.shortcuts-app__footer {
-  flex-shrink: 0;
-  padding: 0.5rem 1rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+
+.shortcuts-app__btn-row {
+  display: flex;
+  gap: 0.5rem;
+  align-self: flex-start;
+  margin: 0.25rem 1rem 0.25rem;
 }
 
 .shortcuts-app__add-btn {
+  background: #22c55e;
+  border: none;
+  color: #fff;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.9;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.shortcuts-app__browse-btn {
+  background: #6b7280;
+  flex-shrink: 0;
+  border: none;
+  color: #fff;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.9;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.shortcuts-app__sort-bar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.15rem;
+  background: rgba(45, 26, 16, 0.06);
+  border-radius: 999px;
+  align-self: flex-start;
+  margin: 0.25rem 1rem 0.25rem;
+}
+
+.shortcuts-app__sort-btn {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(45, 26, 16, 0.6);
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+
+  &:hover {
+    color: #2d1a10;
+  }
+
+  &--active {
+    background: #fffef8;
+    color: #2d1a10;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+}
+
+// ── Browse panel ────────────────────────────────────────────────────────────
+
+.shortcuts-browse {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.shortcuts-browse__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem 0.4rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.shortcuts-browse__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2d1a10;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   background: none;
   border: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
+  padding: 0;
   font-family: inherit;
-  padding: 0.25rem 0;
-  opacity: 0.75;
-  transition: opacity 0.12s;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: opacity 0.1s;
 
-  &:hover { opacity: 1; }
+  &:hover { opacity: 0.6; }
+}
+
+.shortcuts-browse__done-btn {
+  background: #22c55e;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.9;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.shortcuts-browse__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.shortcuts-browse__empty {
+  padding: 1rem;
+  font-size: 0.82rem;
+  color: #aaa;
+  text-align: center;
+}
+
+.shortcuts-browse__category {
+  padding: 0.5rem 1rem 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(45, 26, 16, 0.45);
+}
+
+.shortcuts-browse__row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-radius: 8px;
+  margin: 2px 0.5rem;
+  background: rgba(255, 255, 255, 0.55);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.82);
+  }
+}
+
+.shortcuts-browse__icon {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.shortcuts-browse__favicon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.shortcuts-browse__name {
+  flex: 1;
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: #2d1a10;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shortcuts-browse__add-btn {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(45, 26, 16, 0.25);
+  background: transparent;
+  color: #888;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.1s, background 0.1s, color 0.1s;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(45, 26, 16, 0.6);
+    background: rgba(45, 26, 16, 0.07);
+    color: #2d1a10;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  &--added {
+    color: #16a34a;
+    border-color: rgba(22, 163, 74, 0.5);
+    background: rgba(22, 163, 74, 0.08);
+
+    &:hover:not(:disabled) {
+      color: #dc2626;
+      border-color: rgba(220, 38, 38, 0.5);
+      background: rgba(220, 38, 38, 0.08);
+    }
+  }
 }

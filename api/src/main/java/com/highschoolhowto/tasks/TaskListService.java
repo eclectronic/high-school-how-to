@@ -42,7 +42,7 @@ public class TaskListService {
 
     @Transactional(readOnly = true)
     public List<TaskListResponse> getTaskLists(UUID userId) {
-        return taskListRepository.findByUserIdOrderByCreatedAt(userId).stream()
+        return taskListRepository.findByUserIdOrderBySortOrderAscCreatedAtAsc(userId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -195,6 +195,24 @@ public class TaskListService {
                 .toList();
     }
 
+    @Transactional
+    public void reorderLists(UUID userId, List<UUID> orderedIds) {
+        List<TaskList> lists = taskListRepository.findByUserIdOrderBySortOrderAscCreatedAtAsc(userId);
+        if (lists.size() != orderedIds.size()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid order", "Order does not match list count for this user");
+        }
+        var listById = lists.stream().collect(java.util.stream.Collectors.toMap(TaskList::getId, l -> l));
+        int index = 0;
+        for (UUID id : orderedIds) {
+            TaskList list = listById.get(id);
+            if (list == null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid order", "Unknown list id in order");
+            }
+            list.setSortOrder(index++);
+        }
+        taskListRepository.saveAll(listById.values());
+    }
+
     private TaskList requireList(UUID listId, UUID userId) {
         return taskListRepository
                 .findByIdAndUserId(listId, userId)
@@ -207,7 +225,7 @@ public class TaskListService {
                 .sorted(Comparator.comparingInt(TaskItem::getSortOrder).thenComparing(TaskItem::getCreatedAt))
                 .map(this::toResponse)
                 .toList();
-        return new TaskListResponse(list.getId(), list.getTitle(), list.getColor(), list.getTextColor(), tasks);
+        return new TaskListResponse(list.getId(), list.getTitle(), list.getColor(), list.getTextColor(), tasks, list.getSortOrder());
     }
 
     private TaskItemResponse toResponse(TaskItem task) {

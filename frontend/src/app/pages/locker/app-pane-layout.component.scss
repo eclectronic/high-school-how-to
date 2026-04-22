@@ -1,3 +1,12 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+}
+
 .pane-layout-wrapper {
   display: flex;
   flex-direction: column;
@@ -15,6 +24,10 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
   min-height: 0;
+
+  @media (max-width: 768px) {
+    gap: 0.5rem;
+  }
 }
 
 .toolbar-apps {
@@ -75,6 +88,7 @@
     transform: scale(1.15);
     border-color: rgba(45, 26, 16, 0.6);
   }
+
 }
 
 .locker-color-overlay {
@@ -121,6 +135,59 @@
   &:focus {
     border-color: #2d1a10;
   }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.toolbar-text-size {
+  display: flex;
+  border: 1px solid rgba(45, 26, 16, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.text-size-btn {
+  padding: 0.25rem 0.4rem;
+  border: none;
+  background: #fff;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: rgba(45, 26, 16, 0.5);
+  border-right: 1px solid rgba(45, 26, 16, 0.15);
+  transition: background 0.1s, color 0.1s;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &:hover:not(&--active) {
+    background: rgba(45, 26, 16, 0.06);
+    color: #2d1a10;
+  }
+
+  &--active {
+    background: rgba(45, 26, 16, 0.12);
+    color: #2d1a10;
+  }
+}
+
+.pane-layout__empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(45, 26, 16, 0.4);
+  font-size: 0.9rem;
+  font-style: italic;
 }
 
 .pane-layout {
@@ -168,6 +235,13 @@
     background: rgba(0, 0, 0, 0.25);
     width: 3px;
   }
+
+  &--inert {
+    cursor: default;
+
+    &::after { background: rgba(0, 0, 0, 0.06); }
+    &:hover::after { background: rgba(0, 0, 0, 0.06); width: 2px; }
+  }
 }
 
 // Wrapper that provides the tape pseudo-element and flex sizing.
@@ -179,7 +253,7 @@
   flex-basis: 0;
   flex-shrink: 0;
   min-height: 0;
-  min-width: 0;
+  min-width: 240px;
   padding-top: 12px;  // headroom so the tape can straddle the pane's top edge
 
   &--hidden {
@@ -256,4 +330,5 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  zoom: var(--locker-scale, 1.15);
 }

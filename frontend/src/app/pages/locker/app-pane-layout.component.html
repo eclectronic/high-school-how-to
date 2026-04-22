@@ -7,10 +7,9 @@
           type="button"
           class="toolbar-app-btn"
           [class.toolbar-app-btn--active]="activeApps.includes(def.type)"
-          [class.toolbar-app-btn--maximized]="maximizedApp() === def.type"
-          [title]="maximizedApp() === def.type ? 'Restore ' + def.label : def.label"
+          [title]="def.label"
           [attr.aria-pressed]="activeApps.includes(def.type)"
-          (click)="maximizedApp() === def.type ? onMinimize(def.type) : toggleApp(def.type)"
+          (click)="toggleApp(def.type)"
         >{{ def.icon }}</button>
       }
     </div>
@@ -47,25 +46,44 @@
         }
       </optgroup>
     </select>
+
+    <!-- Text size control -->
+    <div class="toolbar-text-size" role="group" aria-label="Text size">
+      @for (opt of textSizeOptions; track opt.value) {
+        <button
+          type="button"
+          class="text-size-btn"
+          [class.text-size-btn--active]="lockerTextSize === opt.value"
+          [title]="'Text size: ' + opt.value"
+          (click)="onTextSizeSelect(opt.value)"
+        >{{ opt.label }}</button>
+      }
+    </div>
   </div>
 
   <div class="pane-layout">
+    @if (activeApps.length === 0) {
+      <div class="pane-layout__empty">
+        <p>No apps open. Use the toolbar above to add one.</p>
+      </div>
+    }
     @for (appType of activeApps; track appType; let i = $index) {
-      @if (i > 0 && !isPaneHidden(activeApps[i - 1]) && !isPaneHidden(appType)) {
+      @if (i > 0 && showResizer(i - 1)) {
         <div
           class="col-resizer"
           [class.col-resizer--active]="activeResizer() === i - 1"
+          [class.col-resizer--inert]="isResizerInert(i - 1)"
           (mousedown)="onResizerMousedown($event, i - 1)"
         ></div>
       }
       <div
         class="pane-wrap"
-        [style.flex-grow]="maximizedApp() === appType ? 1 : (isPaneHidden(appType) ? 0 : columnWeights()[i])"
-        [class.pane-wrap--hidden]="isPaneHidden(appType)"
+        [style.flex]="getPaneFlex(appType, i)"
       >
         <div
           class="pane"
-          [style.--pane-tint]="getHeaderColor(appType)"
+          appPaneFocusTrap
+          [style.--pane-tint]="getEffectivePaneTint(appType)"
           [class.pane--focused]="focusedPane === i"
           [class.pane--drag-source]="dragSourceIndex() === i"
           [class.pane--drag-over]="dragOverIndex() === i"
@@ -82,15 +100,13 @@
           >
             <app-pane-header
               [appType]="appType"
-              [paletteColor]="getHeaderColor(appType)"
+              [paletteColor]="getEffectivePaneTint(appType)"
+              [appColor]="getEffectivePaneTint(appType)"
               [paneIndex]="i"
               [subtitle]="appSubtitles()[appType]"
-              [isMaximized]="maximizedApp() === appType"
-              [canMinimize]="maximizedApp() === appType && activeApps.length > 1"
-              [canClose]="activeApps.length > 1"
-              (minimize)="onMinimize(appType)"
-              (maximize)="onMaximize(appType)"
+              [canClose]="true"
               (close)="onClose(appType)"
+              (colorPickerRequest)="showColorPickerForApp.set(appType)"
             />
           </div>
 
@@ -98,23 +114,23 @@
               @switch (appType) {
                 @case ('TODO') {
                   <app-todo-app
-                    [paletteColor]="getPaletteColor(appType)"
+                    [paletteColor]="getHeaderColor(appType)"
                     (subtitleChange)="onAppSubtitleChange('TODO', $event)"
                     (headerColorChange)="onAppHeaderColorChange('TODO', $event)"
                   />
                 }
                 @case ('NOTES') {
                   <app-notes-app
-                    [paletteColor]="getPaletteColor(appType)"
+                    [paletteColor]="getHeaderColor(appType)"
                     (subtitleChange)="onAppSubtitleChange('NOTES', $event)"
                     (headerColorChange)="onAppHeaderColorChange('NOTES', $event)"
                   />
                 }
                 @case ('TIMER') {
-                  <app-timer-app [paletteColor]="getPaletteColor(appType)" />
+                  <app-timer-app [paletteColor]="getHeaderColor(appType)" />
                 }
                 @case ('SHORTCUTS') {
-                  <app-shortcuts-app [paletteColor]="getPaletteColor(appType)" />
+                  <app-shortcuts-app [paletteColor]="getHeaderColor(appType)" />
                 }
               }
           </div>
@@ -132,6 +148,20 @@
           [showGradientToggle]="false"
           (colorChange)="lockerColorChange.emit($event); showLockerColorPicker.set(false)"
           (escaped)="showLockerColorPicker.set(false)"
+        />
+      </div>
+    </div>
+  }
+
+  @if (showColorPickerForApp()) {
+    <div class="locker-color-overlay" (click)="showColorPickerForApp.set(null)">
+      <div class="locker-color-overlay__card" (click)="$event.stopPropagation()">
+        <p class="locker-color-overlay__title">{{ getAppLabel(showColorPickerForApp()!) }} Color</p>
+        <app-swatch-picker
+          [selectedColor]="getAppColor(showColorPickerForApp()!)"
+          [showGradientToggle]="false"
+          (colorChange)="onAppColorPicked(showColorPickerForApp()!, $event)"
+          (escaped)="showColorPickerForApp.set(null)"
         />
       </div>
     </div>

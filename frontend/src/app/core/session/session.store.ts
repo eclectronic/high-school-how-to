@@ -5,6 +5,8 @@ interface SessionState {
   accessToken: string | null;
   refreshToken: string | null;
   expiresAt: number | null;
+  avatarUrl: string | null;
+  firstName: string | null;
 }
 
 const STORAGE_KEY = 'hsht.session';
@@ -16,13 +18,18 @@ export class SessionStore {
   private readonly state = signal<SessionState>({
     accessToken: null,
     refreshToken: null,
-    expiresAt: null
+    expiresAt: null,
+    avatarUrl: null,
+    firstName: null,
   });
 
   readonly isAuthenticated = computed(() => {
     const snapshot = this.state();
     return Boolean(snapshot.accessToken && !this.isExpired(snapshot));
   });
+
+  readonly avatarUrl = computed(() => this.state().avatarUrl);
+  readonly firstName = computed(() => this.state().firstName);
 
   readonly isAdmin = computed(() => {
     const snapshot = this.state();
@@ -38,17 +45,31 @@ export class SessionStore {
     const expiresAt = Date.now() + response.expiresIn * 1000;
     const next: SessionState = {
       accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      expiresAt
+      refreshToken: response.refreshToken ?? null,
+      expiresAt,
+      avatarUrl: response.avatarUrl ?? null,
+      firstName: response.firstName ?? null,
     };
     this.state.set(next);
-    this.persist(next);
+
+    if (typeof window === 'undefined') return;
+
+    if (next.refreshToken) {
+      // Remember-Me: persist in localStorage, clear sessionStorage
+      window.sessionStorage.removeItem(STORAGE_KEY);
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } else {
+      // Session-only: persist in sessionStorage, clear localStorage
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    }
   }
 
   clearSession() {
-    this.state.set({ accessToken: null, refreshToken: null, expiresAt: null });
+    this.state.set({ accessToken: null, refreshToken: null, expiresAt: null, avatarUrl: null, firstName: null });
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_KEY);
+      window.sessionStorage.removeItem(STORAGE_KEY);
     }
   }
 
@@ -60,7 +81,7 @@ export class SessionStore {
     if (this.isExpired(snapshot)) {
       // Keep refresh token so we can recover the session via refresh flow.
       this.state.update(current => ({ ...current, accessToken: null, expiresAt: null }));
-      this.persist(this.state());
+      this.persistCurrent();
       return null;
     }
     return snapshot.accessToken;
@@ -74,7 +95,8 @@ export class SessionStore {
     if (typeof window === 'undefined') {
       return;
     }
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    // localStorage takes priority (Remember-Me session)
+    const raw = window.localStorage.getItem(STORAGE_KEY) ?? window.sessionStorage.getItem(STORAGE_KEY);
     if (!raw) {
       return;
     }
@@ -83,8 +105,8 @@ export class SessionStore {
       if (parsed.accessToken && !this.isExpired(parsed)) {
         this.state.set(parsed);
       } else if (parsed.refreshToken) {
-        this.state.set({ accessToken: null, refreshToken: parsed.refreshToken, expiresAt: null });
-        this.persist(this.state());
+        this.state.set({ accessToken: null, refreshToken: parsed.refreshToken, expiresAt: null, avatarUrl: parsed.avatarUrl ?? null, firstName: parsed.firstName ?? null });
+        this.persistCurrent();
       } else {
         this.clearSession();
       }
@@ -93,11 +115,14 @@ export class SessionStore {
     }
   }
 
-  private persist(state: SessionState) {
-    if (typeof window === 'undefined') {
-      return;
+  private persistCurrent() {
+    if (typeof window === 'undefined') return;
+    const current = this.state();
+    if (current.refreshToken) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+    } else {
+      window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(current));
     }
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
   private isExpired(state: SessionState) {

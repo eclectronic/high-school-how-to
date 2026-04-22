@@ -16,8 +16,8 @@ import { Shortcut } from '../../core/models/task.models';
       <!-- Hover edit pencil -->
       <button type="button"
               class="shortcut__edit-btn"
-              title="Edit shortcut"
-              aria-label="Edit shortcut"
+              title="Edit pin"
+              aria-label="Edit pin"
               (click)="onEditClick($event)">✏️</button>
 
       <!-- Icon area -->
@@ -36,7 +36,7 @@ import { Shortcut } from '../../core/models/task.models';
              (error)="onFaviconError($event)" />
         <span *ngIf="!shortcut.iconUrl && !shortcut.emoji && (!shortcut.faviconUrl || faviconFailed)"
               class="shortcut__default-icon"
-              aria-hidden="true">🔗</span>
+              aria-hidden="true">📌</span>
       </div>
 
       <!-- Label -->

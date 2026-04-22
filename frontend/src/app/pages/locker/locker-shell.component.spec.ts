@@ -13,6 +13,8 @@ const stubPreferences = {
   paletteName: 'ocean',
   lockerColor: null,
   fontFamily: null,
+  lockerTextSize: 'DEFAULT' as const,
+  appColors: null,
 };
 
 describe('LockerShellComponent', () => {
