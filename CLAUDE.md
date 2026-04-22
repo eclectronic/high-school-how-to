@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - Backend: unit tests for services (happy path + edge cases/validation), integration tests for controller endpoints (auth, correct responses, error cases).
   - Frontend: unit tests for components (renders correctly, key interactions) and services (correct HTTP calls).
   - Follow existing test patterns in the codebase (Karma/Jasmine for frontend, JUnit/Spring Boot Test for backend).
+- **Build must pass before release**: When preparing or wrapping up a release, the full build (`./gradlew build` for backend, `npm run build` for frontend) must succeed with zero errors and zero warnings before any release commit is made. Never commit or push release artifacts (changelog, version bump, tags) on a broken build — fix the build first.
 - **Security best practices**: For authentication and sensitive operations, follow security best practices:
 - Use parameterized queries or ORM features to prevent SQL injection.
 - Hash passwords securely (e.g., bcrypt) and never log sensitive information.
