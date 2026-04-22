@@ -22,11 +22,13 @@ All three list views now support keyboard navigation: **↑ ↓** moves focus be
 
 Note cards now show a compact relative timestamp (e.g. "3d ago") in the lower-left corner. The date shown tracks your current sort mode — when sorted by **Created** it shows the creation date; otherwise it shows the last-updated date. Clicking the timestamp expands an inline info block showing the full creation and update datetimes.
 
-### Pins — Browse & Emoji Icons
+### Pins — Browse, Emoji Icons & Iconic UI
 
-The Pins app has a new **Browse** panel, opened with the 🔍 button that sits next to the + button. The panel shows a curated library of ~30 commonly-used student sites (Google Workspace, Khan Academy, Quizlet, Desmos, Common App, and more) organized by category. Each site shows its favicon. Clicking a row opens the site; the ✓/+ button on the right toggles whether the pin is in your list. Adding a pin from Browse fills in the favicon automatically.
+The Pins app has a new **Browse** panel. A 🔍 magnifying-glass button sits next to the + button at the bottom of the pin list; tapping it opens a categorized library of ~30 commonly-used student sites — Google Workspace tools, Khan Academy, Quizlet, Desmos, Grammarly, Common App, and more — each shown with its favicon. Clicking a row opens the site in a new tab. The ✓ / + button on the right edge of each row toggles whether the pin is already in your list; keyboard users can press **Space**, **A**, or **+** to toggle, and **↑ ↓** to move between rows. Adding a pin from Browse automatically fills in its favicon.
 
-When adding or editing a pin manually, you can now assign a **custom emoji icon** using an emoji picker — useful for sites without a recognizable favicon or for personal bookmarks. When you add a pin by URL without supplying a name, the app fetches the page title automatically and uses it as the pin name.
+When adding or editing a pin manually, you can assign a **custom emoji icon** via an emoji picker — handy for personal bookmarks or sites with an unhelpful favicon. When a URL is entered without a name, the app silently fetches the page title and uses it, so you rarely need to type a name at all.
+
+More broadly, text-label buttons throughout the locker have been replaced with **iconic equivalents**: the Browse button became a grey 🔍 circle, "New Note / New Pin / Add List" text buttons became green ＋ circles, "Back / Save" exit buttons became green ✓ circles, and list-item delete controls were standardized to ✕. The result is a more compact, visually consistent chrome that stays out of the way of your content.
 
 ### Locker Pane — Minimize and Maximize Removed
 
