@@ -1,5 +1,15 @@
 # Changelog
 
+## [7.0.3] — 2026-04-25
+
+### Networking — App Runner default egress + public Postgres
+
+The 7.0.0 Google Sign-In feature was returning `401 Unauthorized` for every user in production. After the diagnostic logging added in 7.0.1 and the JWKS fetch-timeout bump in 7.0.2 failed to fix it, root-cause analysis revealed that the App Runner service was routing all outbound traffic through a VPC connector whose ENIs had no path to the public internet — App Runner connector ENIs are never assigned public IPs, and an Internet Gateway only NATs traffic from instances that have one. Anything App Runner needed on the public internet — Google's JWKS for ID-token verification, Amazon SES for verification and password-reset emails — silently failed. v6 and earlier did not surface the issue because nothing in the codebase reached out beyond the VPC; v7 introduced two new external dependencies and both broke for the same reason.
+
+Removed the VPC connector and switched App Runner egress to its default public path. To preserve database access without provisioning a NAT Gateway, the Postgres instance is now reachable on the public internet — it was already configured `PubliclyAccessible: true` and enforcing SSL via `rds.force_ssl=1`, so the only gate was the security group. Inbound `tcp/5432` is now permitted from `0.0.0.0/0` on the database security group; SSL is mandatory; the master credential remains in AWS Secrets Manager. Storage is encrypted at rest. The 3-second JWKS-fetch timeout from 7.0.2 is now inert (App Runner reaches Google in under 100 ms via default egress) but is left in place as cold-start insurance.
+
+User-visible result: Google Sign-In, account-verification emails, and password-reset emails all work in production again. Full diagnosis, options considered, and security tradeoffs are in [`docs/v7-network-egress.md`](docs/v7-network-egress.md).
+
 ## [7.0.2] — 2026-04-25
 
 ### Google Sign-In — JWKS fetch timeout fix
