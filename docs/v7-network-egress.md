@@ -83,7 +83,7 @@ The VPC connector ARN (`arn:aws:apprunner:us-west-2:136022486206:vpcconnector/hi
 **Optional companion mitigations** (none of which gate this rollout):
 
 - Rotate the Postgres master password to a fresh 32+ char random string.
-- Move Postgres to a non-default port (e.g., 54320) — the same SG rule, just a different port — to cut opportunistic scan volume by ~95%. Requires updating `SPRING_DATASOURCE_URL` in `application-prod.yml`.
+- Move Postgres to a non-default port — **not feasible for existing RDS PostgreSQL instances**. Neither `modify-db-instance` nor parameter group modification supports a port change on RDS PostgreSQL (only Db2/Oracle). Would require creating a new RDS instance and migrating data.
 - Enable IAM database authentication so the application uses short-lived AWS-signed tokens instead of a long-lived password.
 
 ## Reversibility

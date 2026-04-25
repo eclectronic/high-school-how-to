@@ -138,15 +138,13 @@ var dbAdminPassword : String = "postgres"
 var dbUser : String = "postgres"
 var dbPassword : String = "postgres"
 var dbHost : String = "localhost"
-var dbPort : String = "5432"
 if (liquibaseEnv == "prod") {
     dbHost = "highschoolhowto.c388sauoez7e.us-west-2.rds.amazonaws.com"
-    dbPort = "54321"
     dbAdminPassword = env("HIGHSCHOOLHOWTO_DB_ADMIN_PROD_PASSWORD", dbAdminPassword)
     dbPassword = env("HIGHSCHOOLHOWTO_DB_PROD_PASSWORD", dbPassword)
 }
-var dbAdminUrl : String = "jdbc:postgresql://$dbHost:$dbPort/postgres"
-var dbUrl : String = "jdbc:postgresql://$dbHost:$dbPort/highschoolhowto"
+var dbAdminUrl : String = "jdbc:postgresql://$dbHost:5432/postgres"
+var dbUrl : String = "jdbc:postgresql://$dbHost:5432/highschoolhowto"
 
 liquibase {
     activities.register("createDb") {
