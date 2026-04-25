@@ -1,5 +1,11 @@
 # Changelog
 
+## [7.0.2] — 2026-04-25
+
+### Google Sign-In — JWKS fetch timeout fix
+
+Production Google Sign-In was failing with `401 Unauthorized` for every user after deploy. Diagnostic logging from 7.0.1 revealed the cause: Nimbus's `RemoteJWKSet` ships with a 500 ms connect / 500 ms read timeout, which cold App Runner containers routinely exceed on the first DNS + TLS handshake to `googleapis.com`. Once the timeout fires, the JWK cache stays empty for the worker's lifetime and every signature verification fails, even though the ID tokens are valid. `GoogleIdTokenVerifier` now passes an explicit `DefaultResourceRetriever` with 3 s / 3 s timeouts — generous enough to absorb cold-start network variance, still fast enough to fail real outages cleanly.
+
 ## [7.0.1] — 2026-04-22
 
 ### Google Sign-In — diagnostic logging

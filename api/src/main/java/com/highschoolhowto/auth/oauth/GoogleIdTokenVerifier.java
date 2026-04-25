@@ -6,6 +6,7 @@ import com.nimbusds.jose.jwk.source.RemoteJWKSet;
 import com.nimbusds.jose.proc.JWSKeySelector;
 import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.util.DefaultResourceRetriever;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.proc.ConfigurableJWTProcessor;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
@@ -37,7 +38,11 @@ public class GoogleIdTokenVerifier {
     public GoogleIdTokenVerifier(String expectedClientId) {
         this.expectedClientId = expectedClientId;
         try {
-            JWKSource<SecurityContext> keySource = new RemoteJWKSet<>(new URL(GOOGLE_JWKS_URL));
+            // Nimbus's default RemoteJWKSet timeouts are 500 ms / 500 ms, which a cold App Runner
+            // container regularly blows past on its first DNS+TLS handshake to googleapis.com,
+            // poisoning the cache and breaking sign-in for the worker's lifetime.
+            DefaultResourceRetriever retriever = new DefaultResourceRetriever(3000, 3000);
+            JWKSource<SecurityContext> keySource = new RemoteJWKSet<>(new URL(GOOGLE_JWKS_URL), retriever);
             JWSKeySelector<SecurityContext> keySelector =
                     new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, keySource);
             ConfigurableJWTProcessor<SecurityContext> processor = new DefaultJWTProcessor<>();
