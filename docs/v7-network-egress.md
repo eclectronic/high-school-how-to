@@ -83,7 +83,6 @@ The VPC connector ARN (`arn:aws:apprunner:us-west-2:136022486206:vpcconnector/hi
 **Optional companion mitigations** (none of which gate this rollout):
 
 - Rotate the Postgres master password to a fresh 32+ char random string.
-- Move Postgres to a non-default port — **not feasible for existing RDS PostgreSQL instances**. Neither `modify-db-instance` nor parameter group modification supports a port change on RDS PostgreSQL (only Db2/Oracle). Would require creating a new RDS instance and migrating data.
 - Enable IAM database authentication so the application uses short-lived AWS-signed tokens instead of a long-lived password.
 
 ## Reversibility
@@ -106,7 +105,7 @@ aws apprunner update-service \
 
 ## Follow-ups
 
-- **`api/scripts/aws-apprunner-setup.sh`** still provisions a VPC connector for new environments. It should be rewritten to use default egress + a public-Postgres SG rule out of the box, so that re-running the script on a new account doesn't reproduce today's bug.
+- **`api/scripts/aws-apprunner-setup.sh`** ✓ Updated in 7.0.3 to use DEFAULT egress in the new-service spec, so re-running the script on a new account won't reproduce this bug.
 - **The 3-second JWKS-fetch timeout from 7.0.2** (`GoogleIdTokenVerifier.java`) is inert under this architecture — App Runner reaches Google's JWKS endpoint in under 100 ms via default egress. It is harmless and provides a small safety margin against cold-start network variance, so it is staying.
 - **Frontend error humanization** (`login.component.ts:95-108`) maps any 401 from either auth endpoint to "We could not match that email/password," which misdirected the early investigation. A small split — branching on which endpoint failed — would have shown "Google Sign-In failed" the first time and saved a step.
 - **Master password rotation** is a sensible companion to publishing the DB to the internet. Recommend doing this once with the new posture in place.
