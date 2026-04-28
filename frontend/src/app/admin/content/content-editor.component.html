@@ -17,12 +17,10 @@
       <div class="admin-card editor-section">
         <h2>Basic Info</h2>
 
-        @if (form.cardType !== 'TODO_LIST') {
-          <div class="form-row">
-            <label>Title</label>
-            <input [(ngModel)]="form.title" (input)="onTitleInput()" placeholder="Getting Your Driver's License" />
-          </div>
-        }
+        <div class="form-row">
+          <label>Title</label>
+          <input [(ngModel)]="form.title" (input)="onTitleInput()" placeholder="Getting Your Driver's License" />
+        </div>
 
         <div class="form-row">
           <label>Slug</label>
