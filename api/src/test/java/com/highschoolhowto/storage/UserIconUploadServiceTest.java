@@ -21,7 +21,7 @@ import org.springframework.mock.web.MockMultipartFile;
 class UserIconUploadServiceTest {
 
     @Mock
-    S3StorageService s3StorageService;
+    StorageService storageService;
 
     @InjectMocks
     UserIconUploadService service;
@@ -80,10 +80,10 @@ class UserIconUploadServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "icon.jpeg", "image/jpeg", TINY_JPEG);
         String prefix = "media/icons/" + USER_ID + "/";
-        when(s3StorageService.keyPrefix("icons/" + USER_ID + "/")).thenReturn(prefix);
-        when(s3StorageService.countObjects(prefix)).thenReturn(0);
-        when(s3StorageService.generateFilename(anyString())).thenReturn("abc.jpeg");
-        when(s3StorageService.upload(any(), eq("abc.jpeg"), eq("image/jpeg"), anyString()))
+        when(storageService.keyPrefix("icons/" + USER_ID + "/")).thenReturn(prefix);
+        when(storageService.countObjects(prefix)).thenReturn(0);
+        when(storageService.generateFilename(anyString())).thenReturn("abc.jpeg");
+        when(storageService.upload(any(), eq("abc.jpeg"), eq("image/jpeg"), anyString()))
                 .thenReturn("https://cdn.example.com/media/icons/" + USER_ID + "/abc.jpeg");
 
         String result = service.uploadIcon(file, USER_ID);
@@ -120,8 +120,8 @@ class UserIconUploadServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "icon.png", "image/png", new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47});
         String prefix = "media/icons/" + USER_ID + "/";
-        when(s3StorageService.keyPrefix("icons/" + USER_ID + "/")).thenReturn(prefix);
-        when(s3StorageService.countObjects(prefix))
+        when(storageService.keyPrefix("icons/" + USER_ID + "/")).thenReturn(prefix);
+        when(storageService.countObjects(prefix))
                 .thenReturn(UserIconUploadService.MAX_ICONS_PER_USER);
 
         assertThatThrownBy(() -> service.uploadIcon(file, USER_ID))
@@ -147,10 +147,10 @@ class UserIconUploadServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "icon.svg", "image/svg+xml", svgBytes);
         String prefix = "media/icons/" + USER_ID + "/";
-        when(s3StorageService.keyPrefix("icons/" + USER_ID + "/")).thenReturn(prefix);
-        when(s3StorageService.countObjects(prefix)).thenReturn(0);
-        when(s3StorageService.generateFilename(anyString())).thenReturn("abc.svg");
-        when(s3StorageService.upload(eq(svgBytes), eq("abc.svg"), eq("image/svg+xml"), anyString()))
+        when(storageService.keyPrefix("icons/" + USER_ID + "/")).thenReturn(prefix);
+        when(storageService.countObjects(prefix)).thenReturn(0);
+        when(storageService.generateFilename(anyString())).thenReturn("abc.svg");
+        when(storageService.upload(eq(svgBytes), eq("abc.svg"), eq("image/svg+xml"), anyString()))
                 .thenReturn("https://cdn.example.com/media/icons/" + USER_ID + "/abc.svg");
 
         String result = service.uploadIcon(file, USER_ID);

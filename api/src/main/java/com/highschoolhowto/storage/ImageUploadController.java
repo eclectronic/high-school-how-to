@@ -20,11 +20,11 @@ public class ImageUploadController {
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp", "image/svg+xml");
 
-    private final S3StorageService s3StorageService;
+    private final StorageService storageService;
     private final ThumbnailService thumbnailService;
 
-    public ImageUploadController(S3StorageService s3StorageService, ThumbnailService thumbnailService) {
-        this.s3StorageService = s3StorageService;
+    public ImageUploadController(StorageService storageService, ThumbnailService thumbnailService) {
+        this.storageService = storageService;
         this.thumbnailService = thumbnailService;
     }
 
@@ -33,14 +33,14 @@ public class ImageUploadController {
         validate(file);
         byte[] originalBytes = readBytes(file);
         String contentType = file.getContentType();
-        String filename = s3StorageService.generateFilename(extensionFor(contentType));
-        String imageUrl = s3StorageService.upload(originalBytes, filename, contentType, "images");
+        String filename = storageService.generateFilename(extensionFor(contentType));
+        String imageUrl = storageService.upload(originalBytes, filename, contentType, "images");
 
         // SVGs are not rasterizable by thumbnailator — skip thumbnail generation
         String thumbnailUrl = null;
         if (!"image/svg+xml".equals(contentType)) {
             byte[] thumbBytes = thumbnailService.generateThumbnail(originalBytes);
-            thumbnailUrl = s3StorageService.upload(thumbBytes, filename, "image/jpeg", "thumbs");
+            thumbnailUrl = storageService.upload(thumbBytes, filename, "image/jpeg", "thumbs");
         }
 
         return new ImageUploadResponse(imageUrl, thumbnailUrl);
@@ -56,8 +56,8 @@ public class ImageUploadController {
         validate(file);
         byte[] originalBytes = readBytes(file);
         String contentType = file.getContentType();
-        String filename = s3StorageService.generateFilename(extensionFor(contentType));
-        String imageUrl = s3StorageService.upload(originalBytes, filename, contentType, "content");
+        String filename = storageService.generateFilename(extensionFor(contentType));
+        String imageUrl = storageService.upload(originalBytes, filename, contentType, "content");
         return new ImageUploadResponse(imageUrl, null);
     }
 
@@ -70,8 +70,8 @@ public class ImageUploadController {
         validate(file);
         byte[] originalBytes = readBytes(file);
         String contentType = file.getContentType();
-        String filename = s3StorageService.generateFilename(extensionFor(contentType));
-        String imageUrl = s3StorageService.upload(originalBytes, filename, contentType, "badges");
+        String filename = storageService.generateFilename(extensionFor(contentType));
+        String imageUrl = storageService.upload(originalBytes, filename, contentType, "badges");
         return new ImageUploadResponse(imageUrl, null);
     }
 

@@ -35,3 +35,7 @@ auth:
 notifications:
   test:
     enabled: true
+
+storage:
+  local:
+    enabled: true

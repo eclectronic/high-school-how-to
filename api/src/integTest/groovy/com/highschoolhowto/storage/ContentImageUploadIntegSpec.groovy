@@ -33,7 +33,7 @@ class ContentImageUploadIntegSpec extends BaseIntegrationSpec {
     JwtService jwtService
 
     @MockBean
-    S3StorageService s3StorageService
+    StorageService storageService
 
     // A minimal valid 1x1 JPEG — same bytes used by UserIconUploadIntegSpec
     private static final byte[] TINY_JPEG = [
@@ -147,8 +147,8 @@ class ContentImageUploadIntegSpec extends BaseIntegrationSpec {
         def token = tokenFor(admin)
         def expectedUrl = "https://cdn.example.com/content/test-uuid.jpeg"
 
-        when(s3StorageService.generateFilename(anyString())).thenReturn("test-uuid.jpeg")
-        when(s3StorageService.upload(any(byte[].class), anyString(), anyString(), anyString()))
+        when(storageService.generateFilename(anyString())).thenReturn("test-uuid.jpeg")
+        when(storageService.upload(any(byte[].class), anyString(), anyString(), anyString()))
                 .thenReturn(expectedUrl)
 
         def file = new MockMultipartFile("file", "photo.jpeg", "image/jpeg", TINY_JPEG)

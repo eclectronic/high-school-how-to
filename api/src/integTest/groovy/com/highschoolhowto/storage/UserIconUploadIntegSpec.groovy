@@ -33,7 +33,7 @@ class UserIconUploadIntegSpec extends BaseIntegrationSpec {
     JwtService jwtService
 
     @MockBean
-    S3StorageService s3StorageService
+    StorageService storageService
 
     private User createActiveUser(String email) {
         def user = new User()
@@ -103,10 +103,10 @@ class UserIconUploadIntegSpec extends BaseIntegrationSpec {
         def token = tokenFor(user)
         def expectedUrl = "/media/icons/${user.id}/test-uuid.jpeg"
 
-        when(s3StorageService.keyPrefix(anyString())).thenReturn("media/icons/${user.id}/".toString())
-        when(s3StorageService.countObjects(anyString())).thenReturn(0)
-        when(s3StorageService.generateFilename(anyString())).thenReturn("test-uuid.jpeg")
-        when(s3StorageService.upload(any(byte[].class), anyString(), anyString(), anyString()))
+        when(storageService.keyPrefix(anyString())).thenReturn("media/icons/${user.id}/".toString())
+        when(storageService.countObjects(anyString())).thenReturn(0)
+        when(storageService.generateFilename(anyString())).thenReturn("test-uuid.jpeg")
+        when(storageService.upload(any(byte[].class), anyString(), anyString(), anyString()))
                 .thenReturn(expectedUrl.toString())
 
         def file = new MockMultipartFile("file", "icon.jpeg", "image/jpeg", TINY_JPEG)

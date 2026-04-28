@@ -28,10 +28,10 @@ public class UserIconUploadService {
     private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp", "image/svg+xml");
 
-    private final S3StorageService s3StorageService;
+    private final StorageService storageService;
 
-    public UserIconUploadService(S3StorageService s3StorageService) {
-        this.s3StorageService = s3StorageService;
+    public UserIconUploadService(StorageService storageService) {
+        this.storageService = storageService;
     }
 
     public String uploadIcon(MultipartFile file, UUID userId) {
@@ -46,9 +46,9 @@ public class UserIconUploadService {
                 ? bytes
                 : resize(bytes);
 
-        String filename = s3StorageService.generateFilename(extension);
+        String filename = storageService.generateFilename(extension);
         String subfolder = ICONS_SUBFOLDER + "/" + userId;
-        return s3StorageService.upload(toUpload, filename, contentType, subfolder);
+        return storageService.upload(toUpload, filename, contentType, subfolder);
     }
 
     private void validate(MultipartFile file) {
@@ -72,8 +72,8 @@ public class UserIconUploadService {
     }
 
     private void enforcePerUserLimit(UUID userId) {
-        String prefix = s3StorageService.keyPrefix(ICONS_SUBFOLDER + "/" + userId + "/");
-        int count = s3StorageService.countObjects(prefix);
+        String prefix = storageService.keyPrefix(ICONS_SUBFOLDER + "/" + userId + "/");
+        int count = storageService.countObjects(prefix);
         if (count >= MAX_ICONS_PER_USER) {
             throw new ApiException(
                     HttpStatus.UNPROCESSABLE_ENTITY,

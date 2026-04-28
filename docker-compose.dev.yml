@@ -27,6 +27,7 @@ services:
     volumes:
       - ./api:/workspace/api
       - gradle-cache:/home/gradle/.gradle
+      - ./media:/workspace/media
     ports:
       - "8080:8080"
     depends_on:

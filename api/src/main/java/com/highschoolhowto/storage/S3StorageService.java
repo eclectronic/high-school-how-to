@@ -1,10 +1,9 @@
 package com.highschoolhowto.storage;
 
 import com.highschoolhowto.config.StorageProperties;
-import java.io.IOException;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
@@ -14,7 +13,8 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
-public class S3StorageService {
+@ConditionalOnProperty(name = "storage.local.enabled", havingValue = "false", matchIfMissing = true)
+public class S3StorageService implements StorageService {
 
     private static final Logger log = LoggerFactory.getLogger(S3StorageService.class);
 
@@ -53,13 +53,6 @@ public class S3StorageService {
             log.error("Failed to upload to S3 key {}: {}", key, ex.getMessage(), ex);
             throw new StorageException("Failed to upload file to S3", ex);
         }
-    }
-
-    /**
-     * Generates a unique filename with the given extension.
-     */
-    public String generateFilename(String extension) {
-        return UUID.randomUUID() + "." + extension;
     }
 
     public String keyPrefix(String subfolder) {
