@@ -1,5 +1,17 @@
 # Changelog
 
+## [8.1.0] — 2026-04-28
+
+### TODO_LIST cards, local dev upload pipeline, and content sync script fixes
+
+TODO_LIST cards can now be created and published end-to-end from the admin editor. Two bugs that blocked saving were fixed: the title input is now always visible for all card types (it was previously hidden for TODO_LIST, requiring users to find a small pencil icon in the card preview), and the `@Pattern` constraint on `backgroundColor` and `textColor` was removed — the swatch picker emits gradient CSS values like `linear-gradient(…)` that the old hex-only pattern rejected. Save errors now surface field-level detail from the API's constraint violations rather than a generic "Save failed" message.
+
+On the how-to page, TODO_LIST cards without a thumbnail now show a mini task preview in place of the generic placeholder: a warm sticky-note background with up to four checklist items drawn from the card's template tasks. This makes to-do cards immediately recognisable in the grid.
+
+Image uploads in the local Docker dev environment now work correctly. Previously the admin editor always called the S3 upload path, which fails without AWS credentials. A `StorageService` interface was extracted and a `LocalStorageService` implementation added, activated by `storage.local.enabled=true` in `application-docker.yml`. The local service writes uploads to `./media/uploads/` on the host (via a new `./media:/workspace/media` volume mount on the API container). A companion `LocalMediaWebConfig` registers a Spring MVC resource handler so the API serves `/media/uploads/**` directly from disk, and the Angular dev proxy was updated to forward those paths to the API — necessary because the Angular esbuild dev server only picks up files in `public/` that exist at startup, not ones written at runtime. Unauthenticated access to `/media/uploads/**` is permitted in `SecurityConfig` for local dev.
+
+The content export and import scripts (`scripts/export-content.sh` and `scripts/import-content.sh`) were updated to match the current production schema. Fixes include: `quotes.quote_text` (was `body`), the badges table having no `code` column (now exports to a single `badges.json` keyed by `trigger_type`/`trigger_param`), `recommended_shortcuts.name` (was `label`, with new `emoji`, `category`, and `active` columns), and the removal of `page_layouts`/`page_layout_sections` which were dropped in v5.
+
 ## [8.0.0] — 2026-04-27
 
 ### Admin upgrades — multi-image infographics, locker-style TODO editor, and content sync
