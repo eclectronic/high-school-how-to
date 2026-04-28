@@ -67,6 +67,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/pages/home/layout").permitAll()
                         .requestMatchers("/api/quotes/today").permitAll()
                         .requestMatchers("/api/color-palette").permitAll()
+                        .requestMatchers("/media/uploads/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())

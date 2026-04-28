@@ -35,6 +35,18 @@
                    [src]="cardThumbnail(card)!"
                    [alt]="card.title"
                    loading="lazy" />
+            } @else if (card.cardType === 'TODO_LIST') {
+              <div class="content-card__thumb content-card__thumb--todo-preview"
+                   [style.background]="card.backgroundColor || null">
+                <ul class="todo-preview__list">
+                  @for (task of card.templateTasks.slice(0, 4); track task.id) {
+                    <li class="todo-preview__item">
+                      <span class="todo-preview__check">☐</span>
+                      <span class="todo-preview__text">{{ task.description }}</span>
+                    </li>
+                  }
+                </ul>
+              </div>
             } @else {
               <div class="content-card__thumb content-card__thumb--placeholder">
                 <span>{{ card.cardType[0] }}</span>
