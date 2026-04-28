@@ -1,10 +1,10 @@
-import { Component, OnInit, OnDestroy, HostListener, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, signal, computed, inject, ElementRef, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SiteNavComponent } from '../../shared/site-nav/site-nav.component';
 import { DomSanitizer, SafeHtml, SafeResourceUrl, Title } from '@angular/platform-browser';
 import { Subscription, switchMap } from 'rxjs';
 import { ContentApiService } from '../../core/services/content-api.service';
-import { CardType, ContentCard, LockerStatusResponse, cardTypeIcon } from '../../core/models/content.models';
+import { CardType, ContentCard, MediaUrlEntry, LockerStatusResponse, cardTypeIcon } from '../../core/models/content.models';
 import { SessionStore } from '../../core/session/session.store';
 
 @Component({
@@ -44,8 +44,33 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   protected navHintVisible = signal(false);
   private navHintTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // ── Infographic carousel ──────────────────────────────────────────────────────
+  @ViewChild('carouselTrack') carouselTrackRef?: ElementRef<HTMLDivElement>;
+
+  protected carouselIndex = signal(0);
+
+  /** Resolved mediaUrls list for the current INFOGRAPHIC card.
+   *  Falls back to synthesizing from the legacy scalar fields when mediaUrls is absent or empty.
+   */
+  protected readonly mediaUrls = computed((): MediaUrlEntry[] => {
+    const card = this.card();
+    if (!card || card.cardType !== 'INFOGRAPHIC') return [];
+    if (card.mediaUrls?.length) return card.mediaUrls;
+    if (card.mediaUrl) return [{ url: card.mediaUrl, printUrl: card.printMediaUrl ?? null, alt: null }];
+    return [];
+  });
+
+  protected readonly isMultiImage = computed(() => this.mediaUrls().length > 1);
+
+  /** Print URL for the currently visible inline slide. */
+  protected readonly currentPrintUrl = computed(() => {
+    const entries = this.mediaUrls();
+    return entries[this.carouselIndex()]?.printUrl ?? null;
+  });
+
   // ── Infographic lightbox ─────────────────────────────────────────────────────
   protected lightboxOpen = signal(false);
+  protected lightboxIndex = signal(0);
   protected lightboxZoom = signal(1);
   protected lightboxPanX = signal(0);
   protected lightboxPanY = signal(0);
@@ -58,6 +83,17 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
     () => `translate(${this.lightboxPanX()}px, ${this.lightboxPanY()}px) scale(${this.lightboxZoom()})`,
   );
   protected lightboxZoomPercent = computed(() => Math.round(this.lightboxZoom() * 100));
+
+  protected readonly lightboxCurrentEntry = computed((): MediaUrlEntry | null => {
+    const entries = this.mediaUrls();
+    if (!entries.length) {
+      const card = this.card();
+      return card?.mediaUrl ? { url: card.mediaUrl, printUrl: card.printMediaUrl ?? null, alt: null } : null;
+    }
+    return entries[this.lightboxIndex()] ?? null;
+  });
+
+  protected readonly lightboxPrintUrl = computed(() => this.lightboxCurrentEntry()?.printUrl ?? null);
 
   /** True when the card should render without nav arrows, back link, or tag header. */
   protected simpleLayout = computed(() => {
@@ -137,6 +173,7 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
           next: (card) => {
             this.card.set(card);
             this.lockerStatus.set(null);
+            this.carouselIndex.set(0);
             if (card.cardType === 'VIDEO' && card.mediaUrl) {
               this.safeEmbed.set(
                 this.sanitizer.bypassSecurityTrustResourceUrl(this.buildEmbedUrl(card.mediaUrl)),
@@ -205,14 +242,18 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   protected onKeydown(event: KeyboardEvent): void {
-    // Never fire when typing in a form field
     if (
       event.target instanceof HTMLInputElement ||
       event.target instanceof HTMLTextAreaElement
     ) return;
 
     if (this.lightboxOpen()) {
-      if (event.key === 'Escape') this.closeLightbox();
+      if (event.key === 'Escape') { this.closeLightbox(); return; }
+      if (event.key === 'ArrowLeft') { this.lightboxPrevSlide(); return; }
+      if (event.key === 'ArrowRight') { this.lightboxNextSlide(); return; }
+      if (event.key === '+') { this.lightboxZoomIn(); return; }
+      if (event.key === '-') { this.lightboxZoomOut(); return; }
+      if (event.key === '0') { this.lightboxResetZoom(); return; }
       return;
     }
 
@@ -223,6 +264,7 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   // ── Infographic lightbox ─────────────────────────────────────────────────────
 
   protected openLightbox(): void {
+    this.lightboxIndex.set(this.carouselIndex());
     this.lightboxOpen.set(true);
     this.lightboxZoom.set(1);
     this.lightboxPanX.set(0);
@@ -234,6 +276,54 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
     this.lightboxOpen.set(false);
     this.lightboxDragging.set(false);
     document.body.classList.remove('lightbox-open');
+  }
+
+  // ── Carousel ──────────────────────────────────────────────────────────────────
+
+  protected setCarouselIndex(i: number): void {
+    const len = this.mediaUrls().length;
+    if (i < 0 || i >= len) return;
+    this.carouselIndex.set(i);
+    this.scrollCarouselTo(i);
+  }
+
+  protected carouselPrev(): void {
+    this.setCarouselIndex(this.carouselIndex() - 1);
+  }
+
+  protected carouselNext(): void {
+    this.setCarouselIndex(this.carouselIndex() + 1);
+  }
+
+  private scrollCarouselTo(index: number): void {
+    const track = this.carouselTrackRef?.nativeElement;
+    if (!track) return;
+    const slideWidth = track.offsetWidth;
+    track.scrollTo({ left: slideWidth * index, behavior: 'smooth' });
+  }
+
+  protected onCarouselScroll(event: Event): void {
+    const track = event.target as HTMLDivElement;
+    const index = Math.round(track.scrollLeft / track.offsetWidth);
+    if (index !== this.carouselIndex()) {
+      this.carouselIndex.set(index);
+    }
+  }
+
+  // ── Lightbox slide navigation ────────────────────────────────────────────────
+
+  protected lightboxPrevSlide(): void {
+    if (this.lightboxIndex() > 0) {
+      this.lightboxIndex.update((i) => i - 1);
+      this.lightboxResetZoom();
+    }
+  }
+
+  protected lightboxNextSlide(): void {
+    if (this.lightboxIndex() < this.mediaUrls().length - 1) {
+      this.lightboxIndex.update((i) => i + 1);
+      this.lightboxResetZoom();
+    }
   }
 
   protected lightboxZoomIn(): void {

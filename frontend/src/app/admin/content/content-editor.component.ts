@@ -4,17 +4,22 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ContentApiService } from '../../core/services/content-api.service';
 import {
   Tag,
   CardType,
   CardStatus,
+  MediaUrlEntry,
   SaveCardRequest,
   ContentCardLinkRequest,
   ContentCardSummary,
   cardTypeIcon,
 } from '../../core/models/content.models';
 import { TiptapEditorComponent } from './tiptap-editor.component';
+import { InlineTitleEditComponent } from '../../shared/inline-title-edit/inline-title-edit.component';
+import { SwatchPickerComponent } from '../../shared/swatch-picker/swatch-picker.component';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 interface LinkDraft {
   targetCardId: number;
@@ -33,8 +38,8 @@ interface CardForm {
   description: string;
   cardType: CardType;
   status: CardStatus;
-  mediaUrl: string;
-  printMediaUrl: string;
+  mediaUrl: string;        // VIDEO only
+  printMediaUrl: string;   // VIDEO only (legacy; INFOGRAPHIC uses mediaUrls signal)
   thumbnailUrl: string;
   coverImageUrl: string;
   backgroundColor: string;
@@ -46,7 +51,15 @@ interface CardForm {
 @Component({
   selector: 'app-content-editor',
   standalone: true,
-  imports: [FormsModule, RouterLink, TiptapEditorComponent],
+  imports: [
+    FormsModule,
+    RouterLink,
+    DragDropModule,
+    TiptapEditorComponent,
+    InlineTitleEditComponent,
+    SwatchPickerComponent,
+    ConfirmDialogComponent,
+  ],
   templateUrl: './content-editor.component.html',
   styleUrl: './content-editor.component.scss',
 })
@@ -82,6 +95,15 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
   protected templateTasks = signal<TemplateTaskForm[]>([]);
   protected newTaskDescription = '';
 
+  // Multi-image infographic entries
+  protected mediaUrls = signal<MediaUrlEntry[]>([]);
+  protected deleteMediaIndex = signal<number | null>(null);
+
+  // TODO_LIST locker-style editor state
+  protected showBgSwatchPicker = signal(false);
+  protected showTextSwatchPicker = signal(false);
+  protected deleteTaskIndex = signal<number | null>(null);
+
   // Related content links
   protected links: LinkDraft[] = [];
   protected linkSearchQuery = '';
@@ -104,12 +126,26 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
     return this.bodyHtml ? this.sanitizer.bypassSecurityTrustHtml(this.bodyHtml) : null;
   }
 
+  protected toolbarBg(color: string | null | undefined): string {
+    if (!color) return 'rgba(255, 255, 255, 0.35)';
+    return `color-mix(in srgb, ${color} 88%, #000)`;
+  }
+
+  protected toggleBgSwatchPicker(event: Event): void {
+    event.stopPropagation();
+    this.showBgSwatchPicker.update((v) => !v);
+  }
+
+  protected toggleTextSwatchPicker(event: Event): void {
+    event.stopPropagation();
+    this.showTextSwatchPicker.update((v) => !v);
+  }
+
   ngOnInit() {
     this.api.adminListTags().subscribe({
       next: (tags) => this.allTags.set(tags.sort((a, b) => a.name.localeCompare(b.name))),
     });
 
-    // Wire up typeahead search with debounce
     this.subs.add(
       this.linkSearch$
         .pipe(
@@ -157,7 +193,6 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
           };
           this.bodyJson = card.bodyJson;
           this.bodyHtml = card.bodyHtml;
-          // Load existing links
           this.links = (card.links ?? []).map((l) => ({
             targetCardId: l.targetCardId,
             targetTitle: l.targetTitle,
@@ -165,6 +200,15 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
             linkText: l.linkText === l.targetTitle ? '' : l.linkText,
           }));
           this.templateTasks.set((card.templateTasks ?? []).map((t) => ({ description: t.description })));
+          // Load mediaUrls with defensive fallback for INFOGRAPHIC
+          if (card.cardType === 'INFOGRAPHIC') {
+            const entries = card.mediaUrls?.length
+              ? card.mediaUrls
+              : card.mediaUrl
+                ? [{ url: card.mediaUrl, printUrl: card.printMediaUrl ?? null, alt: null }]
+                : [];
+            this.mediaUrls.set(entries);
+          }
           this.loading.set(false);
         },
         error: () => {
@@ -214,7 +258,6 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
   protected readonly cardTypeIcon = cardTypeIcon;
 
   protected hideLinkDropdown() {
-    // Delay to allow click on dropdown items to fire first
     setTimeout(() => this.showLinkDropdown.set(false), 150);
   }
 
@@ -229,20 +272,39 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
     }
   }
 
+  protected onTodoTitleChange(title: string): void {
+    this.form.title = title;
+    this.onTitleInput();
+  }
+
   protected onEditorChange(event: { json: string; html: string }) {
     this.bodyJson = event.json;
     this.bodyHtml = event.html;
   }
 
+  // ── Template tasks ────────────────────────────────────────────────────────
+
   protected addTemplateTask() {
     const desc = this.newTaskDescription.trim();
-    if (!desc) return;
+    if (!desc || this.templateTasks().length >= 50) return;
     this.templateTasks.update((tasks) => [...tasks, { description: desc }]);
     this.newTaskDescription = '';
   }
 
-  protected removeTemplateTask(index: number) {
-    this.templateTasks.update((tasks) => tasks.filter((_, i) => i !== index));
+  protected confirmDeleteTask(index: number): void {
+    this.deleteTaskIndex.set(index);
+  }
+
+  protected onDeleteTaskConfirmed(): void {
+    const i = this.deleteTaskIndex();
+    if (i !== null) {
+      this.templateTasks.update((tasks) => tasks.filter((_, idx) => idx !== i));
+      this.deleteTaskIndex.set(null);
+    }
+  }
+
+  protected onDeleteTaskCancelled(): void {
+    this.deleteTaskIndex.set(null);
   }
 
   protected updateTemplateTask(index: number, description: string) {
@@ -251,14 +313,82 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
     );
   }
 
-  protected moveTemplateTask(index: number, direction: -1 | 1) {
-    const tasks = this.templateTasks();
-    const target = index + direction;
-    if (target < 0 || target >= tasks.length) return;
-    const updated = [...tasks];
-    [updated[index], updated[target]] = [updated[target], updated[index]];
-    this.templateTasks.set(updated);
+  protected onTaskDrop(event: CdkDragDrop<TemplateTaskForm[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    this.templateTasks.update((tasks) => {
+      const updated = [...tasks];
+      moveItemInArray(updated, event.previousIndex, event.currentIndex);
+      return updated;
+    });
   }
+
+  // ── Multi-image infographic entries ──────────────────────────────────────
+
+  protected addMediaUrl(): void {
+    this.mediaUrls.update((entries) => [...entries, { url: '', printUrl: null, alt: null }]);
+  }
+
+  protected updateMediaEntryAlt(index: number, alt: string): void {
+    this.mediaUrls.update((entries) => entries.map((e, i) => (i === index ? { ...e, alt: alt || null } : e)));
+  }
+
+  protected confirmDeleteMedia(index: number): void {
+    this.deleteMediaIndex.set(index);
+  }
+
+  protected onDeleteMediaConfirmed(): void {
+    const i = this.deleteMediaIndex();
+    if (i !== null) {
+      this.mediaUrls.update((entries) => entries.filter((_, idx) => idx !== i));
+      this.deleteMediaIndex.set(null);
+    }
+  }
+
+  protected onDeleteMediaCancelled(): void {
+    this.deleteMediaIndex.set(null);
+  }
+
+  protected onMediaDrop(event: CdkDragDrop<MediaUrlEntry[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    this.mediaUrls.update((entries) => {
+      const updated = [...entries];
+      moveItemInArray(updated, event.previousIndex, event.currentIndex);
+      return updated;
+    });
+  }
+
+  protected uploadMediaFile(event: Event, entryIndex: number, field: 'url' | 'printUrl'): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.uploadingImage.set(true);
+    this.api.adminUploadImage(file).subscribe({
+      next: (res) => {
+        this.mediaUrls.update((entries) =>
+          entries.map((e, i) =>
+            i === entryIndex
+              ? { ...e, [field]: field === 'url' ? (res.thumbnailUrl ?? res.url) : res.url }
+              : e,
+          ),
+        );
+        // Mirror first entry back into the legacy form field for display
+        const first = this.mediaUrls()[0];
+        if (entryIndex === 0 && first) {
+          this.form.mediaUrl = first.url;
+          this.form.printMediaUrl = first.printUrl ?? '';
+        }
+        this.uploadingImage.set(false);
+        input.value = '';
+      },
+      error: () => {
+        this.error.set('Image upload failed');
+        this.uploadingImage.set(false);
+      },
+    });
+  }
+
+  // ── Thumbnail / cover image upload ────────────────────────────────────────
 
   protected toggleTag(tagId: number) {
     if (this.form.tagIds.has(tagId)) {
@@ -290,9 +420,16 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ── Save ─────────────────────────────────────────────────────────────────
+
   protected save() {
     if (!this.form.tagIds.size) {
       this.error.set('Select at least one tag');
+      return;
+    }
+
+    if (this.form.cardType === 'TODO_LIST' && this.templateTasks().length === 0) {
+      this.error.set('TODO_LIST cards require at least one template task');
       return;
     }
 
@@ -302,9 +439,16 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
       sortOrder: i,
     }));
 
-    if (this.form.cardType === 'TODO_LIST' && this.templateTasks().length === 0) {
-      this.error.set('TODO_LIST cards require at least one template task');
-      return;
+    let mediaUrl: string | null = null;
+    let printMediaUrl: string | null = null;
+    let mediaUrlsList: MediaUrlEntry[] | null = null;
+
+    if (this.form.cardType === 'INFOGRAPHIC') {
+      mediaUrlsList = this.mediaUrls();
+      mediaUrl = mediaUrlsList[0]?.url || null;
+      printMediaUrl = mediaUrlsList[0]?.printUrl ?? null;
+    } else if (this.form.cardType !== 'TODO_LIST') {
+      mediaUrl = this.form.mediaUrl || null;
     }
 
     const req: SaveCardRequest = {
@@ -312,12 +456,13 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
       slug: this.form.slug,
       description: this.form.description || null,
       cardType: this.form.cardType,
-      mediaUrl: this.form.cardType === 'TODO_LIST' ? null : this.form.mediaUrl || null,
-      printMediaUrl: this.form.cardType === 'TODO_LIST' ? null : this.form.printMediaUrl || null,
+      mediaUrl,
+      printMediaUrl,
+      mediaUrls: mediaUrlsList,
       thumbnailUrl: this.form.thumbnailUrl || null,
       coverImageUrl: this.form.coverImageUrl || null,
-      bodyJson: this.form.cardType === 'TODO_LIST' ? null : this.bodyJson,
-      bodyHtml: this.form.cardType === 'TODO_LIST' ? null : this.bodyHtml,
+      bodyJson: this.form.cardType === 'ARTICLE' ? this.bodyJson : null,
+      bodyHtml: this.form.cardType === 'ARTICLE' ? this.bodyHtml : null,
       backgroundColor: this.form.backgroundColor || null,
       textColor: this.form.textColor || null,
       simpleLayout: this.form.simpleLayout,

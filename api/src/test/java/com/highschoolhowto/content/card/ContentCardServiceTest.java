@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.highschoolhowto.content.tag.Tag;
 import com.highschoolhowto.content.tag.TagRepository;
 import com.highschoolhowto.tasks.TaskItem;
 import com.highschoolhowto.tasks.TaskList;
@@ -24,6 +25,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -232,7 +234,7 @@ class ContentCardServiceTest {
     void create_todoList_requiresTemplateTasks() {
         SaveCardRequest request = new SaveCardRequest(
                 "Checklist", "checklist", null, CardType.TODO_LIST,
-                null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
                 false, CardStatus.DRAFT, List.of(1L), null, null);
 
         when(cardRepository.existsBySlug("checklist")).thenReturn(false);
@@ -254,7 +256,7 @@ class ContentCardServiceTest {
         }
         SaveCardRequest request = new SaveCardRequest(
                 "Checklist", "checklist", null, CardType.TODO_LIST,
-                null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
                 false, CardStatus.DRAFT, List.of(1L), null, tasks);
 
         when(cardRepository.existsBySlug("checklist")).thenReturn(false);
@@ -263,5 +265,96 @@ class ContentCardServiceTest {
         assertThatThrownBy(() -> service.create(request))
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> assertThat(((ApiException) e).getStatus()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    // --- INFOGRAPHIC multi-image ---
+
+    private Tag makeTag(Long id, String slug) {
+        Tag tag = new Tag();
+        tag.setSlug(slug);
+        tag.setName(slug);
+        return tag;
+    }
+
+    @Test
+    void create_infographic_storesMediaUrlsAndMirrorsFirstEntry() {
+        List<MediaUrlEntry> entries = List.of(
+                new MediaUrlEntry("/media/img1.jpg", "/media/img1.pdf", "Step 1"),
+                new MediaUrlEntry("/media/img2.jpg", null, "Step 2"));
+        SaveCardRequest request = new SaveCardRequest(
+                "My Guide", "my-guide", null, CardType.INFOGRAPHIC,
+                null, null, entries, null, null, null, null, null, null,
+                false, CardStatus.DRAFT, List.of(1L), null, null);
+
+        Tag tag = makeTag(1L, "guides");
+        when(cardRepository.existsBySlug("my-guide")).thenReturn(false);
+        when(tagRepository.findAllById(List.of(1L))).thenReturn(List.of(tag));
+
+        ArgumentCaptor<ContentCard> captor = ArgumentCaptor.forClass(ContentCard.class);
+        when(cardRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.create(request);
+
+        ContentCard saved = captor.getValue();
+        assertThat(saved.getMediaUrls()).hasSize(2);
+        assertThat(saved.getMediaUrls().get(0).url()).isEqualTo("/media/img1.jpg");
+        assertThat(saved.getMediaUrls().get(0).printUrl()).isEqualTo("/media/img1.pdf");
+        assertThat(saved.getMediaUrls().get(1).url()).isEqualTo("/media/img2.jpg");
+        // Legacy scalar mirrors first entry
+        assertThat(saved.getMediaUrl()).isEqualTo("/media/img1.jpg");
+        assertThat(saved.getPrintMediaUrl()).isEqualTo("/media/img1.pdf");
+        // No body content on infographics
+        assertThat(saved.getBodyJson()).isNull();
+        assertThat(saved.getBodyHtml()).isNull();
+    }
+
+    @Test
+    void create_infographic_backCompat_synthesizesMediaUrlsFromLegacyScalars() {
+        // Old admin client: no mediaUrls list, only legacy scalar fields
+        SaveCardRequest request = new SaveCardRequest(
+                "Old Style", "old-style", null, CardType.INFOGRAPHIC,
+                "/media/legacy.jpg", "/media/legacy.pdf", null,
+                null, null, null, null, null, null,
+                false, CardStatus.DRAFT, List.of(1L), null, null);
+
+        Tag tag = makeTag(1L, "guides");
+        when(cardRepository.existsBySlug("old-style")).thenReturn(false);
+        when(tagRepository.findAllById(List.of(1L))).thenReturn(List.of(tag));
+
+        ArgumentCaptor<ContentCard> captor = ArgumentCaptor.forClass(ContentCard.class);
+        when(cardRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.create(request);
+
+        ContentCard saved = captor.getValue();
+        assertThat(saved.getMediaUrls()).hasSize(1);
+        assertThat(saved.getMediaUrls().get(0).url()).isEqualTo("/media/legacy.jpg");
+        assertThat(saved.getMediaUrls().get(0).printUrl()).isEqualTo("/media/legacy.pdf");
+        assertThat(saved.getMediaUrls().get(0).alt()).isNull();
+        assertThat(saved.getMediaUrl()).isEqualTo("/media/legacy.jpg");
+        assertThat(saved.getPrintMediaUrl()).isEqualTo("/media/legacy.pdf");
+    }
+
+    @Test
+    void create_todoList_clearsMediaUrls() {
+        SaveCardRequest request = new SaveCardRequest(
+                "My List", "my-list", null, CardType.TODO_LIST,
+                null, null, null, null, null, null, null, null, null,
+                false, CardStatus.DRAFT, List.of(1L), null,
+                List.of(new ContentCardTaskRequest("Task A")));
+
+        Tag tag = makeTag(1L, "life-skills");
+        when(cardRepository.existsBySlug("my-list")).thenReturn(false);
+        when(tagRepository.findAllById(List.of(1L))).thenReturn(List.of(tag));
+
+        ArgumentCaptor<ContentCard> captor = ArgumentCaptor.forClass(ContentCard.class);
+        when(cardRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.create(request);
+
+        ContentCard saved = captor.getValue();
+        assertThat(saved.getMediaUrls()).isEmpty();
+        assertThat(saved.getMediaUrl()).isNull();
+        assertThat(saved.getPrintMediaUrl()).isNull();
     }
 }

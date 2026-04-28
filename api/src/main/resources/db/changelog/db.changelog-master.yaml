@@ -121,3 +121,7 @@ databaseChangeLog:
       file: db/changelog/v7-grey-palette-0076.sql
   - include:
       file: db/changelog/v7-tasklist-order-0077.sql
+  - include:
+      file: db/changelog/v8-multi-image-infographics-0078.sql
+  - include:
+      file: db/changelog/v8-export-db-role-0079.sql

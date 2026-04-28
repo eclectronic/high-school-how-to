@@ -1,5 +1,15 @@
 # Changelog
 
+## [8.0.0] — 2026-04-27
+
+### Admin upgrades — multi-image infographics, locker-style TODO editor, and content sync
+
+The admin content editor has been substantially rebuilt. Infographic cards now support multiple images in a single card: the editor manages an ordered list of image/print-URL/alt-text entries with drag-to-reorder and per-entry upload buttons, while the viewer displays them as a swipe carousel with chevron navigation, dot indicators, and a per-image lightbox. The lightbox supports multi-slide navigation, zoom, and pan. Legacy single-image infographics continue to work without any data migration — the API synthesizes the new format from the existing scalar fields on the way out, and the viewer falls back gracefully on the way in.
+
+The TODO_LIST editor branch has been rebuilt to match the locker's card-preview style: an inline title editor, swatch-picker buttons for background and text color, drag-to-reorder tasks with confirm-on-delete, and a 50-task maximum enforced in both directions. The standalone title input is hidden for TODO_LIST cards; the inline title edit in the preview card drives both the title and the slug auto-generation.
+
+A content-sync facility was added to turn the repository into a versioned snapshot of all admin-authored data. `scripts/export-content.sh` reads the prod database (via a dedicated read-only export role) and both S3 buckets, writing per-slug JSON files under `data/` and mirroring media under `media/`. `scripts/import-content.sh --target local|prod` truncates and re-inserts all content tables in a single transaction, optionally syncing media to S3. The `hshowto_export` Postgres role is provisioned automatically by a Liquibase changeset on app startup, reading its password from the `HIGHSCHOOLHOWTO_DB_EXPORT_PROD_PASSWORD` secret.
+
 ## [7.0.3] — 2026-04-25
 
 ### Networking — App Runner default egress + public Postgres

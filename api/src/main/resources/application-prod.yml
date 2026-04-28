@@ -1,6 +1,9 @@
 spring:
   datasource:
     url: jdbc:postgresql://highschoolhowto.c388sauoez7e.us-west-2.rds.amazonaws.com:5432/highschoolhowto?sslmode=require
+  liquibase:
+    parameters:
+      EXPORT_DB_PASSWORD: ${HIGHSCHOOLHOWTO_DB_EXPORT_PROD_PASSWORD}
 
 notifications:
   ses:

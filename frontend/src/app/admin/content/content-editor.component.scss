@@ -305,5 +305,344 @@
   &:disabled { opacity: 0.6; cursor: not-allowed; }
   &--primary { background: linear-gradient(90deg, #ff9966, #ff5c77); color: #fff; }
   &--secondary { background: #f0e8d8; color: #2d1a10; }
+  &--danger { background: rgba(186, 26, 26, 0.12); color: #7a1c1c; }
   &--sm { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
+}
+
+// ── Multi-image infographic list editor ────────────────────────────────────────
+
+.media-url-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+
+  &__track {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__add {
+    align-self: flex-start;
+  }
+}
+
+.media-url-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #fafafa;
+  border: 1px solid rgba(45, 26, 16, 0.15);
+  border-radius: 10px;
+
+  &__drag {
+    cursor: grab;
+    color: rgba(45, 26, 16, 0.35);
+    font-size: 0.9rem;
+    user-select: none;
+    flex-shrink: 0;
+    letter-spacing: -2px;
+
+    &:active { cursor: grabbing; }
+  }
+
+  &__preview {
+    flex-shrink: 0;
+    width: 72px;
+    height: 54px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #e8e0d4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  &__no-img {
+    font-size: 0.7rem;
+    color: #8f7f73;
+    text-align: center;
+    padding: 0.25rem;
+  }
+
+  &__fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  &__uploads {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  &__print-set {
+    font-size: 0.75rem;
+    color: #22c55e;
+    font-weight: 600;
+  }
+
+  &__alt-input {
+    border: 1px solid rgba(45, 26, 16, 0.2);
+    border-radius: 6px;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.875rem;
+    font-family: inherit;
+    background: #fff;
+    width: 100%;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: #ff9966;
+    }
+  }
+
+  &__delete {
+    flex-shrink: 0;
+  }
+}
+
+// CDK drag placeholder for media items
+.media-url-list__track .cdk-drag-preview {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+}
+.media-url-list__track .cdk-drag-placeholder {
+  opacity: 0.3;
+}
+
+// ── TODO_LIST locker-style editor ──────────────────────────────────────────────
+
+.todo-editor-section {
+  position: relative;
+}
+
+.todo-editor-preview {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(45, 26, 16, 0.15);
+  transition: background 0.2s, color 0.2s;
+  font-size: 0.9rem;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(8px);
+  }
+
+  &__title {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: inherit;
+    min-width: 0;
+  }
+
+  &__tasks {
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-height: 60px;
+  }
+
+  &__empty {
+    color: inherit;
+    opacity: 0.5;
+    font-style: italic;
+    font-size: 0.85rem;
+    text-align: center;
+    margin: 0.75rem 0;
+  }
+}
+
+// Color swatch buttons in the todo preview header
+.todo-swatch-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.12s;
+
+  &:hover { transform: scale(1.15); }
+
+  &--text {
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+}
+
+// Reuse todo-task styles from locker (mirrored here)
+.todo-task {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+
+  &__drag-handle {
+    width: 0.9rem;
+    color: inherit;
+    opacity: 0.3;
+    cursor: grab;
+    font-size: 0.9rem;
+    user-select: none;
+    flex-shrink: 0;
+    letter-spacing: -2px;
+
+    &:active { cursor: grabbing; }
+
+    .todo-task:hover & { opacity: 0.7; }
+  }
+
+  &__desc {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.875rem;
+    color: inherit;
+  }
+
+  &__delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: #aaa;
+    padding: 0.15rem 0.3rem;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.12s, color 0.12s;
+
+    .todo-task:hover & { opacity: 1; }
+
+    &:hover { color: #e53e3e; }
+  }
+}
+
+// CDK drag states for todo tasks in the editor
+.todo-editor-preview__tasks .cdk-drag-preview {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  border-radius: 7px;
+}
+.todo-editor-preview__tasks .cdk-drag-placeholder {
+  opacity: 0.3;
+}
+.todo-editor-preview__tasks.cdk-drop-list-dragging .todo-task:not(.cdk-drag-placeholder) {
+  transition: transform 220ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// Add-task row (same as locker)
+.todo-app__add-task {
+  display: flex;
+  gap: 0.4rem;
+  padding-top: 0.4rem;
+  margin-top: 0.1rem;
+}
+
+.todo-app__task-input {
+  flex: 1;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.6);
+  color: #2d1a10;
+  outline: none;
+
+  &:focus { border-color: rgba(0, 0, 0, 0.5); }
+}
+
+.todo-app__add-task-btn {
+  background: #22c55e;
+  border: none;
+  color: #fff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.9;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+
+  &:hover:not(:disabled) {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+.todo-editor__max-msg {
+  font-size: 0.8rem;
+  color: inherit;
+  opacity: 0.65;
+  font-style: italic;
+  margin: 0.5rem 0;
+  text-align: center;
+}
+
+// Color picker overlay for TODO_LIST editor
+.todo-editor-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 254, 248, 0.82);
+  backdrop-filter: blur(3px);
+  border-radius: 12px;
+}
+
+.todo-editor-overlay__card {
+  background: #fffef8;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(45, 26, 16, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.todo-editor-overlay__title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2d1a10;
 }

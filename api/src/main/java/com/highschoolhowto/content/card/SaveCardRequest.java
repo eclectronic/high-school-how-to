@@ -15,6 +15,7 @@ public record SaveCardRequest(
         @NotNull CardType cardType,
         String mediaUrl,
         String printMediaUrl,
+        List<MediaUrlEntry> mediaUrls,
         String thumbnailUrl,
         String coverImageUrl,
         String bodyJson,

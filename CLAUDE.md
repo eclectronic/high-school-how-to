@@ -185,6 +185,56 @@ Content images (infographics, thumbnails, cover images) live in the top-level `m
   Helper scripts are also available: `frontend/scripts/deploy-prod.sh` (push) and `frontend/scripts/pull-media.sh` (pull).
 - **Adding new media**: Drop files into `media/` (commit them), then use the admin content editor to set the card's media URL to `/media/path/to/file.jpg` (local) or the absolute CloudFront URL (prod).
 
+### Content Sync
+
+Production DB and S3 are the source of truth for admin-authored content. A pair of scripts in `scripts/` turn the repo into a versioned snapshot that enables local dev against realistic data and disaster recovery.
+
+```
+Prod DB + S3  ──export-content.sh──►  ./data/*.json + ./media/*  ──import-content.sh──►  Local or fresh prod DB
+```
+
+**Typical flow**: author via prod admin UI → run `scripts/export-content.sh` → review JSON diff → commit `data/` + any new media → others run `scripts/import-content.sh --target local`.
+
+**Disaster recovery**: run `scripts/import-content.sh --target prod` against a freshly-provisioned RDS + empty S3 to restore the full content library from the most recent commit.
+
+#### Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/export-content.sh` | Reads prod DB (via `PROD_EXPORT_DB_URL` in `~/docker.env`) and both S3 buckets, writes `./data/` JSON files and syncs `./media/`. |
+| `scripts/import-content.sh --target local\|prod` | Reads `./data/` + `./media/`, truncates and re-inserts in a single transaction. `--target prod` also syncs media to S3 and requires typed confirmation twice. |
+
+The `hshowto_export` Postgres role is provisioned automatically by Liquibase changeset `v8-export-db-role-0079.sql` when the app starts in the `prod` profile. It reads the password from the `HIGHSCHOOLHOWTO_DB_EXPORT_PROD_PASSWORD` environment variable (set in Secrets Manager). Add `PROD_EXPORT_DB_URL=postgresql://hshowto_export:<password>@<host>:5432/highschoolhowto` to `~/docker.env` to enable export scripts.
+
+#### Data layout
+
+```
+data/
+  content-cards/    # one JSON file per card (filename = slug)
+  tags/             # one JSON file per tag (filename = slug)
+  page-layouts/     # one JSON file per layout (filename = name-as-slug)
+  quotes/           # quotes.json (all rows)
+  badges/           # one JSON file per badge (filename = code)
+  recommended-shortcuts/  # shortcuts.json (all rows)
+```
+
+Child rows (tags, links, template tasks) are denormalized into the parent card file. Tag references use slug strings so a rename only touches one file.
+
+#### Tables in scope (synced)
+
+`content_cards`, `content_card_links`, `content_card_tags`, `content_card_tasks`, `tags`, `page_layouts`, `page_layout_sections`, `quotes`, `badges`, `recommended_shortcuts`
+
+User-owned tables (`app_users`, `tasks`, `bookmarks`, etc.) are **not** synced — they remain isolated per environment.
+
+#### Image buckets
+
+| S3 location | Local mirror | Notes |
+|---|---|---|
+| `s3://highschoolhowto/prod/media/` | `./media/` (excluding `uploads/`) | Curated infographic images. |
+| `s3://highschoolhowto-site/uploads/` | `./media/uploads/` | Admin-uploaded images (thumbnails, content images). |
+
+Both are under `./media/` so the Docker dev-server mount (`./media` → `/workspace/frontend/public/media`) serves them without extra wiring.
+
 ### Backend
 
 - **Framework**: Spring Boot 3.3, Java 21, Gradle

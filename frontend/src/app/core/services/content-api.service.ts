@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { map } from 'rxjs/operators';
 import {
   ContentCard,
   ContentCardAdmin,
@@ -7,6 +8,7 @@ import {
   HomeLayoutResponse,
   ImageUploadResponse,
   LockerStatusResponse,
+  MediaUrlEntry,
   SaveCardRequest,
   SaveTagRequest,
   Tag,
@@ -19,11 +21,15 @@ export class ContentApiService {
 
   // Public
   getPublishedCards() {
-    return this.http.get<ContentCard[]>('/api/content/cards');
+    return this.http.get<ContentCard[]>('/api/content/cards').pipe(
+      map((cards) => cards.map(normalizeMediaUrls)),
+    );
   }
 
   getCardBySlug(slug: string) {
-    return this.http.get<ContentCard>(`/api/content/cards/${slug}`);
+    return this.http.get<ContentCard>(`/api/content/cards/${slug}`).pipe(
+      map(normalizeMediaUrls),
+    );
   }
 
   addToLocker(slug: string) {
@@ -39,7 +45,9 @@ export class ContentApiService {
   }
 
   getCardsByTag(tagSlug: string) {
-    return this.http.get<ContentCard[]>(`/api/tags/${tagSlug}/cards`);
+    return this.http.get<ContentCard[]>(`/api/tags/${tagSlug}/cards`).pipe(
+      map((cards) => cards.map(normalizeMediaUrls)),
+    );
   }
 
   getHomeLayout() {
@@ -107,4 +115,16 @@ export class ContentApiService {
     return this.http.get<ContentCardSummary[]>('/api/admin/content/search', { params });
   }
 
+}
+
+/**
+ * Synthesizes mediaUrls from legacy scalar fields when an API response omits the new
+ * field (cached responses, rolling-deploy window with an old API serving a new client).
+ */
+function normalizeMediaUrls(card: ContentCard): ContentCard {
+  if (!card.mediaUrls?.length && card.mediaUrl) {
+    const entry: MediaUrlEntry = { url: card.mediaUrl, printUrl: card.printMediaUrl ?? null, alt: null };
+    return { ...card, mediaUrls: [entry] };
+  }
+  return { ...card, mediaUrls: card.mediaUrls ?? [] };
 }

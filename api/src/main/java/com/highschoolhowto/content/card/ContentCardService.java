@@ -211,16 +211,40 @@ public class ContentCardService {
         card.setTextColor(request.textColor());
         card.setSimpleLayout(request.simpleLayout());
 
-        if (request.cardType() != CardType.TODO_LIST) {
-            card.setMediaUrl(request.mediaUrl());
-            card.setPrintMediaUrl(request.printMediaUrl());
-            card.setBodyJson(request.bodyJson());
-            card.setBodyHtml(htmlSanitizer.sanitize(request.bodyHtml()));
-        } else {
+        if (request.cardType() == CardType.TODO_LIST) {
             card.setMediaUrl(null);
             card.setPrintMediaUrl(null);
+            card.setMediaUrls(List.of());
             card.setBodyJson(null);
             card.setBodyHtml(null);
+        } else if (request.cardType() == CardType.INFOGRAPHIC) {
+            List<MediaUrlEntry> entries = request.mediaUrls();
+            if (entries == null || entries.isEmpty()) {
+                // Old admin client: synthesize from legacy scalar fields
+                if (request.mediaUrl() != null && !request.mediaUrl().isBlank()) {
+                    card.setMediaUrls(List.of(new MediaUrlEntry(request.mediaUrl(), request.printMediaUrl(), null)));
+                    card.setMediaUrl(request.mediaUrl());
+                    card.setPrintMediaUrl(request.printMediaUrl());
+                } else {
+                    card.setMediaUrls(List.of());
+                    card.setMediaUrl(null);
+                    card.setPrintMediaUrl(null);
+                }
+            } else {
+                card.setMediaUrls(entries);
+                // Mirror first entry into legacy scalar fields so back-compat readers stay consistent
+                card.setMediaUrl(entries.get(0).url());
+                card.setPrintMediaUrl(entries.get(0).printUrl());
+            }
+            card.setBodyJson(null);
+            card.setBodyHtml(null);
+        } else {
+            // VIDEO / ARTICLE — use legacy scalar fields directly
+            card.setMediaUrl(request.mediaUrl());
+            card.setPrintMediaUrl(request.printMediaUrl());
+            card.setMediaUrls(List.of());
+            card.setBodyJson(request.bodyJson());
+            card.setBodyHtml(htmlSanitizer.sanitize(request.bodyHtml()));
         }
 
         List<Tag> tags = tagRepository.findAllById(request.tagIds());

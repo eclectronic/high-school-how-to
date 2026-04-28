@@ -1,4 +1,10 @@
 export type CardType = 'VIDEO' | 'INFOGRAPHIC' | 'ARTICLE' | 'TODO_LIST';
+
+export interface MediaUrlEntry {
+  url: string;
+  printUrl: string | null;
+  alt: string | null;
+}
 export type CardStatus = 'DRAFT' | 'PUBLISHED';
 
 export interface ContentCardLinkResponse {
@@ -41,6 +47,7 @@ export interface ContentCard {
   cardType: CardType;
   mediaUrl: string | null;
   printMediaUrl: string | null;
+  mediaUrls: MediaUrlEntry[];
   thumbnailUrl: string | null;
   coverImageUrl: string | null;
   bodyHtml: string | null;
@@ -73,6 +80,7 @@ export interface SaveCardRequest {
   cardType: CardType;
   mediaUrl: string | null;
   printMediaUrl: string | null;
+  mediaUrls: MediaUrlEntry[] | null;
   thumbnailUrl: string | null;
   coverImageUrl: string | null;
   bodyJson: string | null;

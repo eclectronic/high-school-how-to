@@ -22,6 +22,7 @@ function makeCard(overrides: Partial<ContentCard> = {}): ContentCard {
     status: 'PUBLISHED',
     mediaUrl: 'https://youtu.be/abc123',
     printMediaUrl: null,
+    mediaUrls: [],
     coverImageUrl: null,
     bodyHtml: null,
     backgroundColor: null,
@@ -205,5 +206,108 @@ describe('ContentViewerComponent', () => {
     const titleService = TestBed.inject(Title) as Title;
     initWithCard(makeCard({ title: 'My Awesome Video' }));
     expect(titleService.getTitle()).toBe('My Awesome Video | High School How To');
+  });
+
+  // ── Infographic carousel ──────────────────────────────────────────────────────
+
+  it('renders single infographic without carousel chrome (no chevrons, no dots)', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrl: '/media/test.jpg',
+      mediaUrls: [{ url: '/media/test.jpg', printUrl: null, alt: null }],
+    }));
+    fixture.detectChanges();
+    const chevrons = fixture.nativeElement.querySelectorAll('.infographic-carousel__chevron');
+    expect(chevrons.length).toBe(0);
+    const dots = fixture.nativeElement.querySelectorAll('.infographic-carousel__dot');
+    expect(dots.length).toBe(0);
+  });
+
+  it('renders multi-image infographic with chevrons and dots', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrl: '/media/img1.jpg',
+      mediaUrls: [
+        { url: '/media/img1.jpg', printUrl: null, alt: 'Step 1' },
+        { url: '/media/img2.jpg', printUrl: null, alt: 'Step 2' },
+        { url: '/media/img3.jpg', printUrl: null, alt: 'Step 3' },
+      ],
+    }));
+    fixture.detectChanges();
+    const chevrons = fixture.nativeElement.querySelectorAll('.infographic-carousel__chevron');
+    expect(chevrons.length).toBe(2);
+    const dots = fixture.nativeElement.querySelectorAll('.infographic-carousel__dot');
+    expect(dots.length).toBe(3);
+  });
+
+  it('back-compat: renders infographic from legacy mediaUrl when mediaUrls is empty', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrl: '/media/legacy.jpg',
+      mediaUrls: [],
+    }));
+    fixture.detectChanges();
+    const img = fixture.nativeElement.querySelector('.infographic-panel img');
+    expect(img).toBeTruthy();
+    expect(img.getAttribute('src')).toBe('/media/legacy.jpg');
+  });
+
+  it('carouselIndex starts at 0 on card load', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrls: [
+        { url: '/media/img1.jpg', printUrl: null, alt: null },
+        { url: '/media/img2.jpg', printUrl: null, alt: null },
+      ],
+    }));
+    expect(component['carouselIndex']()).toBe(0);
+  });
+
+  it('lightbox opens at current carousel index', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrls: [
+        { url: '/media/img1.jpg', printUrl: null, alt: null },
+        { url: '/media/img2.jpg', printUrl: null, alt: null },
+      ],
+    }));
+    component['carouselIndex'].set(1);
+    component['openLightbox']();
+    expect(component['lightboxIndex']()).toBe(1);
+  });
+
+  it('lightbox prev/next updates index and resets zoom', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrls: [
+        { url: '/media/img1.jpg', printUrl: null, alt: null },
+        { url: '/media/img2.jpg', printUrl: null, alt: null },
+        { url: '/media/img3.jpg', printUrl: null, alt: null },
+      ],
+    }));
+    component['openLightbox']();
+    component['lightboxZoom'].set(2.5);
+    component['lightboxNextSlide']();
+    expect(component['lightboxIndex']()).toBe(1);
+    expect(component['lightboxZoom']()).toBe(1);
+    component['lightboxNextSlide']();
+    expect(component['lightboxIndex']()).toBe(2);
+    component['lightboxNextSlide'](); // at last — should not advance
+    expect(component['lightboxIndex']()).toBe(2);
+    component['lightboxPrevSlide']();
+    expect(component['lightboxIndex']()).toBe(1);
+  });
+
+  it('currentPrintUrl tracks carousel index', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrls: [
+        { url: '/media/img1.jpg', printUrl: '/media/img1.pdf', alt: null },
+        { url: '/media/img2.jpg', printUrl: null, alt: null },
+      ],
+    }));
+    expect(component['currentPrintUrl']()).toBe('/media/img1.pdf');
+    component['carouselIndex'].set(1);
+    expect(component['currentPrintUrl']()).toBeNull();
   });
 });

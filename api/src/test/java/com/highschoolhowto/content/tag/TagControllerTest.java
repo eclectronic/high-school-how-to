@@ -32,7 +32,7 @@ class TagControllerTest {
     void cardsByTag_delegatesToServiceAndReturnsResponses() {
         ContentCardResponse response = new ContentCardResponse(
                 1L, "sat-vs-act-guide", "SAT vs ACT Guide", null,
-                CardType.VIDEO, null, null, null, null, null, null, null,
+                CardType.VIDEO, null, null, List.of(), null, null, null, null, null,
                 false, CardStatus.PUBLISHED, List.of(), List.of(), List.of(), null, null);
 
         when(cardService.findByTagSlugResponses("tests-for-college", true)).thenReturn(List.of(response));

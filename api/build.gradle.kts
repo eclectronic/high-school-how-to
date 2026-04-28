@@ -138,10 +138,12 @@ var dbAdminPassword : String = "postgres"
 var dbUser : String = "postgres"
 var dbPassword : String = "postgres"
 var dbHost : String = "localhost"
+var exportDbPassword : String = ""
 if (liquibaseEnv == "prod") {
     dbHost = "highschoolhowto.c388sauoez7e.us-west-2.rds.amazonaws.com"
     dbAdminPassword = env("HIGHSCHOOLHOWTO_DB_ADMIN_PROD_PASSWORD", dbAdminPassword)
     dbPassword = env("HIGHSCHOOLHOWTO_DB_PROD_PASSWORD", dbPassword)
+    exportDbPassword = env("HIGHSCHOOLHOWTO_DB_EXPORT_PROD_PASSWORD", exportDbPassword)
 }
 var dbAdminUrl : String = "jdbc:postgresql://$dbHost:5432/postgres"
 var dbUrl : String = "jdbc:postgresql://$dbHost:5432/highschoolhowto"
@@ -162,7 +164,8 @@ liquibase {
             "changelogFile" to "src/main/resources/db/changelog/db.changelog-master.yaml",
             "url" to dbUrl,
             "username" to dbUser,
-            "password" to dbPassword
+            "password" to dbPassword,
+            "changelogParameters.EXPORT_DB_PASSWORD" to exportDbPassword
         )
     }
     runList = "createDb,schema"

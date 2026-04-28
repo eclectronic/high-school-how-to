@@ -98,29 +98,99 @@
         <!-- INFOGRAPHIC ────────────────────────────── -->
         @if (card.cardType === 'INFOGRAPHIC') {
           <article class="viewer-article viewer-article--infographic">
-            @if (card.mediaUrl) {
-              <div class="infographic-panel" (click)="openLightbox()">
+            @if (mediaUrls().length > 0) {
+              <div
+                class="infographic-carousel"
+                [class.infographic-carousel--single]="!isMultiImage()"
+                role="region"
+                aria-roledescription="carousel"
+                aria-label="Infographic images"
+              >
+                <!-- Scroll track -->
                 <div
-                  class="infographic-overlay"
-                  [class.infographic-overlay--hidden]="!overlayVisible()"
-                  aria-hidden="true">
-                  <div class="infographic-overlay__content">
-                    <p class="infographic-overlay__title">{{ card.title }}</p>
-                    @if (card.description) {
-                      <p class="infographic-overlay__desc">{{ card.description }}</p>
-                    }
-                  </div>
+                  #carouselTrack
+                  class="infographic-carousel__track"
+                  (scroll)="onCarouselScroll($event)"
+                >
+                  @for (entry of mediaUrls(); track $index; let i = $index) {
+                    <div
+                      class="infographic-carousel__slide"
+                      role="group"
+                      aria-roledescription="slide"
+                      [attr.aria-label]="'Image ' + (i + 1) + ' of ' + mediaUrls().length + (entry.alt ? ': ' + entry.alt : '')"
+                    >
+                      <div class="infographic-panel" (click)="openLightbox()">
+                        @if (i === 0) {
+                          <div
+                            class="infographic-overlay"
+                            [class.infographic-overlay--hidden]="!overlayVisible()"
+                            aria-hidden="true">
+                            <div class="infographic-overlay__content">
+                              <p class="infographic-overlay__title">{{ card.title }}</p>
+                              @if (card.description) {
+                                <p class="infographic-overlay__desc">{{ card.description }}</p>
+                              }
+                            </div>
+                          </div>
+                        }
+                        <img
+                          [src]="entry.url"
+                          [alt]="entry.alt || card.title"
+                          [loading]="i === 0 ? 'eager' : 'lazy'"
+                        />
+                      </div>
+                    </div>
+                  }
                 </div>
-                <img [src]="card.mediaUrl" [alt]="card.title" loading="eager" />
+
+                <!-- Prev / next chevrons (desktop only, multi-image) -->
+                @if (isMultiImage()) {
+                  <button
+                    class="infographic-carousel__chevron infographic-carousel__chevron--prev"
+                    [class.infographic-carousel__chevron--hidden]="carouselIndex() === 0"
+                    type="button"
+                    aria-label="Previous image"
+                    (click)="carouselPrev()"
+                  >‹</button>
+                  <button
+                    class="infographic-carousel__chevron infographic-carousel__chevron--next"
+                    [class.infographic-carousel__chevron--hidden]="carouselIndex() === mediaUrls().length - 1"
+                    type="button"
+                    aria-label="Next image"
+                    (click)="carouselNext()"
+                  >›</button>
+                }
               </div>
+
+              <!-- Dot indicator (multi-image, ≤8 images) -->
+              @if (isMultiImage() && mediaUrls().length <= 8) {
+                <div class="infographic-carousel__dots" aria-hidden="true">
+                  @for (entry of mediaUrls(); track $index; let i = $index) {
+                    <button
+                      type="button"
+                      class="infographic-carousel__dot"
+                      [class.infographic-carousel__dot--active]="carouselIndex() === i"
+                      (click)="setCarouselIndex(i)"
+                      [attr.aria-label]="'Go to image ' + (i + 1)"
+                    ></button>
+                  }
+                </div>
+              }
+              @if (isMultiImage() && mediaUrls().length > 8) {
+                <p class="infographic-carousel__counter" aria-live="polite">
+                  {{ carouselIndex() + 1 }} / {{ mediaUrls().length }}
+                </p>
+              }
             }
-            @if (card.printMediaUrl) {
+
+            @if (currentPrintUrl()) {
               <div class="infographic-actions">
-                <button class="btn-print" type="button" (click)="printMedia(card.printMediaUrl!)">
+                <button class="btn-print" type="button" (click)="printMedia(currentPrintUrl()!)">
                   Download / Print
                 </button>
               </div>
             }
+
             @if (card.links.length > 0) {
               <div class="viewer-related">
                 <h2 class="viewer-related__heading">Related</h2>
@@ -244,13 +314,29 @@
     </div>
 
     <!-- Infographic lightbox ─────────────────────────────────── -->
-    @if (lightboxOpen() && card.mediaUrl) {
-      <div class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+    @if (lightboxOpen() && lightboxCurrentEntry()) {
+      <div
+        class="lightbox"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="isMultiImage() ? 'Image viewer — image ' + (lightboxIndex() + 1) + ' of ' + mediaUrls().length : 'Image viewer'"
+      >
         <div class="lightbox__toolbar">
+          @if (isMultiImage()) {
+            <button class="lightbox__tool-btn" (click)="lightboxPrevSlide()" [disabled]="lightboxIndex() === 0" aria-label="Previous image">←</button>
+            <span class="lightbox__zoom-label">{{ lightboxIndex() + 1 }} / {{ mediaUrls().length }}</span>
+            <button class="lightbox__tool-btn" (click)="lightboxNextSlide()" [disabled]="lightboxIndex() === mediaUrls().length - 1" aria-label="Next image">→</button>
+            <span class="lightbox__toolbar-sep"></span>
+          }
           <button class="lightbox__tool-btn" (click)="lightboxZoomOut()" [disabled]="lightboxZoom() <= 0.5" aria-label="Zoom out">−</button>
           <span class="lightbox__zoom-label">{{ lightboxZoomPercent() }}%</span>
           <button class="lightbox__tool-btn" (click)="lightboxZoomIn()" [disabled]="lightboxZoom() >= 5" aria-label="Zoom in">+</button>
           <button class="lightbox__tool-btn" (click)="lightboxResetZoom()" aria-label="Fit to screen">↺</button>
+          @if (lightboxPrintUrl()) {
+            <button class="lightbox__tool-btn" (click)="printMedia(lightboxPrintUrl()!)" aria-label="Download / Print">⬇</button>
+          } @else if (isMultiImage()) {
+            <button class="lightbox__tool-btn" disabled title="No print version available" aria-label="No print version available">⬇</button>
+          }
           <button class="lightbox__tool-btn lightbox__tool-btn--close" (click)="closeLightbox()" aria-label="Close (Esc)">✕</button>
         </div>
         <div class="lightbox__stage"
@@ -263,8 +349,8 @@
              [class.lightbox__stage--grabbing]="lightboxDragging()">
           <img
             class="lightbox__img"
-            [src]="card.mediaUrl"
-            [alt]="card.title"
+            [src]="lightboxCurrentEntry()!.url"
+            [alt]="lightboxCurrentEntry()!.alt || card.title"
             [style.transform]="lightboxTransform()"
             draggable="false" />
         </div>

@@ -73,6 +73,7 @@ class ContentCardServiceLinksTest {
                 null,
                 null,
                 null,
+                null,
                 false,
                 CardStatus.PUBLISHED,
                 List.of(1L),

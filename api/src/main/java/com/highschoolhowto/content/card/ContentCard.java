@@ -59,6 +59,10 @@ public class ContentCard {
     private String coverImageUrl;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "media_urls", columnDefinition = "jsonb")
+    private List<MediaUrlEntry> mediaUrls = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "body_json", columnDefinition = "jsonb")
     private String bodyJson;
 
@@ -138,6 +142,9 @@ public class ContentCard {
 
     public String getCoverImageUrl() { return coverImageUrl; }
     public void setCoverImageUrl(String coverImageUrl) { this.coverImageUrl = coverImageUrl; }
+
+    public List<MediaUrlEntry> getMediaUrls() { return mediaUrls != null ? mediaUrls : new ArrayList<>(); }
+    public void setMediaUrls(List<MediaUrlEntry> mediaUrls) { this.mediaUrls = mediaUrls != null ? mediaUrls : new ArrayList<>(); }
 
     public String getBodyJson() { return bodyJson; }
     public void setBodyJson(String bodyJson) { this.bodyJson = bodyJson; }

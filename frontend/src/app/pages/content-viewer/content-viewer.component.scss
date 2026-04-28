@@ -600,4 +600,99 @@ $breakpoint-desktop: 768px;
     transform-origin: center center;
     pointer-events: none; // prevent browser drag-image ghost
   }
+
+  &__toolbar-sep {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.18);
+    margin: 0 0.25rem;
+    flex-shrink: 0;
+  }
+}
+
+// ─── Infographic carousel ─────────────────────────────────────────────────────
+
+.infographic-carousel {
+  position: relative;
+
+  &__track {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  &__slide {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+  }
+
+  // Prev / next chevrons — shown on hover on desktop, hidden on mobile (swipe handles it)
+  &__chevron {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 254, 249, 0.88);
+    border: 2px solid $color-ink;
+    color: $color-ink;
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba($color-ink, 0.18);
+    opacity: 0.3;
+    transition: opacity 0.15s;
+
+    // Show on panel hover
+    .infographic-carousel:hover & { opacity: 1; }
+
+    &--hidden { display: none; }
+
+    &--prev { left: 0.5rem; }
+    &--next { right: 0.5rem; }
+
+    // Hide on touch/mobile — swipe is the gesture
+    @media (hover: none) { display: none !important; }
+  }
+
+  // Single-image: same rendering as before (no carousel chrome, cursor inherits from .infographic-panel)
+  &--single {
+    .infographic-carousel__track { overflow-x: hidden; }
+  }
+
+  &__dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba($color-ink, 0.25);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s;
+
+    &--active { background: $color-ink; }
+  }
+
+  &__counter {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #5f4f43;
+    margin-top: 0.4rem;
+  }
 }

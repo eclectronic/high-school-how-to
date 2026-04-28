@@ -17,10 +17,12 @@
       <div class="admin-card editor-section">
         <h2>Basic Info</h2>
 
-        <div class="form-row">
-          <label>Title</label>
-          <input [(ngModel)]="form.title" (input)="onTitleInput()" placeholder="Getting Your Driver's License" />
-        </div>
+        @if (form.cardType !== 'TODO_LIST') {
+          <div class="form-row">
+            <label>Title</label>
+            <input [(ngModel)]="form.title" (input)="onTitleInput()" placeholder="Getting Your Driver's License" />
+          </div>
+        }
 
         <div class="form-row">
           <label>Slug</label>
@@ -87,14 +89,71 @@
         }
 
         @if (form.cardType === 'INFOGRAPHIC') {
-          <div class="form-row">
-            <label>Infographic Image URL</label>
-            <input [(ngModel)]="form.mediaUrl" placeholder="https://..." />
+          <div class="media-url-list">
+            <div
+              cdkDropList
+              (cdkDropListDropped)="onMediaDrop($event)"
+              class="media-url-list__track"
+            >
+              @for (entry of mediaUrls(); track $index; let i = $index) {
+                <div class="media-url-item" cdkDrag>
+                  <span class="media-url-item__drag" cdkDragHandle title="Drag to reorder">⋮⋮</span>
+
+                  <div class="media-url-item__preview">
+                    @if (entry.url) {
+                      <img [src]="entry.url" alt="image preview" class="media-url-item__thumb" />
+                    } @else {
+                      <div class="media-url-item__no-img">No image</div>
+                    }
+                  </div>
+
+                  <div class="media-url-item__fields">
+                    <div class="media-url-item__uploads">
+                      <label class="btn btn--secondary btn--sm upload-btn">
+                        Image
+                        <input type="file" accept="image/*" hidden (change)="uploadMediaFile($event, i, 'url')" />
+                      </label>
+                      <label class="btn btn--secondary btn--sm upload-btn">
+                        Print
+                        <input type="file" accept="image/*,application/pdf" hidden (change)="uploadMediaFile($event, i, 'printUrl')" />
+                      </label>
+                      @if (entry.printUrl) {
+                        <span class="media-url-item__print-set" title="{{ entry.printUrl }}">✓ Print set</span>
+                      }
+                    </div>
+                    <input
+                      type="text"
+                      [value]="entry.alt ?? ''"
+                      (change)="updateMediaEntryAlt(i, $any($event.target).value)"
+                      placeholder="Alt text (optional)"
+                      class="media-url-item__alt-input"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    class="btn btn--danger btn--sm media-url-item__delete"
+                    title="Remove image"
+                    (click)="confirmDeleteMedia(i)"
+                  >✕</button>
+                </div>
+              }
+            </div>
+
+            <button type="button" class="btn btn--secondary media-url-list__add" (click)="addMediaUrl()">+ Add image</button>
+
+            @if (uploadingImage()) {
+              <p class="uploading-note">Uploading image…</p>
+            }
           </div>
-          <div class="form-row">
-            <label>Print / Full-res URL</label>
-            <input [(ngModel)]="form.printMediaUrl" placeholder="https://..." />
-          </div>
+
+          @if (deleteMediaIndex() !== null) {
+            <app-confirm-dialog
+              itemName="this image"
+              (confirmed)="onDeleteMediaConfirmed()"
+              (cancelled)="onDeleteMediaCancelled()"
+            />
+          }
         }
 
         <div class="form-row">
@@ -125,71 +184,136 @@
           }
         </div>
 
-        @if (uploadingImage()) {
+        @if (form.cardType !== 'INFOGRAPHIC' && uploadingImage()) {
           <p class="uploading-note">Uploading image...</p>
         }
       </div>
 
-      <!-- Template Tasks (TODO_LIST only) -->
+      <!-- Template Tasks (TODO_LIST only) — locker-style preview card -->
       @if (form.cardType === 'TODO_LIST') {
-        <div class="admin-card editor-section">
+        <div class="admin-card editor-section todo-editor-section">
           <h2>Template Tasks <small>(required — at least 1, max 50)</small></h2>
 
-          <div class="color-pickers-row">
-            <div class="form-row form-row--color">
-              <label>List Color</label>
-              <div class="color-picker-row">
-                <input type="color" [(ngModel)]="form.backgroundColor" [value]="form.backgroundColor || '#fffef8'" />
-                <input type="text" [(ngModel)]="form.backgroundColor" placeholder="#fffef8" class="color-hex-input" />
-                @if (form.backgroundColor) {
-                  <button type="button" class="btn btn--secondary btn--sm" (click)="form.backgroundColor = ''">Clear</button>
-                }
-                <span class="color-preview" [style.background]="form.backgroundColor || 'transparent'"></span>
-              </div>
+          <div
+            class="todo-editor-preview"
+            [style.background]="form.backgroundColor || '#fffef8'"
+            [style.color]="form.textColor || '#2d1a10'"
+          >
+            <!-- Header with inline title and color swatches -->
+            <div class="todo-editor-preview__header" [style.background]="toolbarBg(form.backgroundColor || '#fffef8')">
+              <button
+                type="button"
+                class="todo-swatch-btn"
+                [style.background]="form.backgroundColor || '#fffef8'"
+                title="Background color"
+                (click)="toggleBgSwatchPicker($event)"
+              ></button>
+              <button
+                type="button"
+                class="todo-swatch-btn todo-swatch-btn--text"
+                [style.background]="form.textColor || '#2d1a10'"
+                title="Text color"
+                (click)="toggleTextSwatchPicker($event)"
+              ></button>
+              <app-inline-title-edit
+                class="todo-editor-preview__title"
+                [title]="form.title"
+                placeholder="List title"
+                (titleChange)="onTodoTitleChange($event)"
+              />
             </div>
-            <div class="form-row form-row--color">
-              <label>Text Color</label>
-              <div class="color-picker-row">
-                <input type="color" [(ngModel)]="form.textColor" [value]="form.textColor || '#2d1a10'" />
-                <input type="text" [(ngModel)]="form.textColor" placeholder="#2d1a10 (auto-contrast if empty)" class="color-hex-input" />
-                @if (form.textColor) {
-                  <button type="button" class="btn btn--secondary btn--sm" (click)="form.textColor = ''">Clear</button>
-                }
-                <span class="color-preview" [style.background]="form.textColor || 'transparent'"></span>
-              </div>
-            </div>
-          </div>
 
-          <ul class="template-task-list">
-            @for (task of templateTasks(); track $index) {
-              <li class="template-task-list__item">
-                <span class="template-task-list__order">{{ $index + 1 }}.</span>
-                <input
-                  class="template-task-list__input"
-                  type="text"
-                  [value]="task.description"
-                  (change)="updateTemplateTask($index, $any($event.target).value)"
-                  placeholder="Task description"
-                />
-                <div class="template-task-list__actions">
-                  <button type="button" class="btn btn--secondary btn--sm" [disabled]="$index === 0" (click)="moveTemplateTask($index, -1)" title="Move up">↑</button>
-                  <button type="button" class="btn btn--secondary btn--sm" [disabled]="$index === templateTasks().length - 1" (click)="moveTemplateTask($index, 1)" title="Move down">↓</button>
-                  <button type="button" class="btn btn--danger btn--sm" (click)="removeTemplateTask($index)" title="Remove">🗑</button>
+            <!-- Task rows with CDK drag-drop -->
+            <div
+              class="todo-editor-preview__tasks"
+              cdkDropList
+              (cdkDropListDropped)="onTaskDrop($event)"
+            >
+              @if (templateTasks().length === 0) {
+                <p class="todo-editor-preview__empty">No tasks yet — add one below.</p>
+              }
+              @for (task of templateTasks(); track $index; let i = $index) {
+                <div class="todo-task" cdkDrag [cdkDragLockAxis]="'y'">
+                  <span class="todo-task__drag-handle" cdkDragHandle title="Drag to reorder">⋮⋮</span>
+                  <app-inline-title-edit
+                    class="todo-task__desc"
+                    [title]="task.description"
+                    placeholder="Task description"
+                    (titleChange)="updateTemplateTask(i, $event)"
+                  />
+                  <button
+                    type="button"
+                    class="todo-task__delete-btn"
+                    title="Delete task"
+                    (click)="confirmDeleteTask(i)"
+                  >✕</button>
                 </div>
-              </li>
-            }
-          </ul>
+              }
 
-          <div class="template-task-add">
-            <input
-              type="text"
-              [(ngModel)]="newTaskDescription"
-              placeholder="New task description"
-              class="template-task-add__input"
-              (keyup.enter)="addTemplateTask()"
-            />
-            <button type="button" class="btn btn--secondary" (click)="addTemplateTask()">+ Add task</button>
+              @if (templateTasks().length < 50) {
+                <div class="todo-app__add-task">
+                  <input
+                    type="text"
+                    class="todo-app__task-input"
+                    placeholder="Add a task…"
+                    [(ngModel)]="newTaskDescription"
+                    (keyup.enter)="addTemplateTask()"
+                  />
+                  <button
+                    type="button"
+                    class="todo-app__add-task-btn"
+                    [disabled]="!newTaskDescription.trim()"
+                    title="Add task"
+                    aria-label="Add task"
+                    (click)="addTemplateTask()"
+                  >+</button>
+                </div>
+              } @else {
+                <p class="todo-editor__max-msg">Maximum of 50 tasks reached.</p>
+              }
+            </div>
           </div>
+
+          <!-- Background swatch picker overlay -->
+          @if (showBgSwatchPicker()) {
+            <div class="todo-editor-overlay" (click)="showBgSwatchPicker.set(false)">
+              <div class="todo-editor-overlay__card" (click)="$event.stopPropagation()">
+                <p class="todo-editor-overlay__title">Background Color</p>
+                <app-swatch-picker
+                  [selectedColor]="form.backgroundColor || '#fffef8'"
+                  [showGradientToggle]="false"
+                  (colorChange)="form.backgroundColor = $event"
+                  (colorCommit)="showBgSwatchPicker.set(false)"
+                  (escaped)="showBgSwatchPicker.set(false)"
+                />
+              </div>
+            </div>
+          }
+
+          <!-- Text swatch picker overlay -->
+          @if (showTextSwatchPicker()) {
+            <div class="todo-editor-overlay" (click)="showTextSwatchPicker.set(false)">
+              <div class="todo-editor-overlay__card" (click)="$event.stopPropagation()">
+                <p class="todo-editor-overlay__title">Text Color</p>
+                <app-swatch-picker
+                  [selectedColor]="form.textColor || '#2d1a10'"
+                  [showGradientToggle]="false"
+                  (colorChange)="form.textColor = $event"
+                  (colorCommit)="showTextSwatchPicker.set(false)"
+                  (escaped)="showTextSwatchPicker.set(false)"
+                />
+              </div>
+            </div>
+          }
+
+          <!-- Delete task confirmation -->
+          @if (deleteTaskIndex() !== null) {
+            <app-confirm-dialog
+              [itemName]="templateTasks()[deleteTaskIndex()!].description"
+              (confirmed)="onDeleteTaskConfirmed()"
+              (cancelled)="onDeleteTaskCancelled()"
+            />
+          }
         </div>
       }
 
