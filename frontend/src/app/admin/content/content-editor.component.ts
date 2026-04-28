@@ -479,7 +479,11 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
     obs.subscribe({
       next: () => this.router.navigate(['/admin/content']),
       error: (err) => {
-        this.error.set(err?.error?.detail ?? 'Save failed');
+        const violations: { field: string; message: string }[] = err?.error?.violations ?? [];
+        const detail = violations.length
+          ? violations.map((v) => `${v.field}: ${v.message}`).join('; ')
+          : (err?.error?.detail ?? 'Save failed');
+        this.error.set(detail);
         this.saving.set(false);
       },
     });
