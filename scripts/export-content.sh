@@ -29,7 +29,6 @@ echo "==> Exporting content from prod DB..."
 mkdir -p \
   "$DATA_DIR/content-cards" \
   "$DATA_DIR/tags" \
-  "$DATA_DIR/page-layouts" \
   "$DATA_DIR/quotes" \
   "$DATA_DIR/badges" \
   "$DATA_DIR/recommended-shortcuts"
@@ -118,48 +117,12 @@ os.remove(src)
 print(f"    wrote {len(rows)} card files")
 EOF
 
-# ── Export page layouts (with sections denormalized) ──────────────────────────
-
-echo "  page-layouts..."
-psql "$DB_URL" -t -A -c "
-SELECT json_agg(
-    jsonb_build_object(
-        'id',   pl.id,
-        'name', pl.name,
-        'sections', (
-            SELECT json_agg(jsonb_build_object(
-                'id',         pls.id,
-                'heading',    pls.heading,
-                'sortOrder',  pls.sort_order,
-                'tagSlug',    t.slug
-            ) ORDER BY pls.sort_order)
-            FROM page_layout_sections pls
-            JOIN tags t ON t.id = pls.tag_id
-            WHERE pls.layout_id = pl.id
-        )
-    ) ORDER BY pl.name
-)
-FROM page_layouts pl
-" | python3 -m json.tool > "$DATA_DIR/page-layouts/_all.json.tmp"
-
-python3 - <<'EOF' "$DATA_DIR/page-layouts/_all.json.tmp" "$DATA_DIR/page-layouts"
-import json, sys, os, pathlib
-src, dst = sys.argv[1], sys.argv[2]
-rows = json.load(open(src)) or []
-for row in rows:
-    name_slug = row['name'].lower().replace(' ', '-').replace('_', '-')
-    path = pathlib.Path(dst) / f"{name_slug}.json"
-    path.write_text(json.dumps(row, indent=2, ensure_ascii=False) + "\n")
-os.remove(src)
-print(f"    wrote {len(rows)} layout files")
-EOF
-
 # ── Export quotes ─────────────────────────────────────────────────────────────
 
 echo "  quotes..."
 psql "$DB_URL" -t -A -c "
 SELECT COALESCE(json_agg(row_to_json(q) ORDER BY q.id), '[]'::json)
-FROM (SELECT id, body, attribution FROM quotes) q
+FROM (SELECT id, quote_text, attribution FROM quotes) q
 " | python3 -m json.tool > "$DATA_DIR/quotes/quotes.json"
 echo "    wrote quotes.json"
 
@@ -167,27 +130,17 @@ echo "    wrote quotes.json"
 
 echo "  badges..."
 psql "$DB_URL" -t -A -c "
-SELECT json_agg(row_to_json(b) ORDER BY b.code)
-FROM (SELECT id, code, name, description, icon_url FROM badges) b
-" | python3 -m json.tool > "$DATA_DIR/badges/_all.json.tmp"
-
-python3 - <<'EOF' "$DATA_DIR/badges/_all.json.tmp" "$DATA_DIR/badges"
-import json, sys, os, pathlib
-src, dst = sys.argv[1], sys.argv[2]
-rows = json.load(open(src)) or []
-for row in rows:
-    path = pathlib.Path(dst) / f"{row['code']}.json"
-    path.write_text(json.dumps(row, indent=2, ensure_ascii=False) + "\n")
-os.remove(src)
-print(f"    wrote {len(rows)} badge files")
-EOF
+SELECT COALESCE(json_agg(row_to_json(b) ORDER BY b.id), '[]'::json)
+FROM (SELECT id, name, description, emoji, icon_url, trigger_type, trigger_param FROM badges) b
+" | python3 -m json.tool > "$DATA_DIR/badges/badges.json"
+echo "    wrote badges.json"
 
 # ── Export recommended shortcuts ──────────────────────────────────────────────
 
 echo "  recommended-shortcuts..."
 psql "$DB_URL" -t -A -c "
 SELECT COALESCE(json_agg(row_to_json(rs) ORDER BY rs.sort_order), '[]'::json)
-FROM (SELECT id, label, url, favicon_url, sort_order FROM recommended_shortcuts) rs
+FROM (SELECT id, name, url, emoji, favicon_url, category, sort_order, active FROM recommended_shortcuts) rs
 " | python3 -m json.tool > "$DATA_DIR/recommended-shortcuts/shortcuts.json"
 echo "    wrote shortcuts.json"
 
@@ -197,9 +150,9 @@ echo "==> Syncing S3 media..."
 echo "  curated media (s3://highschoolhowto/prod/media/ → ./media/)..."
 aws s3 sync "s3://highschoolhowto/prod/media/" "$MEDIA_DIR/" --exclude "uploads/*"
 
-echo "  admin uploads (s3://highschoolhowto-site/uploads/ → ./media/uploads/)..."
+echo "  admin uploads (s3://highschoolhowto/uploads/ → ./media/uploads/)..."
 mkdir -p "$MEDIA_DIR/uploads"
-aws s3 sync "s3://highschoolhowto-site/uploads/" "$MEDIA_DIR/uploads/"
+aws s3 sync "s3://highschoolhowto/uploads/" "$MEDIA_DIR/uploads/"
 
 echo ""
 echo "==> Export complete. Review the diff in data/ and media/ then commit."

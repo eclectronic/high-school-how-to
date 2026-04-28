@@ -1,0 +1,25 @@
+{
+  "id": 12,
+  "slug": "help-notes",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Notes",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>Need to write something down fast? That's what Notes is for.</p><h3>Creating a note</h3><ol><li>Open the 📝 Notes app</li><li>Tap <strong>+ New Note</strong></li><li>Tap the title to rename it</li><li>Start typing</li></ol><p>Notes save automatically when you tap away or go back to the list — no save button to remember.</p><h3>What you can do with notes</h3><ul><li><strong>Pick a color</strong> — tap the color picker to color-code your notes so they're easy to spot</li><li><strong>Rename</strong> — tap the title to change it</li><li><strong>Delete</strong> — done with a note? Tap the delete button (you'll be asked to confirm)</li></ul><h3>Tips</h3><ul><li>Use notes for quick reminders, study summaries, or brain dumps before a test</li><li>Keep it short — if your note is turning into an essay, maybe it's time to open a doc instead</li></ul>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:10.017913+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "How to use the Notes app to jot down ideas, reminders, and study summaries.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#ce93d8"
+}

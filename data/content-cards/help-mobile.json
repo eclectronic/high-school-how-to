@@ -1,0 +1,25 @@
+{
+  "id": 18,
+  "slug": "help-mobile",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Using Your Locker on Mobile",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>Your locker is designed to work great on your phone.</p><h3>How it works on mobile</h3><ul><li><strong>All four apps, always</strong> — To-do, Notes, Timer, and Pins are all there as swipeable pages</li><li><strong>Swipe to switch</strong> — swipe left and right to move between apps</li><li><strong>Page dots</strong> — the dots at the bottom show which app you're on. Tap a dot to jump to that page.</li></ul><h3>Inside each app</h3><p>Creating lists, writing notes, setting timers, adding pins — it all works the same as on a computer. The screen is just smaller, so you see one app at a time instead of side-by-side.</p><h3>What's different from desktop</h3><p>The desktop view shows apps as panes you can rearrange, resize, and toggle on or off, with a toolbar at the top for changing the locker color and font. On mobile, every app is always available — there's no concept of \"active\" apps to manage.</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:10.731315+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "How the locker works on your phone: swipe navigation and what's different from desktop.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#fff59d"
+}

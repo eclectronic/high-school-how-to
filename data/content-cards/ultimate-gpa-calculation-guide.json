@@ -1,0 +1,31 @@
+{
+  "id": 1,
+  "slug": "ultimate-gpa-calculation-guide",
+  "tags": [
+    "academics"
+  ],
+  "links": null,
+  "title": "The ULTIMATE GPA Calculation Guide",
+  "status": "PUBLISHED",
+  "bodyHtml": null,
+  "bodyJson": null,
+  "cardType": "VIDEO",
+  "mediaUrl": "https://www.youtube.com/watch?v=fcECDsCmxD0",
+  "createdAt": "2026-04-05T02:51:06.153122+00:00",
+  "mediaUrls": [
+    {
+      "alt": null,
+      "url": "https://www.youtube.com/watch?v=fcECDsCmxD0",
+      "printUrl": null
+    }
+  ],
+  "textColor": null,
+  "updatedAt": "2026-04-05T02:51:06.153122+00:00",
+  "description": "How to find your weighted, unweighted, and capped GPA and why it matters.",
+  "simpleLayout": false,
+  "thumbnailUrl": "https://img.youtube.com/vi/fcECDsCmxD0/hqdefault.jpg",
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": null
+}

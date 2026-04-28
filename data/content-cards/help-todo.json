@@ -1,0 +1,25 @@
+{
+  "id": 11,
+  "slug": "help-todo",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "To-do Lists",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>The To-do app is where you keep track of everything you need to get done.</p><h3>Creating a list</h3><ol><li>Open the 📋 To-do app</li><li>Tap <strong>+ New List</strong></li><li>Tap the title to rename it</li><li>Start adding tasks</li></ol><h3>Adding tasks</h3><p>Type in the <strong>Add a to-do…</strong> input at the bottom of your list and tap <strong>Add</strong> (or press Enter).</p><h3>Checking things off</h3><p>Tap the checkbox next to a task. It feels good, trust us.</p><h3>Due dates</h3><p>Tap the 📅 icon next to a task to set a due date. Once set, the date appears as a small badge on the task — overdue dates are highlighted. Tap the badge to change or clear the date.</p><h3>Other things you can do</h3><ul><li><strong>Rename a list or task</strong> — tap the title or task text to edit it inline</li><li><strong>Delete a task</strong> — tap the <strong>✕</strong> button next to it (you'll be asked to confirm)</li><li><strong>Delete a list</strong> — tap the <strong>🗑</strong> icon (you'll be asked to confirm)</li><li><strong>Change the list color</strong> — tap the colored circle next to the list to pick a new color</li></ul><h3>Importing a How To list</h3><p>Some How To articles come with a ready-made to-do list. When you see one, tap <strong>\"Add to My Locker\"</strong> and a personal copy will appear in your To-do app — edit it however you want.</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:09.825684+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "How to use the To-do app: creating lists, adding tasks, and importing How To checklists.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#f48fb1"
+}

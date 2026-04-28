@@ -1,0 +1,25 @@
+{
+  "id": 13,
+  "slug": "help-timer",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Timer",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>One timer, two modes. Open the ⏱ Timer app and pick the mode that fits what you're doing using the tabs at the top.</p><h3>Basic Mode</h3><p>A simple countdown. Tap the time to set hours, minutes, and seconds, then hit <strong>Start</strong>. You'll hear a chime when it's done. Use <strong>Pause</strong> to stop the clock and <strong>Reset</strong> to start over.</p><p>Great for:</p><ul><li>Timed assignments</li><li>Quick breaks</li><li>\"I'll study for 30 more minutes\" situations</li></ul><h3>Pomodoro Mode</h3><p>The Pomodoro technique breaks your work into focused chunks:</p><ol><li><strong>Focus session</strong> (25 minutes by default)</li><li><strong>Short break</strong> (5 minutes by default)</li><li><strong>Repeat</strong></li><li>After a few focus sessions, take a longer break (15 minutes by default)</li></ol><p>The timer cycles through these phases automatically — just tap <strong>Start</strong> and you'll hear a chime at the end of each phase. Use <strong>Skip</strong> to jump to the next phase or <strong>Reset</strong> to start over.</p><p>The dots show how many focus sessions you've completed in the current cycle.</p><h3>Customizing Pomodoro</h3><p>Tap the <strong>⚙ gear icon</strong> in Pomodoro mode to adjust:</p><ul><li>Focus duration</li><li>Short break duration</li><li>Long break duration</li><li>How many focus sessions before the long break</li></ul><h3>Switching modes</h3><p>Tap the <strong>Basic</strong> or <strong>Pomodoro</strong> tab at the top. You can switch anytime the timer isn't running.</p><h3>Why Pomodoro works</h3><p>Your brain stays fresher when you take regular breaks. It's not about studying longer — it's about studying smarter.</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:10.12344+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "How to use Basic and Pomodoro timer modes for focused study sessions.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#80deea"
+}

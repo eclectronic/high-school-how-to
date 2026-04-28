@@ -1,0 +1,25 @@
+{
+  "id": 19,
+  "slug": "help-content-import",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Getting Content into Your Locker",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>Some articles on the How To page come with a ready-made to-do list — like \"How to Study for Your Driver's Test\" with all the steps already laid out.</p><h3>How to add it</h3><ol><li>Find a How To article with a to-do list</li><li>Tap <strong>\"Add to My Locker\"</strong></li><li>A personal copy of that list shows up in your 📋 To-do app</li></ol><h3>What happens next</h3><p>The list is yours now. You can:</p><ul><li>Check off tasks as you go</li><li>Add your own tasks</li><li>Rename it</li><li>Delete tasks you don't need</li></ul><p>The original How To article stays the same — your copy is independent.</p><h3>Already added it?</h3><p>If you've already added a list, you'll see a <strong>\"View in My Locker\"</strong> link instead of the add button.</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:10.920173+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "How to import How To checklists directly into your To-do app.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#fff176"
+}

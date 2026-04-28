@@ -1,0 +1,31 @@
+{
+  "id": 5,
+  "slug": "daily-routine",
+  "tags": [
+    "daily-life"
+  ],
+  "links": null,
+  "title": "Daily Routine",
+  "status": "PUBLISHED",
+  "bodyHtml": null,
+  "bodyJson": null,
+  "cardType": "INFOGRAPHIC",
+  "mediaUrl": "/media/infographics/web/daily-routine.png",
+  "createdAt": "2026-04-05T02:51:06.247204+00:00",
+  "mediaUrls": [
+    {
+      "alt": null,
+      "url": "/media/infographics/web/daily-routine.png",
+      "printUrl": "/media/infographics/printable/daily-routine.png"
+    }
+  ],
+  "textColor": null,
+  "updatedAt": "2026-04-05T02:51:06.247204+00:00",
+  "description": "My ideal daily routine for productivity and well-being.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": "/media/infographics/printable/daily-routine.png",
+  "templateTasks": null,
+  "backgroundColor": null
+}

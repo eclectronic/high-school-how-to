@@ -1,0 +1,25 @@
+{
+  "id": 16,
+  "slug": "help-stickers",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Stickers",
+  "status": "DRAFT",
+  "bodyHtml": "<p>Stickers are emoji decorations for your locker home screen. They don't do anything functional — they're just for fun.</p><h3>Adding stickers</h3><ol><li>Enter <a href=\"/content/help-edit-mode\">Edit Mode</a></li><li>Pick a sticker from the sticker picker</li><li>It'll appear on your home screen</li><li>Drag it wherever you want</li></ol><h3>Moving or deleting stickers</h3><p>Enter Edit Mode, then drag stickers to reposition or tap to remove them.</p><p>Stickers show up on your home screen on desktop and tablet. On mobile, they're not visible since you go straight to your apps.</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:10.522222+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "How to add and manage emoji stickers on your locker home screen.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#ffab91"
+}

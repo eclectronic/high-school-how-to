@@ -98,8 +98,6 @@ BEGIN;
 
 -- Disable FK checks during truncate (Postgres requires CASCADE)
 TRUNCATE TABLE
-    page_layout_sections,
-    page_layouts,
     content_card_tags,
     content_card_links,
     content_card_tasks,
@@ -219,40 +217,6 @@ with open(sql_file, "a") as f:
             )
 EOF
 
-# ── page_layouts ──────────────────────────────────────────────────────────────
-
-echo "==> Building import SQL for page_layouts..."
-python3 - "$DATA_DIR/page-layouts" "$IMPORT_SQL" <<'EOF'
-import json, sys, pathlib
-
-data_dir, sql_file = pathlib.Path(sys.argv[1]), sys.argv[2]
-rows = []
-for p in sorted(data_dir.glob("*.json")):
-    rows.append(json.load(open(p)))
-
-with open(sql_file, "a") as f:
-    for r in rows:
-        name = r["name"].replace("'", "''")
-        f.write(
-            f"INSERT INTO page_layouts (id, name) VALUES ({r['id']}, '{name}') "
-            f"ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name;\n"
-        )
-        for sec in (r.get("sections") or []):
-            heading = (sec.get("heading") or "").replace("'", "''")
-            heading_sql = f"'{heading}'" if heading else "NULL"
-            tag_slug = sec["tagSlug"].replace("'", "''")
-            so = sec.get("sortOrder", 0)
-            f.write(
-                f"INSERT INTO page_layout_sections (id, layout_id, tag_id, heading, sort_order) "
-                f"SELECT {sec['id']}, {r['id']}, t.id, {heading_sql}, {so} "
-                f"FROM tags t WHERE t.slug='{tag_slug}' "
-                f"ON CONFLICT (id) DO UPDATE SET "
-                f"layout_id=EXCLUDED.layout_id, tag_id=EXCLUDED.tag_id, "
-                f"heading=EXCLUDED.heading, sort_order=EXCLUDED.sort_order;\n"
-            )
-    print(f"  {len(rows)} layouts")
-EOF
-
 # ── quotes ────────────────────────────────────────────────────────────────────
 
 echo "==> Building import SQL for quotes..."
@@ -262,12 +226,12 @@ import json, sys
 rows = json.load(open(sys.argv[1])) or []
 with open(sys.argv[2], "a") as f:
     for r in rows:
-        body = r["body"].replace("'", "''")
+        quote_text = r["quote_text"].replace("'", "''")
         attr = r.get("attribution") or ""
         attr_sql = f"'{attr.replace(chr(39), chr(39)*2)}'" if attr else "NULL"
         f.write(
-            f"INSERT INTO quotes (id, body, attribution) VALUES ({r['id']}, '{body}', {attr_sql}) "
-            f"ON CONFLICT (id) DO UPDATE SET body=EXCLUDED.body, attribution=EXCLUDED.attribution;\n"
+            f"INSERT INTO quotes (id, quote_text, attribution) VALUES ({r['id']}, '{quote_text}', {attr_sql}) "
+            f"ON CONFLICT (id) DO UPDATE SET quote_text=EXCLUDED.quote_text, attribution=EXCLUDED.attribution;\n"
         )
 print(f"  {len(rows)} quotes")
 EOF
@@ -275,29 +239,23 @@ EOF
 # ── badges ────────────────────────────────────────────────────────────────────
 
 echo "==> Building import SQL for badges..."
-python3 - "$DATA_DIR/badges" "$IMPORT_SQL" <<'EOF'
-import json, sys, pathlib
+python3 - "$DATA_DIR/badges/badges.json" "$IMPORT_SQL" <<'EOF'
+import json, sys
 
-data_dir, sql_file = pathlib.Path(sys.argv[1]), sys.argv[2]
-rows = []
-for p in sorted(data_dir.glob("*.json")):
-    rows.append(json.load(open(p)))
-
-with open(sql_file, "a") as f:
+rows = json.load(open(sys.argv[1])) or []
+with open(sys.argv[2], "a") as f:
     for r in rows:
-        code = r["code"].replace("'", "''")
-        name = r["name"].replace("'", "''")
-        desc = r.get("description") or ""
-        desc_sql = f"'{desc.replace(chr(39), chr(39)*2)}'" if desc else "NULL"
-        icon = r.get("icon_url") or ""
-        icon_sql = f"'{icon.replace(chr(39), chr(39)*2)}'" if icon else "NULL"
+        def esc(v): return ("'" + str(v).replace("'", "''") + "'") if v else "NULL"
         f.write(
-            f"INSERT INTO badges (id, code, name, description, icon_url) "
-            f"VALUES ({r['id']}, '{code}', '{name}', {desc_sql}, {icon_sql}) "
-            f"ON CONFLICT (id) DO UPDATE SET code=EXCLUDED.code, name=EXCLUDED.name, "
-            f"description=EXCLUDED.description, icon_url=EXCLUDED.icon_url;\n"
+            f"INSERT INTO badges (id, name, description, emoji, icon_url, trigger_type, trigger_param) "
+            f"VALUES ({r['id']}, {esc(r['name'])}, {esc(r.get('description'))}, "
+            f"{esc(r.get('emoji'))}, {esc(r.get('icon_url'))}, "
+            f"{esc(r['trigger_type'])}, {esc(r.get('trigger_param'))}) "
+            f"ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, "
+            f"emoji=EXCLUDED.emoji, icon_url=EXCLUDED.icon_url, "
+            f"trigger_type=EXCLUDED.trigger_type, trigger_param=EXCLUDED.trigger_param;\n"
         )
-    print(f"  {len(rows)} badges")
+print(f"  {len(rows)} badges")
 EOF
 
 # ── recommended_shortcuts ─────────────────────────────────────────────────────
@@ -309,16 +267,16 @@ import json, sys
 rows = json.load(open(sys.argv[1])) or []
 with open(sys.argv[2], "a") as f:
     for r in rows:
-        label = r["label"].replace("'", "''")
-        url = r["url"].replace("'", "''")
-        fav = r.get("favicon_url") or ""
-        fav_sql = f"'{fav.replace(chr(39), chr(39)*2)}'" if fav else "NULL"
-        so = r.get("sort_order", 0)
+        def esc(v): return ("'" + str(v).replace("'", "''") + "'") if v else "NULL"
+        active = "true" if r.get("active", True) else "false"
         f.write(
-            f"INSERT INTO recommended_shortcuts (id, label, url, favicon_url, sort_order) "
-            f"VALUES ({r['id']}, '{label}', '{url}', {fav_sql}, {so}) "
-            f"ON CONFLICT (id) DO UPDATE SET label=EXCLUDED.label, url=EXCLUDED.url, "
-            f"favicon_url=EXCLUDED.favicon_url, sort_order=EXCLUDED.sort_order;\n"
+            f"INSERT INTO recommended_shortcuts (id, name, url, emoji, favicon_url, category, sort_order, active) "
+            f"VALUES ({esc(r['id'])}, {esc(r['name'])}, {esc(r['url'])}, "
+            f"{esc(r.get('emoji'))}, {esc(r.get('favicon_url'))}, "
+            f"{esc(r.get('category'))}, {r.get('sort_order', 0)}, {active}) "
+            f"ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, url=EXCLUDED.url, "
+            f"emoji=EXCLUDED.emoji, favicon_url=EXCLUDED.favicon_url, "
+            f"category=EXCLUDED.category, sort_order=EXCLUDED.sort_order, active=EXCLUDED.active;\n"
         )
 print(f"  {len(rows)} shortcuts")
 EOF

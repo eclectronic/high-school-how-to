@@ -1,0 +1,31 @@
+{
+  "id": 6,
+  "slug": "un-boring-your-annotations",
+  "tags": [
+    "academics"
+  ],
+  "links": null,
+  "title": "Un-Boring Your Annotations",
+  "status": "PUBLISHED",
+  "bodyHtml": null,
+  "bodyJson": null,
+  "cardType": "INFOGRAPHIC",
+  "mediaUrl": "/media/infographics/web/un-boring-your-annotations.jpeg",
+  "createdAt": "2026-04-05T02:51:06.247204+00:00",
+  "mediaUrls": [
+    {
+      "alt": null,
+      "url": "/media/infographics/web/un-boring-your-annotations.jpeg",
+      "printUrl": "/media/infographics/printable/un-boring-your-annotations.jpeg"
+    }
+  ],
+  "textColor": null,
+  "updatedAt": "2026-04-05T02:51:06.247204+00:00",
+  "description": "Tips for making annotations that stick out and help you learn.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": "/media/infographics/printable/un-boring-your-annotations.jpeg",
+  "templateTasks": null,
+  "backgroundColor": null
+}

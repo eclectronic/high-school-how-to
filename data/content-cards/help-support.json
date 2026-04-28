@@ -1,0 +1,25 @@
+{
+  "id": 21,
+  "slug": "help-support",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Need More Help?",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>If something's not working right or you have a question that's not covered here:</p><ul><li><strong>Check for updates</strong> — we're always adding new features and fixing things</li><li><strong>Clear your browser cache</strong> — sounds boring, but it fixes a surprising number of problems</li><li><strong>Try a different browser</strong> — we work best on Chrome, Firefox, Safari, and Edge</li><li><strong>Contact us</strong> — reach out and let us know what's going on. We want to help.</li></ul><p>Your locker data is saved to your account, so you won't lose anything by refreshing or switching devices. Sign in on any device and your stuff is right where you left it.</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:11.123324+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "Troubleshooting tips and how to contact us if something isn't working.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#f48fb1"
+}

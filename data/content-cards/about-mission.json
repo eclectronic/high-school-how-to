@@ -1,0 +1,25 @@
+{
+  "id": 8,
+  "slug": "about-mission",
+  "tags": [
+    "about"
+  ],
+  "links": null,
+  "title": "About High School How To",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>HighSchoolHowTo serves as a busy student bulletin board, helping you stay stress-free by keeping things streamlined and convenient. You no longer have to open a million apps just to stay organized, because our web page keeps every tool a student needs to stay organized all in one place. You can also pin our infographics, animated videos, and guides that cover everything from academics to fun. High school doesn't have to be scary — we're here to help! <a href=\"/auth/signup\">Create an account</a> and login to lock in today!</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:09.232204+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:26.630674+00:00",
+  "description": "HighSchoolHowTo serves as a busy student bulletin board, helping you stay stress-free by keeping things streamlined and convenient.",
+  "simpleLayout": true,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": null
+}

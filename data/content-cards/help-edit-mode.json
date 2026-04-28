@@ -1,0 +1,25 @@
+{
+  "id": 15,
+  "slug": "help-edit-mode",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Customizing Your Locker",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>You can customize your locker's look and contents — choose which apps appear, change the background color, pick a font, and rearrange your layout.</p><h3>The toolbar (desktop)</h3><p>The small toolbar at the top of your locker has everything you need:</p><ul><li><strong>App icons</strong> — tap to toggle each app on or off. Active apps appear as panes below. You can have up to <strong>3 apps active</strong> at once.</li><li><strong>Locker color button</strong> — tap the colored circle to open the color picker and change your locker's background. See <a href=\"/content/help-palettes\">Locker Color</a> for more.</li><li><strong>Font dropdown</strong> — pick a font for your apps, including dyslexia-friendly options like Lexend, Nunito, OpenDyslexic, and Comic Sans.</li></ul><h3>Rearranging panes (desktop)</h3><ul><li><strong>Reorder</strong> — drag a pane's header onto another pane to swap their positions</li><li><strong>Resize</strong> — drag the divider between two panes to make one wider or narrower</li><li><strong>Maximize</strong> — use the maximize button in the pane header to make a pane fill the locker; minimize to bring the others back</li><li><strong>Close</strong> — use the close button in the pane header to deactivate that app</li></ul><h3>On mobile</h3><p>On your phone, all four apps are always available — just swipe between them. There's no toggling or rearranging on mobile.</p><h3>Saving</h3><p>Your changes save automatically — there's no save button to remember.</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:10.418798+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "How to customize your locker: toggle apps, rearrange panes, change color, and pick a font.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#90caf9"
+}

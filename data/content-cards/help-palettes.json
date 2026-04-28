@@ -1,0 +1,25 @@
+{
+  "id": 17,
+  "slug": "help-palettes",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Locker Color",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>You can change the color of your locker and all its apps in one step using the <strong>Locker Color</strong> picker.</p><h3>How to change your locker color</h3><ol><li>Tap the <strong>Customize</strong> button (pencil icon ✏) on your locker home screen</li><li>Under <strong>Locker Color</strong>, pick any color from the swatch picker</li><li>Tap <strong>Done</strong> to save</li></ol><p>When you pick a color, your locker background updates to that color and each app pane automatically gets a coordinated accent color — no manual tweaking needed.</p><h3>Resetting to the default</h3><p>If you want to go back to the original look, tap <strong>Reset to default</strong> below the color picker. This restores the warm parchment default color.</p><h3>Tips</h3><ul><li>Cooler colors (blues, greens) give a calm, focused feel</li><li>Warmer colors (pinks, oranges) feel energetic and fun</li><li>Try something that matches your vibe — you can always reset it</li></ul>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:10.632485+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "How to customize your locker's color scheme using the Locker Color picker.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#b0bec5"
+}

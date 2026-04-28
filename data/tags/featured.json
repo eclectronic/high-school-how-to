@@ -1,0 +1,7 @@
+{
+  "id": 5,
+  "slug": "featured",
+  "name": "Featured",
+  "description": "Pinned to the top of the home page",
+  "sort_order": 99
+}

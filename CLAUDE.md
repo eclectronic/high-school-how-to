@@ -212,7 +212,6 @@ The `hshowto_export` Postgres role is provisioned automatically by Liquibase cha
 data/
   content-cards/    # one JSON file per card (filename = slug)
   tags/             # one JSON file per tag (filename = slug)
-  page-layouts/     # one JSON file per layout (filename = name-as-slug)
   quotes/           # quotes.json (all rows)
   badges/           # one JSON file per badge (filename = code)
   recommended-shortcuts/  # shortcuts.json (all rows)
@@ -222,7 +221,7 @@ Child rows (tags, links, template tasks) are denormalized into the parent card f
 
 #### Tables in scope (synced)
 
-`content_cards`, `content_card_links`, `content_card_tags`, `content_card_tasks`, `tags`, `page_layouts`, `page_layout_sections`, `quotes`, `badges`, `recommended_shortcuts`
+`content_cards`, `content_card_links`, `content_card_tags`, `content_card_tasks`, `tags`, `quotes`, `badges`, `recommended_shortcuts`
 
 User-owned tables (`app_users`, `tasks`, `bookmarks`, etc.) are **not** synced — they remain isolated per environment.
 

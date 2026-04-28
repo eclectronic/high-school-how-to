@@ -1,0 +1,25 @@
+{
+  "id": 10,
+  "slug": "help-apps",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Your Apps",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>You have four apps in your locker:</p><table><thead><tr><th>App</th><th>What it does</th></tr></thead><tbody><tr><td>📋 <strong>To-do</strong></td><td>Make lists, check things off, set due dates</td></tr><tr><td>📝 <strong>Notes</strong></td><td>Jot down anything — study notes, reminders, ideas</td></tr><tr><td>⏱ <strong>Timer</strong></td><td>Basic countdown or Pomodoro mode for focused study</td></tr><tr><td>📌 <strong>Pins</strong></td><td>Pinned web links to your most-used sites</td></tr></tbody></table><h3>Opening an app</h3><p><strong>On a computer:</strong> active apps are always visible side-by-side as panes. Use the small icon buttons in the toolbar at the top to toggle apps on and off. You can have up to <strong>3 apps active</strong> at once.</p><p><strong>On your phone:</strong> swipe left and right to move between apps. All four apps are always available — no toggling needed.</p><h3>Inside an app</h3><p>Most apps hold multiple items — for example, the To-do app can hold many lists. When you open an app, you'll see your items listed. Tap one to open it. Hit the back arrow to return to the list.</p><p>Your place is saved — switch apps and come back, you're right where you left off.</p><h3>Rearranging your apps (desktop)</h3><p>Drag a pane's header to swap it with another pane. Drag the divider between two panes to resize them. Each pane has buttons to maximize, restore, or close it.</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:09.617895+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "Overview of the four locker apps: To-do, Notes, Timer, and Pins.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#ffcc80"
+}

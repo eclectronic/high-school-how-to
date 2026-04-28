@@ -1,0 +1,312 @@
+[
+    {
+        "id": "bd6f42b3-0ca7-4070-a1d8-c20f326dd66a",
+        "name": "Copilot",
+        "url": "https://copilot.microsoft.com/",
+        "emoji": "\ud83e\udd16",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://copilot.microsoft.com/&size=64",
+        "category": "Microsoft",
+        "sort_order": 5,
+        "active": true
+    },
+    {
+        "id": "931e4b11-0f02-4dce-88d2-e35b390b8219",
+        "name": "Gemini",
+        "url": "https://gemini.google.com/app",
+        "emoji": "\u2728",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://gemini.google.com/app&size=64",
+        "category": "Google",
+        "sort_order": 5,
+        "active": true
+    },
+    {
+        "id": "25257f0f-d4d3-4081-b921-fb317df3886a",
+        "name": "PowerSchool",
+        "url": "https://www.powerschool.com/",
+        "emoji": "\ud83c\udf92",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://www.powerschool.com/&size=64",
+        "category": "School",
+        "sort_order": 10,
+        "active": true
+    },
+    {
+        "id": "5cbe703b-e1c6-463a-bf1e-0a20f87df5b7",
+        "name": "Grammarly",
+        "url": "https://www.grammarly.com",
+        "emoji": "\u270d\ufe0f",
+        "favicon_url": "https://www.google.com/s2/favicons?domain=grammarly.com&sz=64",
+        "category": "Writing & Citations",
+        "sort_order": 10,
+        "active": true
+    },
+    {
+        "id": "541ba39e-d88a-4479-9a42-55700149deb2",
+        "name": "Slack",
+        "url": "https://slack.com/",
+        "emoji": "\ud83d\udcac",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://slack.com/&size=64",
+        "category": "Communication",
+        "sort_order": 10,
+        "active": true
+    },
+    {
+        "id": "4a920396-2c95-48ae-98f7-bf0afc049908",
+        "name": "iCloud",
+        "url": "https://www.icloud.com/",
+        "emoji": "\u2601\ufe0f",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://www.icloud.com/&size=64",
+        "category": "Apple",
+        "sort_order": 10,
+        "active": true
+    },
+    {
+        "id": "6062e0e6-cfe7-4e42-9d87-56d82f1fbaf2",
+        "name": "Outlook",
+        "url": "https://outlook.cloud.microsoft/mail/",
+        "emoji": "\u2709\ufe0f",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://outlook.cloud.microsoft/mail/&size=64",
+        "category": "Microsoft",
+        "sort_order": 10,
+        "active": true
+    },
+    {
+        "id": "966692c4-35c6-4137-9ab3-0fefb3755d46",
+        "name": "Classroom",
+        "url": "https://classroom.google.com",
+        "emoji": "\ud83c\udf93",
+        "favicon_url": "/assets/favicons/google-classroom.png",
+        "category": "Google",
+        "sort_order": 10,
+        "active": true
+    },
+    {
+        "id": "b6eb7046-7f69-41b3-9598-c14d0ad814dd",
+        "name": "Quizlet",
+        "url": "https://quizlet.com",
+        "emoji": "\ud83d\uddc2\ufe0f",
+        "favicon_url": "https://www.google.com/s2/favicons?domain=quizlet.com&sz=64",
+        "category": "Learning",
+        "sort_order": 20,
+        "active": true
+    },
+    {
+        "id": "069cb263-a6fe-45b0-8391-63b2c6bd76bf",
+        "name": "Canva",
+        "url": "https://www.canva.com",
+        "emoji": "\ud83c\udfa8",
+        "favicon_url": "https://www.google.com/s2/favicons?domain=canva.com&sz=64",
+        "category": "Productivity",
+        "sort_order": 20,
+        "active": true
+    },
+    {
+        "id": "7cf248c0-76cc-4e2f-9e7c-9ad7d5574411",
+        "name": "Outlook Calendar",
+        "url": "https://outlook.cloud.microsoft/calendar",
+        "emoji": "\ud83d\udcc5",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://outlook.cloud.microsoft/calendar&size=64",
+        "category": "Microsoft",
+        "sort_order": 20,
+        "active": true
+    },
+    {
+        "id": "90d6c5ee-b4e6-4e9c-b0b7-245fce1ac7b6",
+        "name": "GDrive",
+        "url": "https://drive.google.com",
+        "emoji": "\ud83d\udcc1",
+        "favicon_url": "https://ssl.gstatic.com/images/branding/product/2x/drive_2020q4_48dp.png",
+        "category": "Google",
+        "sort_order": 20,
+        "active": true
+    },
+    {
+        "id": "879c14f3-7c7a-4c78-92af-d6ac37b8155f",
+        "name": "Microsoft Teams",
+        "url": "https://teams.microsoft.com/",
+        "emoji": "\ud83d\udc65",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://teams.microsoft.com/&size=64",
+        "category": "Communication",
+        "sort_order": 20,
+        "active": true
+    },
+    {
+        "id": "3f148be7-0980-4ac3-9f00-720329b3c648",
+        "name": "Schoology",
+        "url": "https://app.schoology.com/login",
+        "emoji": "\ud83d\udcd8",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://app.schoology.com/login&size=64",
+        "category": "School",
+        "sort_order": 20,
+        "active": true
+    },
+    {
+        "id": "65188daf-57a7-4d79-baf2-5265cb06c2dd",
+        "name": "Word",
+        "url": "https://word.cloud.microsoft/",
+        "emoji": "\ud83d\udcdd",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://word.cloud.microsoft/&size=64",
+        "category": "Microsoft",
+        "sort_order": 30,
+        "active": true
+    },
+    {
+        "id": "0b58ee6d-af4e-496c-ae8a-04b57a40e635",
+        "name": "GDocs",
+        "url": "https://docs.google.com",
+        "emoji": "\ud83d\udcc4",
+        "favicon_url": "https://ssl.gstatic.com/images/branding/product/2x/docs_2020q4_48dp.png",
+        "category": "Google",
+        "sort_order": 30,
+        "active": true
+    },
+    {
+        "id": "815b8104-a818-4c81-b57b-c77fc90447ea",
+        "name": "Discord",
+        "url": "https://discord.com/app",
+        "emoji": "\ud83c\udfae",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://discord.com/app&size=64",
+        "category": "Communication",
+        "sort_order": 30,
+        "active": true
+    },
+    {
+        "id": "fd4c57a0-4a09-41aa-bb46-e15e610ab7f1",
+        "name": "EasyBib",
+        "url": "https://www.easybib.com",
+        "emoji": "\ud83d\udcd6",
+        "favicon_url": "https://www.google.com/s2/favicons?domain=easybib.com&sz=64",
+        "category": "Writing & Citations",
+        "sort_order": 30,
+        "active": true
+    },
+    {
+        "id": "f2bf984b-7b2d-495f-90b4-7b163fa440f3",
+        "name": "Microsoft 365",
+        "url": "https://www.office.com",
+        "emoji": "\ud83d\udcbc",
+        "favicon_url": "https://www.google.com/s2/favicons?domain=office.com&sz=64",
+        "category": "Productivity",
+        "sort_order": 30,
+        "active": true
+    },
+    {
+        "id": "ca96681b-b967-4ccc-8e37-e807e405bb6a",
+        "name": "GSheets",
+        "url": "https://sheets.google.com",
+        "emoji": "\ud83d\udcca",
+        "favicon_url": "https://ssl.gstatic.com/images/branding/product/2x/sheets_2020q4_48dp.png",
+        "category": "Google",
+        "sort_order": 35,
+        "active": true
+    },
+    {
+        "id": "c776e675-2d81-4179-823b-2054eaf508b0",
+        "name": "GSlides",
+        "url": "https://slides.google.com",
+        "emoji": "\ud83c\udf9e\ufe0f",
+        "favicon_url": "https://ssl.gstatic.com/images/branding/product/2x/slides_2020q4_48dp.png",
+        "category": "Google",
+        "sort_order": 37,
+        "active": true
+    },
+    {
+        "id": "1bec29fe-481e-4acf-993f-f2f22198b6ca",
+        "name": "Excel",
+        "url": "https://excel.cloud.microsoft/",
+        "emoji": "\ud83d\udcca",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://excel.cloud.microsoft/&size=64",
+        "category": "Microsoft",
+        "sort_order": 40,
+        "active": true
+    },
+    {
+        "id": "f03b68e2-f19b-4c51-bf07-9bf4a63a9727",
+        "name": "Gmail",
+        "url": "https://mail.google.com",
+        "emoji": "\u2709\ufe0f",
+        "favicon_url": "https://ssl.gstatic.com/images/branding/product/2x/gmail_2020q4_48dp.png",
+        "category": "Google",
+        "sort_order": 40,
+        "active": true
+    },
+    {
+        "id": "cdfb7ada-06a9-41eb-aced-4e50b29c7dba",
+        "name": "Zoom",
+        "url": "https://zoom.us/",
+        "emoji": "\ud83c\udfa5",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://zoom.us/&size=64",
+        "category": "Communication",
+        "sort_order": 40,
+        "active": true
+    },
+    {
+        "id": "92bdc992-a60e-46df-854c-f4b38a1ae7f5",
+        "name": "Citation Machine",
+        "url": "https://www.citationmachine.net",
+        "emoji": "\ud83d\udcdd",
+        "favicon_url": "https://www.google.com/s2/favicons?domain=citationmachine.net&sz=64",
+        "category": "Writing & Citations",
+        "sort_order": 40,
+        "active": true
+    },
+    {
+        "id": "8a9c0fe6-97c6-4847-a969-e51f033bddb1",
+        "name": "GMeet",
+        "url": "https://meet.google.com/",
+        "emoji": "\ud83d\udcf9",
+        "favicon_url": "https://ssl.gstatic.com/images/branding/product/2x/meet_2020q4_48dp.png",
+        "category": "Google",
+        "sort_order": 45,
+        "active": true
+    },
+    {
+        "id": "87762e3a-42ac-4a38-81aa-33d9ae5e994f",
+        "name": "PowerPoint",
+        "url": "https://powerpoint.cloud.microsoft/",
+        "emoji": "\ud83d\udcfd\ufe0f",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://powerpoint.cloud.microsoft/&size=64",
+        "category": "Microsoft",
+        "sort_order": 45,
+        "active": true
+    },
+    {
+        "id": "7b582f2f-e49b-41ed-a71b-9fc568b6ba3e",
+        "name": "OneNote",
+        "url": "https://onenote.cloud.microsoft/",
+        "emoji": "\ud83d\udcd3",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://onenote.cloud.microsoft/&size=64",
+        "category": "Microsoft",
+        "sort_order": 47,
+        "active": true
+    },
+    {
+        "id": "1e9ecf28-c6e5-4860-8be9-42b47d01fc02",
+        "name": "GCal",
+        "url": "https://calendar.google.com",
+        "emoji": "\ud83d\udcc5",
+        "favicon_url": "https://ssl.gstatic.com/images/branding/product/2x/calendar_2020q4_48dp.png",
+        "category": "Google",
+        "sort_order": 50,
+        "active": true
+    },
+    {
+        "id": "9b44c500-04bb-4c6a-8205-715aa97b3ab3",
+        "name": "OneDrive",
+        "url": "https://onedrive.live.com",
+        "emoji": "\u2601\ufe0f",
+        "favicon_url": "https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://onedrive.live.com/&size=64",
+        "category": "Microsoft",
+        "sort_order": 50,
+        "active": true
+    },
+    {
+        "id": "41ff33c1-7345-42d5-9bc7-9d637cf3d711",
+        "name": "Scholar",
+        "url": "https://scholar.google.com",
+        "emoji": "\ud83d\udd2c",
+        "favicon_url": "/assets/favicons/google-scholar.png",
+        "category": "Google",
+        "sort_order": 60,
+        "active": true
+    }
+]

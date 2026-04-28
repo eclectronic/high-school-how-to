@@ -1,0 +1,25 @@
+{
+  "id": 20,
+  "slug": "help-keyboard",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Keyboard Shortcuts",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>If you're on a computer, these keyboard shortcuts can speed things up:</p><table><thead><tr><th>Shortcut</th><th>What it does</th></tr></thead><tbody><tr><td><code>1</code> / <code>2</code> / <code>3</code></td><td>Focus app pane 1, 2, or 3</td></tr><tr><td><code>n</code></td><td>Create a new item in the focused app</td></tr></tbody></table><p><em>These shortcuts only work when you're in the locker and not typing in a text field.</em></p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:11.02846+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "Desktop keyboard shortcuts for navigating and using your locker faster.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#ffcc80"
+}

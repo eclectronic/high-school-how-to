@@ -1,0 +1,31 @@
+{
+  "id": 2,
+  "slug": "sat-vs-act-guide",
+  "tags": [
+    "academics"
+  ],
+  "links": null,
+  "title": "To Test or Not to Test? The SAT, the ACT, and YOU!",
+  "status": "PUBLISHED",
+  "bodyHtml": null,
+  "bodyJson": null,
+  "cardType": "VIDEO",
+  "mediaUrl": "https://www.youtube.com/watch?v=V5amSLLPFoA",
+  "createdAt": "2026-04-05T02:51:06.153122+00:00",
+  "mediaUrls": [
+    {
+      "alt": null,
+      "url": "https://www.youtube.com/watch?v=V5amSLLPFoA",
+      "printUrl": null
+    }
+  ],
+  "textColor": null,
+  "updatedAt": "2026-04-05T03:26:18.475554+00:00",
+  "description": "What is the SAT? What is the ACT? What's the difference? Your comprehensive guide to college standardized testing.",
+  "simpleLayout": false,
+  "thumbnailUrl": "https://img.youtube.com/vi/V5amSLLPFoA/hqdefault.jpg",
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": null
+}

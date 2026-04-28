@@ -1,0 +1,25 @@
+{
+  "id": 9,
+  "slug": "help-welcome",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Welcome to Your Locker",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>Your locker is your personal workspace on High School How To. Open it once and you're set — no setup needed.</p><h3>What's in your locker</h3><p>You've got four apps:</p><ul><li>📋 <strong>To-do</strong> — make lists, check things off, set due dates</li><li>📝 <strong>Notes</strong> — quick notes, study summaries, ideas</li><li>⏱ <strong>Timer</strong> — basic countdown or Pomodoro mode</li><li>📌 <strong>Pins</strong> — pinned web links to sites you use a lot</li></ul><h3>How it works</h3><p><strong>On a computer?</strong> Your active apps live side-by-side in panes. A small toolbar at the top lets you toggle apps on and off, change your locker color, and pick a font.</p><p><strong>On your phone?</strong> Swipe left and right to move between apps. All four apps are always there — the dots at the bottom show which one you're on.</p><p>Take a look around and start using it.</p>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:09.41781+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "An overview of your locker and everything in it.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#fff176"
+}

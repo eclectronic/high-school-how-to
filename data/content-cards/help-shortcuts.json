@@ -1,0 +1,25 @@
+{
+  "id": 14,
+  "slug": "help-shortcuts",
+  "tags": [
+    "help"
+  ],
+  "links": null,
+  "title": "Pins",
+  "status": "PUBLISHED",
+  "bodyHtml": "<p>Pins are pinned web locations — URLs to websites you visit often, like your school portal, Google Classroom, Canvas, or anything else you need quick access to. They live in the 📌 Pins app <em>and</em> appear as quick-tap icons across the top of your locker home screen.</p><h3>How to add a Pin</h3><ol><li>Open the 📌 <strong>Pins</strong> app from your locker</li><li>Tap <strong>+ Add Pin</strong> at the bottom</li><li>Enter the URL (e.g. <code>https://classroom.google.com</code>)</li><li>Optionally enter a name so you know what it is at a glance</li><li>Tap <strong>Add</strong></li></ol><p>Your pin appears instantly in the list and on your home screen.</p><h3>Editing or deleting a Pin</h3><p>Each pin in the list has two action buttons:</p><ul><li><strong>✏ Edit</strong> — tap to update the URL or name</li><li><strong>✕ Delete</strong> — tap to remove the pin</li></ul><h3>Quick-adding from the home screen</h3><p>You can also tap the <strong>+</strong> button in the pins row on your home screen to add a new pin without opening the Pins app.</p><h3>Tips</h3><ul><li>Pin the sites you open every single day — saves searching or typing the URL</li><li>Give pins short, clear names so they're easy to recognise at a glance</li></ul>",
+  "bodyJson": null,
+  "cardType": "ARTICLE",
+  "mediaUrl": null,
+  "createdAt": "2026-04-13T09:05:10.317805+00:00",
+  "mediaUrls": [],
+  "textColor": null,
+  "updatedAt": "2026-04-16T08:18:28.728416+00:00",
+  "description": "How to pin your favourite web locations (URLs) so they're always one tap away.",
+  "simpleLayout": false,
+  "thumbnailUrl": null,
+  "coverImageUrl": null,
+  "printMediaUrl": null,
+  "templateTasks": null,
+  "backgroundColor": "#a5d6a7"
+}
