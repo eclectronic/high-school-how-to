@@ -281,6 +281,266 @@ $tape-border: rgba($color-ink, 0.14);
   box-shadow: 0 2px 5px rgba($color-ink, 0.12);
 }
 
+// ── Edit mode — draft badge, pencil button ───────────────────────
+
+.draft-badge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 2;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #d97706;
+  border-radius: 0.25rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  letter-spacing: 0.05em;
+}
+
+.card-pencil-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 0.35rem;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+
+  .content-card:hover & {
+    opacity: 1;
+  }
+}
+
+// ── Edit mode — new card tile ─────────────────────────────────────
+
+.new-card-tile {
+  position: relative;
+  border: 2px dashed #d97706;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 180px;
+  cursor: pointer;
+  color: #d97706;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(217, 119, 6, 0.05);
+  }
+
+  &__plus {
+    font-size: 2rem;
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  &__label {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+}
+
+.new-card-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  min-width: 180px;
+  padding: 0.25rem 0;
+
+  &__item {
+    display: block;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    text-align: left;
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #374151;
+
+    &:hover {
+      background: #f9fafb;
+    }
+  }
+}
+
+// ── Drag-to-topic: pill states ────────────────────────────────────
+
+.tag-nav__link--drop-target {
+  background: #fef3c7;
+  border-color: #d97706;
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.3);
+}
+
+.tag-nav__link--already-tagged {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tag-nav__link--new {
+  position: relative;
+  border-style: dashed;
+  color: #d97706;
+  border-color: #d97706;
+  background: transparent;
+
+  &:hover {
+    background: rgba(217, 119, 6, 0.05);
+  }
+}
+
+// ── Card drag handle ──────────────────────────────────────────────
+
+.card-drag-handle {
+  position: absolute;
+  left: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: grab;
+  color: #9ca3af;
+  font-size: 1rem;
+  padding: 0.25rem;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.15s;
+  user-select: none;
+
+  .content-card:hover & {
+    opacity: 1;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// ── New topic popover ─────────────────────────────────────────────
+
+.new-topic-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: 260px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  padding: 0.75rem;
+  z-index: 200;
+  text-align: left;
+  cursor: default;
+
+  &__header {
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    color: #111827;
+  }
+
+  &__label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+  }
+
+  &__input {
+    display: block;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.35rem;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+    box-sizing: border-box;
+  }
+
+  &__error {
+    font-size: 0.75rem;
+    color: #dc2626;
+    margin: 0.25rem 0 0;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+  }
+
+  &__btn {
+    padding: 0.3rem 0.75rem;
+    border-radius: 0.35rem;
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &--cancel {
+      background: #f3f4f6;
+      color: #374151;
+
+      &:hover {
+        background: #e5e7eb;
+      }
+    }
+
+    &--create {
+      background: #d97706;
+      color: #fff;
+
+      &:hover {
+        background: #b45309;
+      }
+    }
+  }
+}
+
+// ── Edit toast notification ───────────────────────────────────────
+
+.edit-toast {
+  position: fixed;
+  bottom: 5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: #fff;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  z-index: 3000;
+  pointer-events: none;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 // ── TODO_LIST task preview ────────────────────────────────────────
 
 .todo-preview {

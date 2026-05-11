@@ -1,0 +1,66 @@
+@if (open) {
+  <div class="picker-backdrop" (click)="close()"></div>
+  <div class="picker-modal">
+    <div class="picker-header">
+      <h2>Choose Image</h2>
+      <div class="picker-header__actions">
+        <button class="picker-upload-btn" (click)="triggerUpload()">
+          + Upload
+        </button>
+        <button class="picker-close-btn" (click)="close()" aria-label="Close">✕</button>
+      </div>
+    </div>
+
+    <div class="picker-search">
+      <input
+        #searchInput
+        type="text"
+        placeholder="Search by filename or alt text…"
+        [(ngModel)]="search"
+        (ngModelChange)="onSearchChange()"
+        class="picker-search__input"
+      />
+    </div>
+
+    @if (error()) {
+      <div class="picker-error">{{ error() }}</div>
+    }
+
+    @if (loading()) {
+      <div class="picker-loading">Loading…</div>
+    } @else {
+      <div class="picker-grid">
+        @for (asset of assets(); track asset.id) {
+          <button class="picker-thumb" (click)="select(asset)" [title]="asset.filename ?? asset.url">
+            <img [src]="asset.url" [alt]="asset.altText ?? ''" loading="lazy" />
+            <span class="picker-thumb__name">{{ asset.filename ?? asset.url }}</span>
+          </button>
+        } @empty {
+          <p class="picker-empty">No images found.</p>
+        }
+      </div>
+
+      @if (totalPages > 1) {
+        <div class="picker-pagination">
+          <button (click)="prevPage()" [disabled]="page === 0">← Prev</button>
+          <span>Page {{ page + 1 }} of {{ totalPages }}</span>
+          <button (click)="nextPage()" [disabled]="page >= totalPages - 1">Next →</button>
+        </div>
+      }
+    }
+
+    <input #fileInput type="file" accept="image/*" style="display:none" (change)="onFileSelected($event)" />
+  </div>
+
+  @if (pendingUploadFile()) {
+    <div class="picker-upload-overlay" (click)="pendingUploadFile.set(null)">
+      <div (click)="$event.stopPropagation()">
+        <app-image-upload-popover
+          [file]="pendingUploadFile()!"
+          (uploaded)="onUploadComplete($event)"
+          (cancelled)="pendingUploadFile.set(null)"
+        />
+      </div>
+    </div>
+  }
+}

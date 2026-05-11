@@ -1,5 +1,21 @@
 # Changelog
 
+## [9.0.0] — 2026-05-11
+
+### Inline authoring — edit the live site directly; human-readable upload filenames
+
+v9 collapses the standalone admin content editor into the live site itself. Admins flip an "Edit Mode" toggle in the nav and the site becomes the editor. Every visible content surface — title, description, body, infographic slides, video URL, to-do tasks — is editable in place, on the same components users see. A floating Save / Discard bar at the bottom-right commits or reverts changes without a context switch.
+
+Each card type has its own inline editing experience. ARTICLE cards use the existing Tiptap rich-text editor, now rendered directly in the viewer. INFOGRAPHIC cards show a Replace button and alt-text input per slide, a drag handle for reordering slides, a "Set print version" pill, and a trailing "+ Add image" tile for appending new slides. VIDEO cards expose a YouTube URL input with a live preview iframe below and a thumbnail Pick button. TODO_LIST cards use a new inline template editor with drag-to-reorder tasks, add/delete, and a color swatch picker — the same UI admins author in is the UI users see when they browse the card.
+
+The properties panel (⚙ Properties pill) gives access to fields that don't have a visible inline home: status (Draft/Published), slug, card type, and thumbnail. Changing any of these marks the card dirty and the floating Save bar commits them together with any inline edits. The Delete action lives here too, behind a confirm dialog.
+
+On listing pages (How To, Topic), edit mode reveals draft badges, pencil buttons for one-click navigation to the viewer in edit mode, and drag handles for assigning cards to topics. A "+ New topic" pill in the filter bar opens an inline popover that creates a new topic immediately. A "+ New how-to" tile at the end of the card grid opens a type dropdown; picking a type creates a blank draft and navigates to its viewer with the title focused.
+
+Image uploads now produce human-readable storage filenames instead of UUIDs. The uploaded filename (or an optional typed title) is sanitized to lowercase alphanumeric + hyphens and used as the storage key: uploading `Study Tips Cover.jpg` stores at `uploads/images/study-tips-cover.jpg`. Same-name uploads are rejected with a 409 Conflict response, surfacing the existing asset so the admin can choose "Use existing" or rename. Existing UUID-named assets are unchanged.
+
+The tag → topic vocabulary rename is now complete across all admin- and user-facing strings. The data layer (`tags` table, `Tag` interface) keeps its name. The admin control panel no longer has a "Content" section — all content authoring happens on the live site.
+
 ## [8.1.0] — 2026-04-28
 
 ### TODO_LIST cards, local dev upload pipeline, and content sync script fixes

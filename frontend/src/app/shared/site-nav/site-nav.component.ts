@@ -2,11 +2,12 @@ import { Component, Input, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthApiService } from '../../core/services/auth-api.service';
 import { SessionStore } from '../../core/session/session.store';
+import { EditModeToggleComponent } from '../edit-mode-toggle/edit-mode-toggle.component';
 
 @Component({
   selector: 'app-site-nav',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, EditModeToggleComponent],
   templateUrl: './site-nav.component.html',
   styleUrl: './site-nav.component.scss',
 })

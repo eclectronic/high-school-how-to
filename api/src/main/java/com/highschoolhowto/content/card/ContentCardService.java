@@ -122,19 +122,44 @@ public class ContentCardService {
         return ContentCardAdminResponse.from(findById(id));
     }
 
+    @Transactional(readOnly = true)
+    public ContentCardAdminResponse findAdminResponseBySlug(String slug) {
+        return ContentCardAdminResponse.from(findBySlug(slug));
+    }
+
     @Transactional
     public ContentCardAdminResponse create(SaveCardRequest request) {
-        if (cardRepository.existsBySlug(request.slug())) {
-            throw new ApiException(HttpStatus.CONFLICT, "Slug already in use", "A card with slug '" + request.slug() + "' already exists");
-        }
+        String slug = resolveSlug(request);
+        SaveCardRequest resolved = new SaveCardRequest(
+                request.title() != null ? request.title() : "",
+                slug,
+                request.description(),
+                request.cardType(),
+                request.mediaUrl(),
+                request.printMediaUrl(),
+                request.mediaUrls(),
+                request.thumbnailUrl(),
+                request.coverImageUrl(),
+                request.bodyJson(),
+                request.bodyHtml(),
+                request.backgroundColor(),
+                request.textColor(),
+                request.simpleLayout(),
+                request.status(),
+                request.tagIds(),
+                request.links(),
+                request.templateTasks());
         ContentCard card = new ContentCard();
-        applyRequest(card, request);
+        applyRequest(card, resolved);
         return ContentCardAdminResponse.from(cardRepository.save(card));
     }
 
     @Transactional
     public ContentCardAdminResponse update(Long id, SaveCardRequest request) {
         ContentCard card = findById(id);
+        if (request.slug() == null || request.slug().isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Slug required", "A slug is required when updating an existing card");
+        }
         if (!card.getSlug().equals(request.slug()) && cardRepository.existsBySlug(request.slug())) {
             throw new ApiException(HttpStatus.CONFLICT, "Slug already in use", "A card with slug '" + request.slug() + "' already exists");
         }
@@ -349,6 +374,55 @@ public class ContentCardService {
         } else {
             card.getTemplateTasks().clear();
         }
+    }
+
+    private String resolveSlug(SaveCardRequest request) {
+        String slug = request.slug();
+        if (slug == null || slug.isBlank()) {
+            String title = request.title();
+            String base;
+            if (title != null && !title.isBlank()) {
+                base = slugify(title);
+            } else {
+                String cardTypeLower = request.cardType() != null
+                        ? request.cardType().name().toLowerCase()
+                        : "card";
+                base = cardTypeLower + "-" + randomAlphanumeric(4);
+            }
+            slug = base;
+        }
+
+        // Handle collisions by appending -2, -3, etc.
+        if (cardRepository.existsBySlug(slug)) {
+            int suffix = 2;
+            String candidate;
+            do {
+                candidate = slug + "-" + suffix;
+                suffix++;
+            } while (cardRepository.existsBySlug(candidate));
+            slug = candidate;
+        }
+        return slug;
+    }
+
+    private static String slugify(String text) {
+        String slug = text.toLowerCase()
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        if (slug.length() > 80) {
+            slug = slug.substring(0, 80).replaceAll("-+$", "");
+        }
+        return slug.isEmpty() ? "card" : slug;
+    }
+
+    private static String randomAlphanumeric(int length) {
+        String chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder(length);
+        java.util.Random rng = new java.util.Random();
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(rng.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 
     private String deriveYoutubeThumbnail(String youtubeUrl) {

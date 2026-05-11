@@ -20,6 +20,8 @@ import { TiptapEditorComponent } from './tiptap-editor.component';
 import { InlineTitleEditComponent } from '../../shared/inline-title-edit/inline-title-edit.component';
 import { SwatchPickerComponent } from '../../shared/swatch-picker/swatch-picker.component';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { MediaPickerComponent } from '../media/media-picker.component';
+import { MediaAsset } from '../../core/services/media-api.service';
 
 interface LinkDraft {
   targetCardId: number;
@@ -59,6 +61,7 @@ interface CardForm {
     InlineTitleEditComponent,
     SwatchPickerComponent,
     ConfirmDialogComponent,
+    MediaPickerComponent,
   ],
   templateUrl: './content-editor.component.html',
   styleUrl: './content-editor.component.scss',
@@ -103,6 +106,31 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
   protected showBgSwatchPicker = signal(false);
   protected showTextSwatchPicker = signal(false);
   protected deleteTaskIndex = signal<number | null>(null);
+
+  // Media picker
+  protected pickerOpen = signal(false);
+  private pickerTarget: 'thumbnailUrl' | 'coverImageUrl' | { index: number; field: 'url' | 'printUrl' } | null = null;
+
+  protected openPicker(target: 'thumbnailUrl' | 'coverImageUrl' | { index: number; field: 'url' | 'printUrl' }) {
+    this.pickerTarget = target;
+    this.pickerOpen.set(true);
+  }
+
+  protected onPickerSelected(asset: MediaAsset) {
+    this.pickerOpen.set(false);
+    if (!this.pickerTarget) return;
+    if (this.pickerTarget === 'thumbnailUrl') {
+      this.form.thumbnailUrl = asset.url;
+    } else if (this.pickerTarget === 'coverImageUrl') {
+      this.form.coverImageUrl = asset.url;
+    } else {
+      const { index, field } = this.pickerTarget;
+      const entries = [...this.mediaUrls()];
+      entries[index] = { ...entries[index], [field]: asset.url };
+      this.mediaUrls.set(entries);
+    }
+    this.pickerTarget = null;
+  }
 
   // Related content links
   protected links: LinkDraft[] = [];

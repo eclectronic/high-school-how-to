@@ -107,12 +107,18 @@
 
                   <div class="media-url-item__fields">
                     <div class="media-url-item__uploads">
-                      <label class="btn btn--secondary btn--sm upload-btn">
+                      <button type="button" class="btn btn--secondary btn--sm" (click)="openPicker({ index: i, field: 'url' })">
                         Image
+                      </button>
+                      <label class="btn btn--secondary btn--sm upload-btn">
+                        Upload
                         <input type="file" accept="image/*" hidden (change)="uploadMediaFile($event, i, 'url')" />
                       </label>
-                      <label class="btn btn--secondary btn--sm upload-btn">
+                      <button type="button" class="btn btn--secondary btn--sm" (click)="openPicker({ index: i, field: 'printUrl' })">
                         Print
+                      </button>
+                      <label class="btn btn--secondary btn--sm upload-btn">
+                        Upload Print
                         <input type="file" accept="image/*,application/pdf" hidden (change)="uploadMediaFile($event, i, 'printUrl')" />
                       </label>
                       @if (entry.printUrl) {
@@ -155,9 +161,10 @@
         }
 
         <div class="form-row">
-          <label>Thumbnail URL</label>
+          <label>Thumbnail</label>
           <div class="url-with-upload">
             <input [(ngModel)]="form.thumbnailUrl" placeholder="https://..." />
+            <button type="button" class="btn btn--secondary btn--sm" (click)="openPicker('thumbnailUrl')">Pick</button>
             <label class="btn btn--secondary btn--sm upload-btn">
               Upload
               <input type="file" accept="image/*" hidden (change)="uploadFile($event, 'thumbnailUrl')" />
@@ -169,9 +176,10 @@
         </div>
 
         <div class="form-row">
-          <label>Cover Image URL <small>(used as hero)</small></label>
+          <label>Cover Image <small>(used as hero)</small></label>
           <div class="url-with-upload">
             <input [(ngModel)]="form.coverImageUrl" placeholder="https://..." />
+            <button type="button" class="btn btn--secondary btn--sm" (click)="openPicker('coverImageUrl')">Pick</button>
             <label class="btn btn--secondary btn--sm upload-btn">
               Upload
               <input type="file" accept="image/*" hidden (change)="uploadFile($event, 'coverImageUrl')" />
@@ -447,3 +455,9 @@
     </div>
   }
 </div>
+
+<app-media-picker
+  [open]="pickerOpen()"
+  (selected)="onPickerSelected($event)"
+  (closed)="pickerOpen.set(false)"
+/>

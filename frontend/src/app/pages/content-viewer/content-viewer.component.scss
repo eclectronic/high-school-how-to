@@ -124,6 +124,30 @@ $breakpoint-desktop: 768px;
   }
 }
 
+// ─── Edit mode ────────────────────────────────────────────────────────────────
+
+.draft-banner {
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.props-pill-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.edit-mode-on app-inline-title-edit:hover,
+.edit-mode-on .article-body:hover {
+  outline: 1px dashed rgba(217, 119, 6, 0.4);
+}
+
 // ─── Nav arrows ───────────────────────────────────────────────────────────────
 
 .viewer-arrow {
@@ -234,6 +258,84 @@ $breakpoint-desktop: 768px;
     min-height: 240px;
     border: none;
   }
+
+  &--placeholder {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-ink, 0.06);
+    border: 2px dashed rgba($color-ink, 0.2);
+
+    span {
+      font-size: 0.9rem;
+      color: #5f4f43;
+    }
+  }
+}
+
+.video-edit-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 254, 249, 0.85);
+  border: 1px solid rgba($color-ink, 0.15);
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.video-url-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5f4f43;
+}
+
+.video-url-input {
+  border: 1px solid rgba($color-ink, 0.25);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.875rem;
+  background: #fff;
+  color: $color-ink;
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus { outline: 2px solid #d97706; outline-offset: 1px; }
+}
+
+.video-thumb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.video-thumb-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5f4f43;
+}
+
+.video-thumb-preview {
+  width: 60px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  border: 1px solid rgba($color-ink, 0.2);
+}
+
+.video-thumb-btn {
+  background: rgba($color-ink, 0.06);
+  border: 1px solid rgba($color-ink, 0.2);
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover { background: rgba($color-ink, 0.12); }
 }
 
 // ─── INFOGRAPHIC ──────────────────────────────────────────────────────────────
@@ -629,6 +731,18 @@ $breakpoint-desktop: 768px;
   &__slide {
     flex: 0 0 100%;
     scroll-snap-align: center;
+    position: relative;
+
+    &--drop-target .infographic-panel {
+      outline: 3px dashed #d97706;
+      outline-offset: 4px;
+    }
+
+    &--add {
+      cursor: pointer;
+      flex: 0 0 100%;
+      scroll-snap-align: center;
+    }
   }
 
   // Prev / next chevrons — shown on hover on desktop, hidden on mobile (swipe handles it)
@@ -695,4 +809,118 @@ $breakpoint-desktop: 768px;
     color: #5f4f43;
     margin-top: 0.4rem;
   }
+}
+
+// ─── Infographic slide edit chrome ────────────────────────────────────────────
+
+.slide-edit-toolbar {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.slide-btn {
+  background: rgba(255, 254, 249, 0.92);
+  border: 1px solid rgba(45, 26, 16, 0.3);
+  border-radius: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover { background: #fff; }
+
+  &--remove {
+    color: #dc2626;
+    &:hover { border-color: #dc2626; }
+  }
+}
+
+.slide-drag-handle {
+  cursor: grab;
+  background: rgba(255, 254, 249, 0.92);
+  border: 1px solid rgba(45, 26, 16, 0.3);
+  border-radius: 0.4rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.85rem;
+  letter-spacing: -1px;
+  user-select: none;
+  color: #5f4f43;
+
+  &:active { cursor: grabbing; }
+}
+
+.slide-edit-footer {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  background: rgba(255, 254, 249, 0.85);
+  border-top: 1px solid rgba(45, 26, 16, 0.1);
+}
+
+.slide-alt-input {
+  flex: 1;
+  border: 1px solid rgba(45, 26, 16, 0.25);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  background: #fff;
+  color: #2d1a10;
+
+  &:focus {
+    outline: 2px solid #d97706;
+    outline-offset: 1px;
+  }
+}
+
+.slide-print-btn {
+  flex-shrink: 0;
+  background: rgba(45, 26, 16, 0.05);
+  border: 1px solid rgba(45, 26, 16, 0.2);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover { background: rgba(45, 26, 16, 0.1); }
+}
+
+.infographic-panel--add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px dashed rgba(45, 26, 16, 0.3);
+  border-radius: 0.5rem;
+  min-height: 200px;
+  background: rgba(255, 254, 249, 0.6);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: #d97706;
+    background: rgba(254, 243, 199, 0.4);
+  }
+}
+
+.add-slide-icon {
+  font-size: 2.5rem;
+  color: #92400e;
+  line-height: 1;
+}
+
+.add-slide-label {
+  font-size: 0.9rem;
+  color: #92400e;
+  font-weight: 500;
 }

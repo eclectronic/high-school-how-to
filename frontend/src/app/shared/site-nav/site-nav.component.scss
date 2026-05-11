@@ -19,18 +19,20 @@ $color-rose: #ff9fbf;
 }
 
 .site-nav__logo {
-  font-family: var(--font-display, serif);
-  font-size: 1.1rem;
-  font-weight: 900;
-  color: $color-ink;
-  text-decoration: none;
-  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
-  line-height: 1.2;
+  text-decoration: none;
 
   &:hover {
-    opacity: 0.8;
+    opacity: 0.85;
   }
+}
+
+.site-nav__logo-img {
+  height: 44px;
+  width: auto;
+  display: block;
 }
 
 .site-nav__links {
@@ -161,8 +163,8 @@ $color-rose: #ff9fbf;
     padding: 0.6rem 1rem;
   }
 
-  .site-nav__logo {
-    font-size: 0.95rem;
+  .site-nav__logo-img {
+    height: 36px;
   }
 
   .site-nav__link {

@@ -1,4 +1,4 @@
-<div class="how-to-page">
+<div class="how-to-page" (click)="closeNewCardMenu(); closeNewTopicPopover()">
   <app-site-nav activeRoute="how-to" />
 
   <header class="how-to-page__header">
@@ -9,17 +9,55 @@
   <nav class="tag-nav" aria-label="Filter by topic">
     <button type="button" class="tag-nav__link"
             [class.tag-nav__link--active]="selectedTagSlug() === null"
-            (click)="selectTag(null)">
+            (click)="selectTag(null)"
+            (dragover)="$event.preventDefault()"
+            (drop)="$event.preventDefault()">
       All
     </button>
     @for (tag of availableTags(); track tag.id) {
       <button type="button" class="tag-nav__link"
               [class.tag-nav__link--active]="selectedTagSlug() === tag.slug"
-              (click)="selectTag(tag.slug)">
+              [class.tag-nav__link--drop-target]="editModeStore.enabled() && dragOverTagSlug() === tag.slug"
+              [class.tag-nav__link--already-tagged]="isAlreadyTagged(tag)"
+              (click)="selectTag(tag.slug)"
+              (dragover)="editModeStore.enabled() ? onPillDragOver($event, tag.slug) : null"
+              (dragleave)="onPillDragLeave()"
+              (drop)="editModeStore.enabled() ? onPillDrop($event, tag) : null">
         {{ tag.name }}
       </button>
     }
+    @if (sessionStore.isAdmin() && editModeStore.enabled()) {
+      <button type="button" class="tag-nav__link tag-nav__link--new"
+              (click)="openNewTopicPopover($event)">
+        + New topic
+        @if (newTopicPopoverOpen()) {
+          <div class="new-topic-popover" (click)="$event.stopPropagation()">
+            <div class="new-topic-popover__header">Create new topic</div>
+            <label class="new-topic-popover__label">Name
+              <input class="new-topic-popover__input" type="text"
+                     [(ngModel)]="newTopicName"
+                     placeholder="e.g. Study Skills"
+                     (keydown.enter)="createTopic()"
+                     (keydown.escape)="closeNewTopicPopover()" />
+            </label>
+            @if (newTopicError()) {
+              <p class="new-topic-popover__error">{{ newTopicError() }}</p>
+            }
+            <div class="new-topic-popover__actions">
+              <button type="button" class="new-topic-popover__btn new-topic-popover__btn--cancel"
+                      (click)="closeNewTopicPopover()">Cancel</button>
+              <button type="button" class="new-topic-popover__btn new-topic-popover__btn--create"
+                      (click)="createTopic()">Create</button>
+            </div>
+          </div>
+        }
+      </button>
+    }
   </nav>
+
+  @if (toastMessage()) {
+    <div class="edit-toast" role="status">{{ toastMessage() }}</div>
+  }
 
   <!-- Card grid -->
   @if (loading()) {
@@ -28,6 +66,20 @@
     <div class="card-grid">
       @for (card of filteredCards(); track card.id) {
         <a class="content-card" [routerLink]="['/content', card.slug]">
+          @if (editModeStore.enabled() && card.status === 'DRAFT') {
+            <span class="draft-badge">DRAFT</span>
+          }
+          @if (sessionStore.isAdmin() && editModeStore.enabled()) {
+            <button class="card-pencil-btn"
+                    (click)="navigateToEdit(card.slug, $event)"
+                    title="Edit" aria-label="Edit this card">✏</button>
+            <span class="card-drag-handle"
+                  draggable="true"
+                  (dragstart)="onDragStart($event, card)"
+                  (dragend)="onDragEnd()"
+                  title="Drag to a topic to assign"
+                  (click)="$event.preventDefault(); $event.stopPropagation()">⋮⋮</span>
+          }
           <div class="content-card__thumb-wrapper">
             @if (cardThumbnail(card)) {
               <img class="content-card__thumb"
@@ -67,9 +119,24 @@
           </div>
         </a>
       }
+
+      @if (showNewTile()) {
+        <div class="new-card-tile" (click)="openNewCardMenu($event)">
+          <div class="new-card-tile__plus">+</div>
+          <div class="new-card-tile__label">New how-to</div>
+          @if (newCardMenuOpen()) {
+            <div class="new-card-menu" (click)="$event.stopPropagation()">
+              <button class="new-card-menu__item" (click)="createCard('ARTICLE')">📄 Article</button>
+              <button class="new-card-menu__item" (click)="createCard('INFOGRAPHIC')">🖼 Infographic</button>
+              <button class="new-card-menu__item" (click)="createCard('VIDEO')">▶ Video</button>
+              <button class="new-card-menu__item" (click)="createCard('TODO_LIST')">☑ To-do list</button>
+            </div>
+          }
+        </div>
+      }
     </div>
 
-    @if (filteredCards().length === 0) {
+    @if (filteredCards().length === 0 && !showNewTile()) {
       <p class="how-to-page__empty">No content found.</p>
     }
   }

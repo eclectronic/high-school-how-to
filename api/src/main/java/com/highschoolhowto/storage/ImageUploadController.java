@@ -1,14 +1,18 @@
 package com.highschoolhowto.storage;
 
+import java.util.Map;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import com.highschoolhowto.media.MediaAssetService;
 import com.highschoolhowto.web.ApiException;
 
 @RestController
@@ -22,25 +26,33 @@ public class ImageUploadController {
 
     private final StorageService storageService;
     private final ThumbnailService thumbnailService;
+    private final MediaAssetService mediaAssetService;
 
-    public ImageUploadController(StorageService storageService, ThumbnailService thumbnailService) {
+    public ImageUploadController(StorageService storageService, ThumbnailService thumbnailService,
+            MediaAssetService mediaAssetService) {
         this.storageService = storageService;
         this.thumbnailService = thumbnailService;
+        this.mediaAssetService = mediaAssetService;
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ImageUploadResponse upload(@RequestParam("file") MultipartFile file) {
+    public ImageUploadResponse upload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "title", required = false) String title) {
         validate(file);
         byte[] originalBytes = readBytes(file);
         String contentType = file.getContentType();
-        String filename = storageService.generateFilename(extensionFor(contentType));
+        String canonicalSource = (title != null && !title.isBlank()) ? title : file.getOriginalFilename();
+        String filename = storageService.generateFilename(canonicalSource, extensionFor(contentType), "images");
         String imageUrl = storageService.upload(originalBytes, filename, contentType, "images");
+        mediaAssetService.recordExisting(imageUrl, file.getOriginalFilename(), contentType, originalBytes.length);
 
         // SVGs are not rasterizable by thumbnailator — skip thumbnail generation
         String thumbnailUrl = null;
         if (!"image/svg+xml".equals(contentType)) {
             byte[] thumbBytes = thumbnailService.generateThumbnail(originalBytes);
             thumbnailUrl = storageService.upload(thumbBytes, filename, "image/jpeg", "thumbs");
+            mediaAssetService.recordExisting(thumbnailUrl, "thumb-" + file.getOriginalFilename(), "image/jpeg", thumbBytes.length);
         }
 
         return new ImageUploadResponse(imageUrl, thumbnailUrl);
@@ -52,12 +64,16 @@ public class ImageUploadController {
      * Returns a relative URL suitable for use in article HTML.
      */
     @PostMapping(value = "/upload/content", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ImageUploadResponse uploadContentImage(@RequestParam("file") MultipartFile file) {
+    public ImageUploadResponse uploadContentImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "title", required = false) String title) {
         validate(file);
         byte[] originalBytes = readBytes(file);
         String contentType = file.getContentType();
-        String filename = storageService.generateFilename(extensionFor(contentType));
+        String canonicalSource = (title != null && !title.isBlank()) ? title : file.getOriginalFilename();
+        String filename = storageService.generateFilename(canonicalSource, extensionFor(contentType), "content");
         String imageUrl = storageService.upload(originalBytes, filename, contentType, "content");
+        mediaAssetService.recordExisting(imageUrl, file.getOriginalFilename(), contentType, originalBytes.length);
         return new ImageUploadResponse(imageUrl, null);
     }
 
@@ -66,13 +82,29 @@ public class ImageUploadController {
      * thumbnail generation. Stored under the {@code badges} subfolder.
      */
     @PostMapping(value = "/upload/badges", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ImageUploadResponse uploadBadgeIcon(@RequestParam("file") MultipartFile file) {
+    public ImageUploadResponse uploadBadgeIcon(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "title", required = false) String title) {
         validate(file);
         byte[] originalBytes = readBytes(file);
         String contentType = file.getContentType();
-        String filename = storageService.generateFilename(extensionFor(contentType));
+        String canonicalSource = (title != null && !title.isBlank()) ? title : file.getOriginalFilename();
+        String filename = storageService.generateFilename(canonicalSource, extensionFor(contentType), "badges");
         String imageUrl = storageService.upload(originalBytes, filename, contentType, "badges");
+        mediaAssetService.recordExisting(imageUrl, file.getOriginalFilename(), contentType, originalBytes.length);
         return new ImageUploadResponse(imageUrl, null);
+    }
+
+    @ExceptionHandler(FilenameConflictException.class)
+    public ResponseEntity<Map<String, String>> handleFilenameConflict(FilenameConflictException ex) {
+        String key = ex.getKey();
+        // Extract just the filename portion from the key (e.g. "images/foo.jpeg" -> "foo.jpeg")
+        String filename = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "Filename conflict",
+                "message", "An image named '" + filename + "' already exists.",
+                "existingUrl", ex.getExistingUrl()
+        ));
     }
 
     private byte[] readBytes(MultipartFile file) {

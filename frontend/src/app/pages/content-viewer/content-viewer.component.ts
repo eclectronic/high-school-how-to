@@ -1,16 +1,48 @@
-import { Component, OnInit, OnDestroy, HostListener, signal, computed, inject, ElementRef, ViewChild } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  HostListener,
+  signal,
+  computed,
+  inject,
+  effect,
+  ElementRef,
+  ViewChild,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SiteNavComponent } from '../../shared/site-nav/site-nav.component';
 import { DomSanitizer, SafeHtml, SafeResourceUrl, Title } from '@angular/platform-browser';
 import { Subscription, switchMap } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ContentApiService } from '../../core/services/content-api.service';
-import { CardType, ContentCard, MediaUrlEntry, LockerStatusResponse, cardTypeIcon } from '../../core/models/content.models';
+import {
+  CardType,
+  ContentCard,
+  ContentCardAdmin,
+  MediaUrlEntry,
+  LockerStatusResponse,
+  SaveCardRequest,
+  cardTypeIcon,
+} from '../../core/models/content.models';
 import { SessionStore } from '../../core/session/session.store';
+import { EditModeStore } from '../../core/edit-mode/edit-mode.store';
+import { PropertiesPanelComponent } from '../../shared/inline-edit/properties-panel.component';
+import { InlineTitleEditComponent } from '../../shared/inline-title-edit/inline-title-edit.component';
+import { TiptapEditorComponent } from '../../admin/content/tiptap-editor.component';
+import { ImagePickerComponent } from '../../admin/images/image-picker.component';
+import { MediaAsset } from '../../core/services/media-api.service';
+import { TodoListEditComponent } from '../../shared/inline-edit/todo-list-edit.component';
+
+interface PickerTarget {
+  kind: 'replace' | 'add' | 'print' | 'video-thumbnail';
+  index: number;
+}
 
 @Component({
   selector: 'app-content-viewer',
   standalone: true,
-  imports: [RouterLink, SiteNavComponent],
+  imports: [RouterLink, SiteNavComponent, PropertiesPanelComponent, InlineTitleEditComponent, TiptapEditorComponent, ImagePickerComponent, TodoListEditComponent],
   templateUrl: './content-viewer.component.html',
   styleUrl: './content-viewer.component.scss',
 })
@@ -21,20 +53,38 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   private readonly sanitizer = inject(DomSanitizer);
   private readonly titleService = inject(Title);
   private readonly sessionStore = inject(SessionStore);
+  protected readonly editModeStore = inject(EditModeStore);
   private readonly subs = new Subscription();
 
   private static readonly APP_TITLE = 'High School How To';
 
   protected readonly isAuthenticated = this.sessionStore.isAuthenticated;
+  protected readonly isAdmin = this.sessionStore.isAdmin;
+  protected readonly editMode = this.editModeStore.enabled;
 
   protected card = signal<ContentCard | null>(null);
+  protected adminCard = signal<ContentCardAdmin | null>(null);
   protected loading = signal(true);
   protected error = signal<string | null>(null);
-  protected safeEmbed = signal<SafeResourceUrl | null>(null);
   protected safeHtml = signal<SafeHtml | null>(null);
   protected lockerStatus = signal<LockerStatusResponse | null>(null);
   protected lockerActionPending = signal(false);
   protected lockerAddedToast = signal(false);
+  protected isSaving = signal(false);
+  protected autoFocusTitle = signal(false);
+
+  protected readonly displayCard = computed(() => {
+    const dirty = this.editModeStore.dirtyCard();
+    const base = this.adminCard() ?? this.card();
+    if (!dirty || !base) return base;
+    return { ...base, ...dirty } as ContentCardAdmin;
+  });
+
+  protected readonly safeEmbed = computed((): SafeResourceUrl | null => {
+    const c = (this.isAdmin() && this.editMode()) ? this.displayCard() : this.card();
+    if (!c || c.cardType !== 'VIDEO' || !c.mediaUrl) return null;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(this.buildEmbedUrl(c.mediaUrl));
+  });
 
   /** Controls the mobile title overlay on infographic cards. Shown on load, fades after 3s. */
   protected overlayVisible = signal(false);
@@ -49,11 +99,19 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
 
   protected carouselIndex = signal(0);
 
+  // Slide picker state (replace/add/print)
+  protected pickerTarget = signal<PickerTarget | null>(null);
+
+  // Slide drag-reorder state
+  protected slideDragFromIndex = signal<number | null>(null);
+  protected slideDropTargetIndex = signal<number | null>(null);
+
   /** Resolved mediaUrls list for the current INFOGRAPHIC card.
+   *  In edit mode, reflects any dirty changes made since the card loaded.
    *  Falls back to synthesizing from the legacy scalar fields when mediaUrls is absent or empty.
    */
   protected readonly mediaUrls = computed((): MediaUrlEntry[] => {
-    const card = this.card();
+    const card = (this.isAdmin() && this.editMode()) ? this.displayCard() : this.card();
     if (!card || card.cardType !== 'INFOGRAPHIC') return [];
     if (card.mediaUrls?.length) return card.mediaUrls;
     if (card.mediaUrl) return [{ url: card.mediaUrl, printUrl: card.printMediaUrl ?? null, alt: null }];
@@ -135,12 +193,22 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
     return idx < cards.length - 1 ? cards[idx + 1] : null;
   });
 
+  constructor() {
+    // Watch for save requests from the global save bar
+    effect(() => {
+      if (this.editModeStore.pendingSave() > 0) {
+        this.saveCard();
+      }
+    });
+  }
+
   ngOnInit(): void {
     // Re-load the nav list whenever the tag query param changes (supports in-page switching).
     this.subs.add(
       this.route.queryParamMap.subscribe((qp) => {
         const tag = qp.get('tag');
         this.tagSlug.set(tag);
+        this.autoFocusTitle.set(qp.get('edit') === 'focus');
         const list$ = tag ? this.api.getCardsByTag(tag) : this.api.getPublishedCards();
         list$.subscribe({
           next: (cards) => {
@@ -164,21 +232,28 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
           switchMap((params) => {
             this.loading.set(true);
             this.error.set(null);
-            this.safeEmbed.set(null);
             this.safeHtml.set(null);
-            return this.api.getCardBySlug(fixedSlug ?? params.get('slug')!);
+            this.adminCard.set(null);
+            this.editModeStore.discard();
+            const slug = fixedSlug ?? params.get('slug')!;
+            return this.api.getCardBySlug(slug).pipe(
+              catchError((err) => {
+                if (err.status === 404 && this.sessionStore.isAdmin() && this.editModeStore.enabled()) {
+                  return this.api.adminGetCardBySlug(slug);
+                }
+                throw err;
+              }),
+            );
           }),
         )
         .subscribe({
           next: (card) => {
             this.card.set(card);
+            if ('bodyJson' in card) {
+              this.adminCard.set(card as ContentCardAdmin);
+            }
             this.lockerStatus.set(null);
             this.carouselIndex.set(0);
-            if (card.cardType === 'VIDEO' && card.mediaUrl) {
-              this.safeEmbed.set(
-                this.sanitizer.bypassSecurityTrustResourceUrl(this.buildEmbedUrl(card.mediaUrl)),
-              );
-            }
             if (card.cardType === 'ARTICLE' && card.bodyHtml) {
               // bodyHtml is already server-side sanitized by OWASP
               this.safeHtml.set(this.sanitizer.bypassSecurityTrustHtml(card.bodyHtml));
@@ -201,6 +276,64 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
           },
         }),
     );
+  }
+
+  protected saveCard(): void {
+    const dirty = this.editModeStore.dirtyCard();
+    const card = this.adminCard() ?? this.card();
+    if (!dirty || !card) return;
+    const merged = { ...card, ...dirty } as ContentCardAdmin;
+    const req = this.buildSaveRequest(merged);
+    this.isSaving.set(true);
+    this.api.adminUpdateCard(card.id, req).subscribe({
+      next: (saved) => {
+        this.card.set(saved);
+        this.adminCard.set(saved as unknown as ContentCardAdmin);
+        this.editModeStore.commit(saved as unknown as Record<string, unknown>);
+        this.isSaving.set(false);
+      },
+      error: () => {
+        this.editModeStore.setError('Save failed. Please try again.');
+        this.isSaving.set(false);
+      },
+    });
+  }
+
+  private buildSaveRequest(card: ContentCardAdmin): SaveCardRequest {
+    return {
+      title: card.title,
+      slug: card.slug,
+      description: card.description,
+      cardType: card.cardType,
+      mediaUrl: card.mediaUrl,
+      printMediaUrl: card.printMediaUrl,
+      mediaUrls: card.mediaUrls,
+      thumbnailUrl: card.thumbnailUrl,
+      coverImageUrl: card.coverImageUrl,
+      bodyJson: card.bodyJson ?? null,
+      bodyHtml: card.bodyHtml ?? null,
+      backgroundColor: card.backgroundColor,
+      textColor: card.textColor,
+      simpleLayout: card.simpleLayout,
+      status: card.status,
+      tagIds: card.tags.map(t => t.id),
+      links: card.links.map(l => ({ targetCardId: l.targetCardId, linkText: l.linkText, sortOrder: l.sortOrder })),
+      templateTasks: card.templateTasks.map(t => ({ description: t.description })),
+    };
+  }
+
+  protected deleteCard(): void {
+    const card = this.adminCard() ?? this.card();
+    if (!card) return;
+    if (!confirm(`Delete "${card.title}"? This cannot be undone.`)) return;
+    this.api.adminDeleteCard(card.id).subscribe({
+      next: () => this.router.navigate(['/how-to']),
+      error: () => this.editModeStore.setError('Delete failed.'),
+    });
+  }
+
+  protected onBodyChange(e: { json: string; html: string }): void {
+    this.editModeStore.markDirty({ bodyJson: e.json, bodyHtml: e.html });
   }
 
   protected handleAddToLocker(): void {
@@ -259,6 +392,13 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
 
     if (event.key === 'ArrowLeft' && this.prevCard()) this.navigateTo(this.prevCard()!);
     if (event.key === 'ArrowRight' && this.nextCard()) this.navigateTo(this.nextCard()!);
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.editModeStore.isDirty()) {
+      event.preventDefault();
+    }
   }
 
   // ── Infographic lightbox ─────────────────────────────────────────────────────
@@ -411,6 +551,91 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
     );
     win.document.close();
     win.onload = () => win.print();
+  }
+
+  // ── Infographic slide editing ────────────────────────────────────────────────
+
+  protected openSlidePicker(kind: PickerTarget['kind'], index: number): void {
+    this.pickerTarget.set({ kind, index });
+  }
+
+  protected onSlidePickerSelected(asset: MediaAsset): void {
+    const target = this.pickerTarget();
+    if (!target) return;
+    this.pickerTarget.set(null);
+    if (target.kind === 'video-thumbnail') {
+      this.editModeStore.markDirty({ thumbnailUrl: asset.url });
+      return;
+    }
+    const entries = [...this.currentMediaUrls()];
+    if (target.kind === 'replace') {
+      entries[target.index] = { ...entries[target.index], url: asset.url };
+    } else if (target.kind === 'add') {
+      entries.push({ url: asset.url, printUrl: null, alt: null });
+    } else if (target.kind === 'print') {
+      entries[target.index] = { ...entries[target.index], printUrl: asset.url };
+    }
+    this.editModeStore.markDirty({ mediaUrls: entries });
+  }
+
+  protected onVideoUrlChange(url: string): void {
+    this.editModeStore.markDirty({ mediaUrl: url });
+  }
+
+  protected removeSlide(index: number): void {
+    const entries = this.currentMediaUrls().filter((_, i) => i !== index);
+    this.editModeStore.markDirty({ mediaUrls: entries });
+    if (this.carouselIndex() >= entries.length) {
+      this.carouselIndex.set(Math.max(0, entries.length - 1));
+    }
+  }
+
+  protected updateSlideAlt(index: number, alt: string): void {
+    const entries = [...this.currentMediaUrls()];
+    entries[index] = { ...entries[index], alt: alt || null };
+    this.editModeStore.markDirty({ mediaUrls: entries });
+  }
+
+  protected filenameFromUrl(url: string): string {
+    return url.split('/').pop() ?? url;
+  }
+
+  private currentMediaUrls(): MediaUrlEntry[] {
+    const entries = this.mediaUrls();
+    return entries.length ? entries : [];
+  }
+
+  // Slide drag-to-reorder
+  protected onSlideDragStart(event: DragEvent, fromIndex: number): void {
+    this.slideDragFromIndex.set(fromIndex);
+    event.dataTransfer?.setData('text/plain', String(fromIndex));
+  }
+
+  protected onSlideDragOver(event: DragEvent, toIndex: number): void {
+    if (this.slideDragFromIndex() === null) return;
+    event.preventDefault();
+    this.slideDropTargetIndex.set(toIndex);
+  }
+
+  protected onSlideDragLeave(): void {
+    this.slideDropTargetIndex.set(null);
+  }
+
+  protected onSlideDrop(event: DragEvent, toIndex: number): void {
+    event.preventDefault();
+    const fromIndex = this.slideDragFromIndex();
+    this.slideDragFromIndex.set(null);
+    this.slideDropTargetIndex.set(null);
+    if (fromIndex === null || fromIndex === toIndex) return;
+    const entries = [...this.currentMediaUrls()];
+    const [moved] = entries.splice(fromIndex, 1);
+    entries.splice(toIndex, 0, moved);
+    this.editModeStore.markDirty({ mediaUrls: entries });
+  }
+
+  protected onSlideDragEnd(): void {
+    this.slideDragFromIndex.set(null);
+    this.slideDropTargetIndex.set(null);
   }
 
   private buildEmbedUrl(url: string): string {

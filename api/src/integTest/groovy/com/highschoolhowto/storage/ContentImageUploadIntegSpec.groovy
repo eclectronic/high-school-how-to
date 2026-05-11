@@ -147,7 +147,7 @@ class ContentImageUploadIntegSpec extends BaseIntegrationSpec {
         def token = tokenFor(admin)
         def expectedUrl = "https://cdn.example.com/content/test-uuid.jpeg"
 
-        when(storageService.generateFilename(anyString())).thenReturn("test-uuid.jpeg")
+        when(storageService.generateFilename(anyString(), anyString(), anyString())).thenReturn("photo.jpeg")
         when(storageService.upload(any(byte[].class), anyString(), anyString(), anyString()))
                 .thenReturn(expectedUrl)
 

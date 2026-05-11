@@ -125,3 +125,7 @@ databaseChangeLog:
       file: db/changelog/v8-multi-image-infographics-0078.sql
   - include:
       file: db/changelog/v8-export-db-role-0079.sql
+  - include:
+      file: db/changelog/v8-media-assets-0080.sql
+  - include:
+      file: db/changelog/v8-media-assets-backfill-0081.sql

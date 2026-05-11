@@ -1,12 +1,18 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { EditModeBannerComponent } from './shared/edit-mode-banner/edit-mode-banner.component';
+import { EditModeBarComponent } from './shared/edit-mode-bar/edit-mode-bar.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
-  template: '<router-outlet></router-outlet>'
+  imports: [RouterOutlet, EditModeBannerComponent, EditModeBarComponent],
+  template: `
+    <app-edit-mode-banner></app-edit-mode-banner>
+    <router-outlet></router-outlet>
+    <app-edit-mode-bar></app-edit-mode-bar>
+  `,
 })
 export class App implements OnInit, OnDestroy {
   protected readonly title = signal('highschoolhowto');

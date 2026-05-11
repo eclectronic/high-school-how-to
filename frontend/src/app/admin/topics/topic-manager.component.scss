@@ -1,0 +1,158 @@
+.admin-page {
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+  }
+}
+
+.admin-error {
+  background: rgba(186, 26, 26, 0.08);
+  color: #7a1c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.admin-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 4px rgba(45, 26, 16, 0.08);
+  margin-bottom: 1rem;
+}
+
+.form-card {
+  margin-bottom: 1.5rem;
+
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1.1rem;
+  }
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.85rem;
+
+  label {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #5f4f43;
+  }
+
+  input,
+  textarea {
+    border: 1px solid rgba(45, 26, 16, 0.2);
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: #fafafa;
+
+    &:focus {
+      outline: none;
+      border-color: #ff9966;
+    }
+  }
+
+  textarea {
+    resize: vertical;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.tag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tag-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+
+    strong {
+      font-size: 1rem;
+    }
+
+    code {
+      background: #f0e8d8;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: #5f4f43;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #5f4f43;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  &--primary {
+    background: linear-gradient(90deg, #ff9966, #ff5c77);
+    color: #fff;
+  }
+
+  &--secondary {
+    background: #f0e8d8;
+    color: #2d1a10;
+  }
+
+  &--danger {
+    background: rgba(186, 26, 26, 0.1);
+    color: #ba1a1a;
+  }
+
+  &--sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+  }
+}

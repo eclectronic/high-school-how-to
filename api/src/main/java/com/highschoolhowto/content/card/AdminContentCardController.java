@@ -42,6 +42,11 @@ public class AdminContentCardController {
         return cardService.findAdminResponseById(id);
     }
 
+    @GetMapping("/by-slug/{slug}")
+    public ContentCardAdminResponse getBySlug(@PathVariable String slug) {
+        return cardService.findAdminResponseBySlug(slug);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ContentCardAdminResponse create(@Valid @RequestBody SaveCardRequest request) {
