@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { ContentApiService } from '../../core/services/content-api.service';
 import { CardType, ContentCard, SaveCardRequest, Tag } from '../../core/models/content.models';
 import { SiteNavComponent } from '../../shared/site-nav/site-nav.component';
@@ -24,6 +25,7 @@ export class HowToPageComponent {
 
   protected readonly loading = signal(true);
   protected readonly allCards = signal<ContentCard[]>([]);
+  protected readonly allTags = signal<Tag[]>([]);
   protected readonly selectedTagSlug = signal<string | null>(null);
   protected readonly newCardMenuOpen = signal(false);
 
@@ -49,6 +51,11 @@ export class HowToPageComponent {
   );
 
   protected readonly availableTags = computed<Tag[]>(() => {
+    if (this.showNewTile()) {
+      return this.allTags()
+        .filter((t) => !EXCLUDED_TAG_SLUGS.has(t.slug))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+    }
     const seen = new Set<number>();
     const tags: Tag[] = [];
     for (const card of this.visibleCards()) {
@@ -78,10 +85,12 @@ export class HowToPageComponent {
 
   protected loadCards(asAdmin: boolean): void {
     this.loading.set(true);
-    const request$ = asAdmin ? this.api.adminListCards() : this.api.getPublishedCards();
-    request$.subscribe({
-      next: (cards) => {
+    const cards$ = asAdmin ? this.api.adminListCards() : this.api.getPublishedCards();
+    const tags$ = asAdmin ? this.api.adminListTags() : this.api.getAllTags();
+    forkJoin({ cards: cards$, tags: tags$ }).subscribe({
+      next: ({ cards, tags }) => {
         this.allCards.set(cards);
+        this.allTags.set(tags);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
@@ -110,7 +119,8 @@ export class HowToPageComponent {
 
   protected openNewCardMenu(event: MouseEvent): void {
     event.stopPropagation();
-    this.newCardMenuOpen.set(true);
+    this.newCardMenuOpen.set(!this.newCardMenuOpen());
+    this.closeNewTopicPopover();
   }
 
   protected closeNewCardMenu(): void {
@@ -119,11 +129,24 @@ export class HowToPageComponent {
 
   protected createCard(cardType: CardType): void {
     this.closeNewCardMenu();
-    this.api.adminSkeletonCreate(cardType).subscribe({
+    const tagId = this.getSelectedTagId();
+    const tagIds = tagId !== null ? [tagId] : [];
+    if (!tagIds.length) {
+      this.showToast('Select a topic first, then tap + How To');
+      return;
+    }
+    this.api.adminSkeletonCreate(cardType, tagIds).subscribe({
       next: (card) => {
         this.router.navigate(['/content', card.slug], { queryParams: { edit: 'focus' } });
       },
+      error: () => this.showToast('Failed to create card'),
     });
+  }
+
+  private getSelectedTagId(): number | null {
+    const slug = this.selectedTagSlug();
+    if (!slug) return null;
+    return this.availableTags().find((t) => t.slug === slug)?.id ?? null;
   }
 
   protected isAlreadyTagged(tag: Tag): boolean {
