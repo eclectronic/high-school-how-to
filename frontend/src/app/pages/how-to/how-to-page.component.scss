@@ -317,35 +317,53 @@ $tape-border: rgba($color-ink, 0.14);
   }
 }
 
-// ── Edit mode — new card tile ─────────────────────────────────────
+// ── Edit mode — action buttons (+ Topic, + How To) ────────────────
 
-.new-card-tile {
+.action-btn-wrap {
   position: relative;
-  border: 2px dashed #d97706;
-  border-radius: 0.75rem;
-  display: flex;
-  flex-direction: column;
+
+  &--push-right {
+    margin-left: auto;
+  }
+}
+
+.action-btn {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 180px;
+  gap: 0.35rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-family: inherit;
   cursor: pointer;
-  color: #d97706;
-  transition: background 0.15s;
+  box-shadow: 0 6px 14px rgba($color-ink, 0.18);
+  transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
 
   &:hover {
-    background: rgba(217, 119, 6, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 22px rgba($color-ink, 0.24);
+  }
+
+  &--topic {
+    background: #ff9966;
+    color: #fff;
+  }
+
+  &--howto {
+    background: linear-gradient(90deg, #ff9966, #ff5c77);
+    color: #fff;
   }
 
   &__plus {
-    font-size: 2rem;
-    font-weight: 300;
+    font-size: 1.1rem;
+    font-weight: 900;
     line-height: 1;
   }
 
   &__label {
     font-size: 0.9rem;
-    font-weight: 600;
   }
 }
 
@@ -361,6 +379,12 @@ $tape-border: rgba($color-ink, 0.14);
   z-index: 100;
   min-width: 180px;
   padding: 0.25rem 0;
+
+  &--right {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
 
   &__item {
     display: block;
