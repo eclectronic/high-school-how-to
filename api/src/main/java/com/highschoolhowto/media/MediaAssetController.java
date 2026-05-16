@@ -33,8 +33,9 @@ public class MediaAssetController {
     public Page<MediaAssetResponse> list(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "48") int size) {
-        return service.list(search, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "uploadedAt")));
+            @RequestParam(defaultValue = "48") int size,
+            @RequestParam(defaultValue = "false") boolean imagesOnly) {
+        return service.list(search, imagesOnly, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "uploadedAt")));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

@@ -96,6 +96,20 @@
     }
   </nav>
 
+  @if (showNewTile()) {
+    <div class="status-filter" role="group" aria-label="Filter by status">
+      <button type="button" class="status-filter__btn"
+              [class.status-filter__btn--active]="statusFilter() === 'ALL'"
+              (click)="statusFilter.set('ALL')">All</button>
+      <button type="button" class="status-filter__btn"
+              [class.status-filter__btn--active]="statusFilter() === 'PUBLISHED'"
+              (click)="statusFilter.set('PUBLISHED')">Published</button>
+      <button type="button" class="status-filter__btn status-filter__btn--draft"
+              [class.status-filter__btn--active]="statusFilter() === 'DRAFT'"
+              (click)="statusFilter.set('DRAFT')">Draft</button>
+    </div>
+  }
+
   @if (toastMessage()) {
     <div class="edit-toast" role="status">{{ toastMessage() }}</div>
   }

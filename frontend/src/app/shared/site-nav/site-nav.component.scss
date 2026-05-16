@@ -89,6 +89,23 @@ $color-rose: #ff9fbf;
   text-decoration: none;
   transition: transform 150ms ease, box-shadow 150ms ease;
 
+  &--locker {
+    border-radius: 0.55rem;
+    border: 2px solid $color-ink;
+    color: $color-ink;
+    box-shadow: 0 3px 10px rgba($color-ink, 0.15);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba($color-ink, 0.22);
+    }
+
+    &-active {
+      background: $color-ink !important;
+      color: #fffef9;
+    }
+  }
+
   &--primary {
     background: $color-ink;
     color: #fffef9;

@@ -28,6 +28,7 @@ export class HowToPageComponent {
   protected readonly allCards = signal<ContentCard[]>([]);
   protected readonly allTags = signal<Tag[]>([]);
   protected readonly selectedTagSlug = signal<string | null>(null);
+  protected readonly statusFilter = signal<'ALL' | 'PUBLISHED' | 'DRAFT'>('ALL');
   protected readonly newCardMenuOpen = signal(false);
 
   // Drag-to-topic state
@@ -86,8 +87,14 @@ export class HowToPageComponent {
 
   protected readonly filteredCards = computed<ContentCard[]>(() => {
     const slug = this.selectedTagSlug();
-    if (!slug) return this.visibleCards();
-    return this.visibleCards().filter((card) => card.tags.some((t) => t.slug === slug));
+    const status = this.statusFilter();
+    let cards = slug
+      ? this.visibleCards().filter((card) => card.tags.some((t) => t.slug === slug))
+      : this.visibleCards();
+    if (this.showNewTile() && status !== 'ALL') {
+      cards = cards.filter((c) => c.status === status);
+    }
+    return cards;
   });
 
   constructor() {

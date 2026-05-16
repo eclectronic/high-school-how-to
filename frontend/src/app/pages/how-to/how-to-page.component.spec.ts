@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NO_ERRORS_SCHEMA, signal } from '@angular/core';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
@@ -7,6 +7,8 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { HowToPageComponent } from './how-to-page.component';
 import { ContentApiService } from '../../core/services/content-api.service';
 import { ContentCard } from '../../core/models/content.models';
+import { SessionStore } from '../../core/session/session.store';
+import { EditModeStore } from '../../core/edit-mode/edit-mode.store';
 
 const mockCards: ContentCard[] = [
   {
@@ -83,8 +85,11 @@ describe('HowToPageComponent', () => {
   let contentApiSpy: jasmine.SpyObj<ContentApiService>;
 
   beforeEach(async () => {
-    contentApiSpy = jasmine.createSpyObj('ContentApiService', ['getPublishedCards']);
+    contentApiSpy = jasmine.createSpyObj('ContentApiService', [
+      'getPublishedCards', 'getAllTags', 'adminListCards', 'adminListTags',
+    ]);
     contentApiSpy.getPublishedCards.and.returnValue(of(mockCards));
+    contentApiSpy.getAllTags.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [HowToPageComponent, RouterTestingModule],
@@ -142,5 +147,99 @@ describe('HowToPageComponent', () => {
     const tagSlugs = tags.map((t) => t.slug);
     expect(tagSlugs).not.toContain('about');
     expect(tagSlugs).not.toContain('help');
+  });
+});
+
+// ── Status filter (admin edit mode) ──────────────────────────────────────────
+
+describe('HowToPageComponent — status filter', () => {
+  let fixture: ComponentFixture<HowToPageComponent>;
+  let component: HowToPageComponent;
+
+  const academicsTag = { id: 1, slug: 'academics', name: 'Academics', description: null, sortOrder: 1 };
+
+  const baseCard: Omit<ContentCard, 'id' | 'slug' | 'title' | 'status'> = {
+    cardType: 'ARTICLE',
+    description: null,
+    mediaUrl: null,
+    printMediaUrl: null,
+    mediaUrls: [],
+    thumbnailUrl: null,
+    coverImageUrl: null,
+    bodyHtml: null,
+    backgroundColor: null,
+    textColor: null,
+    simpleLayout: false,
+    tags: [academicsTag],
+    links: [],
+    templateTasks: [],
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  };
+
+  const publishedCard: ContentCard = { ...baseCard, id: 10, slug: 'pub-card', title: 'Published', status: 'PUBLISHED' };
+  const draftCard: ContentCard = { ...baseCard, id: 11, slug: 'draft-card', title: 'Draft', status: 'DRAFT' };
+
+  beforeEach(async () => {
+    const apiSpy = jasmine.createSpyObj('ContentApiService', ['adminListCards', 'adminListTags']);
+    apiSpy.adminListCards.and.returnValue(of([publishedCard, draftCard]));
+    apiSpy.adminListTags.and.returnValue(of([academicsTag]));
+
+    const sessionStoreMock = {
+      isAdmin: signal(true).asReadonly(),
+      isAuthenticated: signal(false).asReadonly(),
+      firstName: signal<string | null>(null).asReadonly(),
+      avatarUrl: signal<string | null>(null).asReadonly(),
+      getRefreshToken: jasmine.createSpy('getRefreshToken').and.returnValue(null),
+      clearSession: jasmine.createSpy('clearSession'),
+    };
+
+    const editModeStoreMock = {
+      enabled: signal(true).asReadonly(),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [HowToPageComponent, RouterTestingModule],
+      providers: [
+        { provide: ContentApiService, useValue: apiSpy },
+        { provide: SessionStore, useValue: sessionStoreMock },
+        { provide: EditModeStore, useValue: editModeStoreMock },
+        provideHttpClient(),
+        provideHttpClientTesting(),
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(HowToPageComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('shows all visible cards when statusFilter is ALL', () => {
+    (component as any).statusFilter.set('ALL');
+    const filtered = (component as any).filteredCards() as ContentCard[];
+    expect(filtered.length).toBe(2);
+  });
+
+  it('shows only published cards when statusFilter is PUBLISHED', () => {
+    (component as any).statusFilter.set('PUBLISHED');
+    const filtered = (component as any).filteredCards() as ContentCard[];
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].slug).toBe('pub-card');
+  });
+
+  it('shows only draft cards when statusFilter is DRAFT', () => {
+    (component as any).statusFilter.set('DRAFT');
+    const filtered = (component as any).filteredCards() as ContentCard[];
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].slug).toBe('draft-card');
+  });
+
+  it('status filter combines with topic filter', () => {
+    (component as any).selectedTagSlug.set('academics');
+    (component as any).statusFilter.set('DRAFT');
+    const filtered = (component as any).filteredCards() as ContentCard[];
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].slug).toBe('draft-card');
   });
 });

@@ -1,5 +1,25 @@
 # Changelog
 
+## [9.1.0] — 2026-05-16
+
+### Inline-authoring polish — edit UX, keyboard navigation, locker button, admin filters
+
+This release rounds out the v9 inline-authoring experience with a collection of focused UX improvements built on real usage feedback.
+
+**Edit mode controls.** The floating "Unsaved changes" overlay has been replaced with a smarter in-place indicator: the Save (✓) and Discard (↺) buttons in the viewer toolbar are grey by default and gain color only when there are actual changes — Save turns green, Discard turns amber. The Delete button has moved from the Properties panel to the main toolbar, to the left of the Draft/Published toggle, so all destructive and status actions are in one place. Pressing Escape in the viewer now discards the current changes and navigates back to the How To listing in a single keystroke.
+
+**Infographic viewer.** Infographic images now fill the available screen height with minimal padding, using a flex-column chain that propagates `flex: 1; min-height: 0` through every wrapper layer down to the `<img>`, which gets `height: 100%; object-fit: contain` so it occupies the full viewport height while preserving its aspect ratio. The filmstrip's dark sprocket-hole effect has been removed, leaving only the clean white bounding box with overflow scroll when there are too many thumbnails. The Replace button has also been removed — the existing Delete + Add flow handles the same case more cleanly. Arrow keys now navigate infographic slides: left/right moves between slides within a multi-image card; pressing past the first or last slide advances to the previous or next card, matching how the arrow keys behave for video and article cards.
+
+**Inline editing reach.** The title and description rows in the content viewer are now fully clickable — clicking anywhere in the row activates the inline edit field, rather than requiring a precise click on the small text itself.
+
+**My Locker nav button.** The My Locker button in the site nav has been restyled as a rounded square with a black border, colored with the user's chosen locker color as the background. When the user is on the locker page, the button switches to white-on-black to match the active-page motif used by all other nav links.
+
+**Admin status filter.** In edit mode the How To listing now shows a compact filter bar — All / Published / Draft — above the card grid. Selecting Draft shows only cards with `status: DRAFT`; Published shows only published cards. The filter stacks with the existing topic filter so admins can narrow to, say, draft cards in a specific topic.
+
+**Control panel.** Pressing Escape anywhere in the Control Panel (`/admin`) navigates back to the previous page using the browser's history, so the gear button becomes a true round-trip: click gear, press Escape to return.
+
+**Topic handling fix.** Cards tagged with the `about` topic were being incorrectly suppressed from the How To listing (the exclusion was intended only for the nav bar and home page). The inline topic picker in the content viewer also incorrectly offered `about` and `help` as assignable topics. Both are now fixed: the `about` and `help` tags are excluded only from the picker and from the topic filter pills, not from the card grid.
+
 ## [9.0.0] — 2026-05-11
 
 ### Inline authoring — edit the live site directly; human-readable upload filenames

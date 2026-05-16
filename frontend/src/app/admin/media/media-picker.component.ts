@@ -22,6 +22,7 @@ import { MediaApiService, MediaAsset } from '../../core/services/media-api.servi
 })
 export class MediaPickerComponent implements OnInit, OnChanges {
   @Input() open = false;
+  @Input() imagesOnly = false;
   @Output() selected = new EventEmitter<MediaAsset>();
   @Output() closed = new EventEmitter<void>();
 
@@ -53,7 +54,7 @@ export class MediaPickerComponent implements OnInit, OnChanges {
   protected load() {
     this.loading.set(true);
     this.error.set(null);
-    this.api.list(this.search, this.page).subscribe({
+    this.api.list(this.search, this.page, 48, this.imagesOnly).subscribe({
       next: (p) => {
         this.assets.set(p.content);
         this.totalPages = p.totalPages;

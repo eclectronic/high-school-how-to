@@ -159,17 +159,6 @@ describe('TodoListEditComponent', () => {
     expect(emitted[0]).toBe('#ff0000');
   });
 
-  it('onColorChange() also emits textColorChange with auto-contrast value', () => {
-    setTasks([]);
-    const emitted: string[] = [];
-    component.textColorChange.subscribe(v => emitted.push(v));
-
-    component['onColorChange']('#ffffff');
-
-    expect(emitted.length).toBe(1);
-    expect(emitted[0]).toBe('#000000'); // white bg → black text
-  });
-
   it('onColorChange() closes the color picker', () => {
     setTasks([]);
     component['showColorPicker'].set(true);
@@ -177,31 +166,7 @@ describe('TodoListEditComponent', () => {
     expect(component['showColorPicker']()).toBeFalse();
   });
 
-  // ── Default color initialization ──────────────────────────────────────────
-
-  it('emits default grey backgroundColorChange when backgroundColor input is null', () => {
-    const bgEmitted: string[] = [];
-    component.backgroundColorChange.subscribe(v => bgEmitted.push(v));
-
-    component.backgroundColor = null;
-    component.ngOnChanges({ backgroundColor: new SimpleChange(undefined, null, true) });
-
-    expect(bgEmitted.length).toBe(1);
-    expect(bgEmitted[0]).toBe('#9ca3af');
-  });
-
-  it('emits textColorChange alongside the default grey', () => {
-    const textEmitted: string[] = [];
-    component.textColorChange.subscribe(v => textEmitted.push(v));
-
-    component.backgroundColor = null;
-    component.ngOnChanges({ backgroundColor: new SimpleChange(undefined, null, true) });
-
-    expect(textEmitted.length).toBe(1);
-    expect(['#000000', '#ffffff']).toContain(textEmitted[0]);
-  });
-
-  it('does not emit default color when backgroundColor is already set', () => {
+  it('does not emit backgroundColorChange when backgroundColor input changes', () => {
     const bgEmitted: string[] = [];
     component.backgroundColorChange.subscribe(v => bgEmitted.push(v));
 

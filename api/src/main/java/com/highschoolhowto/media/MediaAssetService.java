@@ -30,8 +30,9 @@ public class MediaAssetService {
         this.jdbc = jdbc;
     }
 
-    public Page<MediaAssetResponse> list(String search, Pageable pageable) {
-        return repo.search(search, pageable).map(MediaAssetResponse::from);
+    public Page<MediaAssetResponse> list(String search, boolean imagesOnly, Pageable pageable) {
+        var page = imagesOnly ? repo.searchImages(search, pageable) : repo.search(search, pageable);
+        return page.map(MediaAssetResponse::from);
     }
 
     @Transactional

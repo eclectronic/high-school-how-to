@@ -31,11 +31,12 @@ export interface MediaUsage {
 export class MediaApiService {
   private readonly http = inject(HttpClient);
 
-  list(search: string = '', page = 0, size = 48): Observable<MediaPage> {
+  list(search: string = '', page = 0, size = 48, imagesOnly = false): Observable<MediaPage> {
     const params = new HttpParams()
       .set('search', search)
       .set('page', page)
-      .set('size', size);
+      .set('size', size)
+      .set('imagesOnly', imagesOnly);
     return this.http.get<MediaPage>('/api/admin/media', { params });
   }
 

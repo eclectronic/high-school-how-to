@@ -633,6 +633,56 @@ $tape-border: rgba($color-ink, 0.14);
   }
 }
 
+// ── Admin status filter bar ───────────────────────────────────────
+
+.status-filter {
+  display: flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+.status-filter__btn {
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba($color-ink, 0.25);
+  background: rgba(255, 254, 249, 0.8);
+  color: rgba($color-ink, 0.65);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+
+  &:hover {
+    background: rgba($color-ink, 0.06);
+    color: $color-ink;
+    border-color: rgba($color-ink, 0.4);
+  }
+
+  &--active {
+    background: $color-ink;
+    color: #fffef9;
+    border-color: $color-ink;
+
+    &:hover {
+      background: $color-ink;
+      color: #fffef9;
+    }
+  }
+
+}
+
+.status-filter__btn--draft.status-filter__btn--active {
+  background: #d97706;
+  border-color: #d97706;
+  color: #fff;
+
+  &:hover {
+    background: #d97706;
+    color: #fff;
+  }
+}
+
 // ── Edit toast notification ───────────────────────────────────────
 
 .edit-toast {

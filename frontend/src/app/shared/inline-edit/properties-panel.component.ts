@@ -135,7 +135,7 @@ export class PropertiesPanelComponent {
   protected readonly cardTypes: CardType[] = ['ARTICLE', 'INFOGRAPHIC', 'VIDEO', 'TODO_LIST'];
 
   toggle(): void {
-    this.open.update(v => !v);
+    this.open.update((v) => !v);
   }
 
   @HostListener('document:keydown.escape')

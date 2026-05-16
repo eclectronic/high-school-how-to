@@ -8,9 +8,13 @@ import { FormsModule } from '@angular/forms';
   imports: [CommonModule, FormsModule],
   template: `
     @if (!editing()) {
-      <span class="title-display" (click)="startEdit()" title="Click to rename" role="button" tabindex="0"
+      <span class="title-display" (click)="startEdit()" title="Click to edit" role="button" tabindex="0"
             (keydown.enter)="startEdit()" (keydown.space)="startEdit()">
-        {{ title }}
+        @if (title) {
+          {{ title }}
+        } @else {
+          <span class="title-placeholder">{{ placeholder || 'Title' }}</span>
+        }
         <span class="title-edit-hint" aria-hidden="true">✏</span>
       </span>
     } @else {
@@ -25,7 +29,13 @@ import { FormsModule } from '@angular/forms';
   styles: [`
     :host { display: inline-block; }
 
+    .title-placeholder {
+      color: #9ca3af;
+      font-weight: 400;
+    }
+
     .title-display {
+      display: block;
       cursor: pointer;
 
       .title-edit-hint {

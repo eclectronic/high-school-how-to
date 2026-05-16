@@ -56,23 +56,11 @@
             </label>
           </div>
         </div>
-      </div>
 
-      <!-- Topics -->
-      <div class="admin-card editor-section">
-        <h2>Topics <small>(select at least one)</small></h2>
-        <div class="tag-picker">
-          @for (tag of allTags(); track tag.id) {
-            <button
-              type="button"
-              class="tag-option"
-              [class.selected]="form.tagIds.has(tag.id)"
-              (click)="toggleTag(tag.id)"
-            >
-              {{ tag.name }}
-            </button>
-          }
-        </div>
+        <app-topic-chips
+          [tags]="selectedTopics()"
+          [allTags]="allTags()"
+          (change)="onTopicsChange($event)" />
       </div>
 
       <!-- Media fields -->
@@ -169,6 +157,9 @@
               Upload
               <input type="file" accept="image/*" hidden (change)="uploadFile($event, 'thumbnailUrl')" />
             </label>
+            @if (form.thumbnailUrl) {
+              <button type="button" class="btn btn--secondary btn--sm" (click)="form.thumbnailUrl = ''" title="Remove thumbnail">Clear</button>
+            }
           </div>
           @if (form.thumbnailUrl) {
             <img class="img-preview" [src]="form.thumbnailUrl" alt="thumbnail preview" />
@@ -184,6 +175,9 @@
               Upload
               <input type="file" accept="image/*" hidden (change)="uploadFile($event, 'coverImageUrl')" />
             </label>
+            @if (form.coverImageUrl) {
+              <button type="button" class="btn btn--secondary btn--sm" (click)="form.coverImageUrl = ''" title="Remove cover image">Clear</button>
+            }
           </div>
           @if (form.coverImageUrl) {
             <img class="img-preview" [src]="form.coverImageUrl" alt="cover preview" />
@@ -458,6 +452,7 @@
 
 <app-media-picker
   [open]="pickerOpen()"
+  [imagesOnly]="true"
   (selected)="onPickerSelected($event)"
   (closed)="pickerOpen.set(false)"
 />

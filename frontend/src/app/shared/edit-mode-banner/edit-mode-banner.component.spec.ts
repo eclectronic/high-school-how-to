@@ -69,6 +69,6 @@ describe('EditModeBannerComponent', () => {
     enabledSignal.set(true);
     fixture.detectChanges();
     const banner: HTMLElement = fixture.nativeElement.querySelector('.edit-mode-banner');
-    expect(banner.textContent).toContain('Authoring mode');
+    expect(banner.textContent).toContain('Edit mode');
   });
 });

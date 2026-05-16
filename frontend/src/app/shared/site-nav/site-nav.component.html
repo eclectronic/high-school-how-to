@@ -29,7 +29,9 @@
 
   <div class="site-nav__cta">
     @if (isAuthenticated()) {
-      <a routerLink="/locker" class="site-nav__cta-btn site-nav__cta-btn--primary">My Locker</a>
+      <a routerLink="/locker" class="site-nav__cta-btn site-nav__cta-btn--locker"
+         [class.site-nav__cta-btn--locker-active]="activeRoute === 'locker'"
+         [style.background]="activeRoute === 'locker' ? null : lockerColor()">My Locker</a>
       <a routerLink="/account/profile" class="site-nav__avatar-btn" [class.site-nav__avatar-btn--active]="activeRoute === 'account'" [title]="firstName() || 'Account'">
         @if (avatarUrl()) {
           <img [src]="avatarUrl()!" class="site-nav__avatar-img" alt="Profile" referrerpolicy="no-referrer" />

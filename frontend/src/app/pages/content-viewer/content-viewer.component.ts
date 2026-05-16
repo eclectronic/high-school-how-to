@@ -23,11 +23,12 @@ import {
   MediaUrlEntry,
   LockerStatusResponse,
   SaveCardRequest,
+  Tag,
   cardTypeIcon,
 } from '../../core/models/content.models';
 import { SessionStore } from '../../core/session/session.store';
 import { EditModeStore } from '../../core/edit-mode/edit-mode.store';
-import { PropertiesPanelComponent } from '../../shared/inline-edit/properties-panel.component';
+import { TopicChipsComponent } from '../../shared/inline-edit/topic-chips.component';
 import { InlineTitleEditComponent } from '../../shared/inline-title-edit/inline-title-edit.component';
 import { TiptapEditorComponent } from '../../admin/content/tiptap-editor.component';
 import { ImagePickerComponent } from '../../admin/images/image-picker.component';
@@ -42,7 +43,7 @@ interface PickerTarget {
 @Component({
   selector: 'app-content-viewer',
   standalone: true,
-  imports: [RouterLink, SiteNavComponent, PropertiesPanelComponent, InlineTitleEditComponent, TiptapEditorComponent, ImagePickerComponent, TodoListEditComponent],
+  imports: [RouterLink, SiteNavComponent, TopicChipsComponent, InlineTitleEditComponent, TiptapEditorComponent, ImagePickerComponent, TodoListEditComponent],
   templateUrl: './content-viewer.component.html',
   styleUrl: './content-viewer.component.scss',
 })
@@ -62,6 +63,7 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   protected readonly isAdmin = this.sessionStore.isAdmin;
   protected readonly editMode = this.editModeStore.enabled;
 
+  protected allTags = signal<Tag[]>([]);
   protected card = signal<ContentCard | null>(null);
   protected adminCard = signal<ContentCardAdmin | null>(null);
   protected loading = signal(true);
@@ -203,6 +205,12 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    if (this.sessionStore.isAdmin()) {
+      this.api.adminListTags().subscribe({
+        next: (tags) => this.allTags.set(tags.filter((t) => t.slug !== 'about' && t.slug !== 'help')),
+      });
+    }
+
     // Re-load the nav list whenever the tag query param changes (supports in-page switching).
     this.subs.add(
       this.route.queryParamMap.subscribe((qp) => {
@@ -215,7 +223,7 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
             const filtered = tag
               ? cards
               : cards.filter(
-                  (c) => c.slug !== 'about-mission' && !c.tags.some((t) => t.slug === 'help'),
+                  (c) => !c.tags.some((t) => t.slug === 'help' || t.slug === 'about'),
                 );
             this.navCards.set(filtered);
           },
@@ -236,14 +244,12 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
             this.adminCard.set(null);
             this.editModeStore.discard();
             const slug = fixedSlug ?? params.get('slug')!;
-            return this.api.getCardBySlug(slug).pipe(
-              catchError((err) => {
-                if (err.status === 404 && this.sessionStore.isAdmin() && this.editModeStore.enabled()) {
-                  return this.api.adminGetCardBySlug(slug);
-                }
-                throw err;
-              }),
-            );
+            const load$ = this.sessionStore.isAdmin()
+              ? this.api.adminGetCardBySlug(slug).pipe(
+                  catchError(() => this.api.getCardBySlug(slug)),
+                )
+              : this.api.getCardBySlug(slug);
+            return load$;
           }),
         )
         .subscribe({
@@ -279,10 +285,27 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   }
 
   protected saveCard(): void {
+    this.doSave();
+  }
+
+  protected saveAndExit(): void {
+    this.doSave(() => this.router.navigate(['/how-to']));
+  }
+
+  protected discardAndExit(): void {
+    this.editModeStore.discard();
+    this.router.navigate(['/how-to']);
+  }
+
+  private doSave(onSuccess?: () => void): void {
     const dirty = this.editModeStore.dirtyCard();
     const card = this.adminCard() ?? this.card();
-    if (!dirty || !card) return;
+    if (!dirty || !card) { onSuccess?.(); return; }
     const merged = { ...card, ...dirty } as ContentCardAdmin;
+    if (!merged.title?.trim()) {
+      this.editModeStore.setError('A title is required before saving.');
+      return;
+    }
     const req = this.buildSaveRequest(merged);
     this.isSaving.set(true);
     this.api.adminUpdateCard(card.id, req).subscribe({
@@ -291,6 +314,7 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
         this.adminCard.set(saved as unknown as ContentCardAdmin);
         this.editModeStore.commit(saved as unknown as Record<string, unknown>);
         this.isSaving.set(false);
+        onSuccess?.();
       },
       error: () => {
         this.editModeStore.setError('Save failed. Please try again.');
@@ -316,10 +340,14 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
       textColor: card.textColor,
       simpleLayout: card.simpleLayout,
       status: card.status,
-      tagIds: card.tags.map(t => t.id),
+      tagIds: (card.tags ?? []).map((t) => t.id),
       links: card.links.map(l => ({ targetCardId: l.targetCardId, linkText: l.linkText, sortOrder: l.sortOrder })),
       templateTasks: card.templateTasks.map(t => ({ description: t.description })),
     };
+  }
+
+  protected setStatus(status: 'DRAFT' | 'PUBLISHED'): void {
+    this.editModeStore.markDirty({ status });
   }
 
   protected deleteCard(): void {
@@ -377,7 +405,8 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
   protected onKeydown(event: KeyboardEvent): void {
     if (
       event.target instanceof HTMLInputElement ||
-      event.target instanceof HTMLTextAreaElement
+      event.target instanceof HTMLTextAreaElement ||
+      (event.target as HTMLElement).isContentEditable
     ) return;
 
     if (this.lightboxOpen()) {
@@ -390,8 +419,25 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (event.key === 'ArrowLeft' && this.prevCard()) this.navigateTo(this.prevCard()!);
-    if (event.key === 'ArrowRight' && this.nextCard()) this.navigateTo(this.nextCard()!);
+    if (this.editMode() && this.isAdmin()) {
+      if (event.key === 'Enter') { event.preventDefault(); this.saveAndExit(); return; }
+      if (event.key === 'Escape') { event.preventDefault(); this.discardAndExit(); return; }
+    }
+
+    if (event.key === 'ArrowLeft') {
+      if (this.card()?.cardType === 'INFOGRAPHIC' && this.carouselIndex() > 0) {
+        this.carouselPrev();
+      } else if (this.prevCard()) {
+        this.navigateTo(this.prevCard()!);
+      }
+    }
+    if (event.key === 'ArrowRight') {
+      if (this.card()?.cardType === 'INFOGRAPHIC' && this.carouselIndex() < this.mediaUrls().length - 1) {
+        this.carouselNext();
+      } else if (this.nextCard()) {
+        this.navigateTo(this.nextCard()!);
+      }
+    }
   }
 
   @HostListener('window:beforeunload', ['$event'])
@@ -580,6 +626,18 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
 
   protected onVideoUrlChange(url: string): void {
     this.editModeStore.markDirty({ mediaUrl: url });
+    const currentTitle = (this.displayCard()?.title ?? '').trim();
+    if (currentTitle || !url) return;
+    const videoId = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)?.[1];
+    if (!videoId) return;
+    fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      .then((r) => r.json())
+      .then((data: { title?: string }) => {
+        if (data.title && !(this.displayCard()?.title ?? '').trim()) {
+          this.editModeStore.markDirty({ title: data.title });
+        }
+      })
+      .catch(() => {});
   }
 
   protected removeSlide(index: number): void {
