@@ -11,16 +11,24 @@
       All
     </button>
     @for (tag of availableTags(); track tag.id) {
-      <button type="button" class="tag-nav__link"
-              [class.tag-nav__link--active]="selectedTagSlug() === tag.slug"
-              [class.tag-nav__link--drop-target]="editModeStore.enabled() && dragOverTagSlug() === tag.slug"
-              [class.tag-nav__link--already-tagged]="isAlreadyTagged(tag)"
-              (click)="selectTag(tag.slug)"
-              (dragover)="editModeStore.enabled() ? onPillDragOver($event, tag.slug) : null"
-              (dragleave)="onPillDragLeave()"
-              (drop)="editModeStore.enabled() ? onPillDrop($event, tag) : null">
-        {{ tag.name }}
-      </button>
+      <div class="tag-nav__pill-wrap">
+        <button type="button" class="tag-nav__link"
+                [class.tag-nav__link--active]="selectedTagSlug() === tag.slug"
+                [class.tag-nav__link--drop-target]="editModeStore.enabled() && dragOverTagSlug() === tag.slug"
+                [class.tag-nav__link--already-tagged]="isAlreadyTagged(tag)"
+                (click)="selectTag(tag.slug)"
+                (dragover)="editModeStore.enabled() ? onPillDragOver($event, tag.slug) : null"
+                (dragleave)="onPillDragLeave()"
+                (drop)="editModeStore.enabled() ? onPillDrop($event, tag) : null">
+          {{ tag.name }}
+        </button>
+        @if (showNewTile()) {
+          <button type="button" class="tag-nav__remove-btn"
+                  (click)="requestDeleteTopic(tag, $event)"
+                  [attr.aria-label]="'Remove topic ' + tag.name"
+                  title="Remove topic">×</button>
+        }
+      </div>
     }
 
     @if (showNewTile()) {
@@ -145,3 +153,10 @@
     }
   }
 </div>
+
+@if (pendingDeleteTag()) {
+  <app-confirm-dialog
+    [message]="deleteTopicDialogMessage()"
+    (confirmed)="confirmDeleteTopic()"
+    (cancelled)="cancelDeleteTopic()" />
+}

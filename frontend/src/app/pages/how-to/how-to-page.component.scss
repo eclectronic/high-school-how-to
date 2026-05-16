@@ -403,6 +403,38 @@ $tape-border: rgba($color-ink, 0.14);
   }
 }
 
+// ── Topic pill wrapper (for the × remove button) ─────────────────
+
+.tag-nav__pill-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.tag-nav__remove-btn {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: $color-ink;
+  color: #fffef9;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1;
+  transition: background 0.12s;
+
+  &:hover {
+    background: #c0392b;
+  }
+}
+
 // ── Drag-to-topic: pill states ────────────────────────────────────
 
 .tag-nav__link--drop-target {

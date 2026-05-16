@@ -7,13 +7,14 @@ import { CardType, ContentCard, SaveCardRequest, Tag } from '../../core/models/c
 import { SiteNavComponent } from '../../shared/site-nav/site-nav.component';
 import { EditModeStore } from '../../core/edit-mode/edit-mode.store';
 import { SessionStore } from '../../core/session/session.store';
+import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
 
 const EXCLUDED_TAG_SLUGS = new Set(['about', 'help']);
 
 @Component({
   selector: 'app-how-to-page',
   standalone: true,
-  imports: [RouterLink, SiteNavComponent, FormsModule],
+  imports: [RouterLink, SiteNavComponent, FormsModule, ConfirmDialogComponent],
   templateUrl: './how-to-page.component.html',
   styleUrl: './how-to-page.component.scss',
 })
@@ -39,6 +40,21 @@ export class HowToPageComponent {
   protected readonly newTopicPopoverOpen = signal(false);
   protected newTopicName = '';
   protected readonly newTopicError = signal<string | null>(null);
+
+  // Delete topic dialog state
+  protected readonly pendingDeleteTag = signal<Tag | null>(null);
+  protected readonly deleteTopicDialogMessage = computed(() => {
+    const tag = this.pendingDeleteTag();
+    if (!tag) return '';
+    const orphaned = this.allCards().filter(
+      (c) => c.tags.some((t) => t.id === tag.id) && c.tags.length === 1,
+    ).length;
+    const total = this.allCards().filter((c) => c.tags.some((t) => t.id === tag.id)).length;
+    if (orphaned > 0) {
+      return `Remove the "${tag.name}" topic? ${orphaned} how-to${orphaned === 1 ? '' : 's'} will have no topic assigned — reassign ${orphaned === 1 ? 'it' : 'them'} first if you want to keep them organised.`;
+    }
+    return `Remove the "${tag.name}" topic? ${total} how-to${total === 1 ? '' : 's'} will lose this topic but keep their other assignments.`;
+  });
 
   protected readonly showNewTile = computed(
     () => this.sessionStore.isAdmin() && this.editModeStore.enabled(),
@@ -244,6 +260,36 @@ export class HowToPageComponent {
   protected closeNewTopicPopover(): void {
     this.newTopicPopoverOpen.set(false);
     this.newTopicError.set(null);
+  }
+
+  protected requestDeleteTopic(tag: Tag, event: MouseEvent): void {
+    event.stopPropagation();
+    const hasCards = this.allCards().some((c) => c.tags.some((t) => t.id === tag.id));
+    if (hasCards) {
+      this.pendingDeleteTag.set(tag);
+    } else {
+      this.executDeleteTopic(tag);
+    }
+  }
+
+  protected confirmDeleteTopic(): void {
+    const tag = this.pendingDeleteTag();
+    this.pendingDeleteTag.set(null);
+    if (tag) this.executDeleteTopic(tag);
+  }
+
+  protected cancelDeleteTopic(): void {
+    this.pendingDeleteTag.set(null);
+  }
+
+  private executDeleteTopic(tag: Tag): void {
+    this.api.adminDeleteTag(tag.id).subscribe({
+      next: () => {
+        if (this.selectedTagSlug() === tag.slug) this.selectedTagSlug.set(null);
+        this.loadCards(true);
+      },
+      error: (err) => this.showToast(err?.error?.detail ?? 'Failed to remove topic'),
+    });
   }
 
   protected createTopic(): void {
