@@ -410,18 +410,18 @@ $tape-border: rgba($color-ink, 0.14);
   display: inline-flex;
 }
 
-.tag-nav__remove-btn {
+.tag-nav__edit-btn {
   position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 17px;
-  height: 17px;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: $color-ink;
   color: #fffef9;
   border: none;
   cursor: pointer;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -431,7 +431,71 @@ $tape-border: rgba($color-ink, 0.14);
   transition: background 0.12s;
 
   &:hover {
-    background: #c0392b;
+    background: color.adjust($color-ink, $lightness: 12%);
+  }
+}
+
+.tag-nav__edit-popover {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  width: 220px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  padding: 0.75rem;
+  z-index: 200;
+  cursor: default;
+
+  &__header {
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    color: #111827;
+  }
+
+  &__input {
+    display: block;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.35rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+  }
+
+  &__btn {
+    padding: 0.3rem 0.75rem;
+    border-radius: 0.35rem;
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+
+    &--delete {
+      background: rgba(186, 26, 26, 0.1);
+      color: #ba1a1a;
+
+      &:hover { background: rgba(186, 26, 26, 0.18); }
+    }
+
+    &--save {
+      background: #ff9966;
+      color: #fff;
+      margin-left: auto;
+
+      &:hover { opacity: 0.88; }
+    }
   }
 }
 

@@ -41,19 +41,18 @@ export class HowToPageComponent {
   protected newTopicName = '';
   protected readonly newTopicError = signal<string | null>(null);
 
+  // Edit topic popover state
+  protected readonly editingTopicTag = signal<Tag | null>(null);
+  protected editingTopicName = '';
+
   // Delete topic dialog state
   protected readonly pendingDeleteTag = signal<Tag | null>(null);
   protected readonly deleteTopicDialogMessage = computed(() => {
     const tag = this.pendingDeleteTag();
     if (!tag) return '';
-    const orphaned = this.allCards().filter(
-      (c) => c.tags.some((t) => t.id === tag.id) && c.tags.length === 1,
-    ).length;
     const total = this.allCards().filter((c) => c.tags.some((t) => t.id === tag.id)).length;
-    if (orphaned > 0) {
-      return `Remove the "${tag.name}" topic? ${orphaned} how-to${orphaned === 1 ? '' : 's'} will have no topic assigned — reassign ${orphaned === 1 ? 'it' : 'them'} first if you want to keep them organised.`;
-    }
-    return `Remove the "${tag.name}" topic? ${total} how-to${total === 1 ? '' : 's'} will lose this topic but keep their other assignments.`;
+    if (total === 0) return `Remove the "${tag.name}" topic?`;
+    return `Remove the "${tag.name}" topic? ${total} how-to${total === 1 ? '' : 's'} will lose this topic assignment.`;
   });
 
   protected readonly showNewTile = computed(
@@ -209,7 +208,7 @@ export class HowToPageComponent {
         this.allCards.update((cards) =>
           cards.map((c) => (c.id === saved.id ? { ...c, tags: saved.tags } : c)),
         );
-        this.showToast(`Added '${tag.name}' to '${card.title}'`);
+        this.showToast(`Added topic '${tag.name}' to '${card.title}'`);
       },
       error: () => this.showToast('Failed to update card'),
     });
@@ -262,8 +261,39 @@ export class HowToPageComponent {
     this.newTopicError.set(null);
   }
 
+  protected openEditTopic(tag: Tag, event: MouseEvent): void {
+    event.stopPropagation();
+    this.closeNewCardMenu();
+    this.closeNewTopicPopover();
+    this.editingTopicTag.set(tag);
+    this.editingTopicName = tag.name;
+  }
+
+  protected closeEditTopic(): void {
+    this.editingTopicTag.set(null);
+  }
+
+  protected saveEditTopic(): void {
+    const tag = this.editingTopicTag();
+    const name = this.editingTopicName.trim();
+    if (!tag || !name) return;
+    this.api.adminUpdateTag(tag.id, {
+      name,
+      slug: tag.slug,
+      description: tag.description,
+      sortOrder: tag.sortOrder,
+    }).subscribe({
+      next: () => {
+        this.closeEditTopic();
+        this.loadCards(true);
+      },
+      error: () => this.showToast('Failed to update topic'),
+    });
+  }
+
   protected requestDeleteTopic(tag: Tag, event: MouseEvent): void {
     event.stopPropagation();
+    this.closeEditTopic();
     const hasCards = this.allCards().some((c) => c.tags.some((t) => t.id === tag.id));
     if (hasCards) {
       this.pendingDeleteTag.set(tag);

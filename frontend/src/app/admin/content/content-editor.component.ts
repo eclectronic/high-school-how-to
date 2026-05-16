@@ -452,7 +452,7 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
 
   protected save() {
     if (!this.form.tagIds.size) {
-      this.error.set('Select at least one tag');
+      this.error.set('Select at least one topic');
       return;
     }
 

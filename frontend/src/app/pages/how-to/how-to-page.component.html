@@ -1,4 +1,4 @@
-<div class="how-to-page" (click)="closeNewCardMenu(); closeNewTopicPopover()">
+<div class="how-to-page" (click)="closeNewCardMenu(); closeNewTopicPopover(); closeEditTopic()">
   <app-site-nav activeRoute="how-to" />
 
   <!-- Tag filter bar -->
@@ -23,10 +23,25 @@
           {{ tag.name }}
         </button>
         @if (showNewTile()) {
-          <button type="button" class="tag-nav__remove-btn"
-                  (click)="requestDeleteTopic(tag, $event)"
-                  [attr.aria-label]="'Remove topic ' + tag.name"
-                  title="Remove topic">×</button>
+          <button type="button" class="tag-nav__edit-btn"
+                  (click)="openEditTopic(tag, $event)"
+                  [attr.aria-label]="'Edit topic ' + tag.name"
+                  title="Edit topic">✏</button>
+          @if (editingTopicTag()?.id === tag.id) {
+            <div class="tag-nav__edit-popover" (click)="$event.stopPropagation()">
+              <div class="tag-nav__edit-popover__header">Edit topic</div>
+              <input class="tag-nav__edit-popover__input" type="text"
+                     [(ngModel)]="editingTopicName"
+                     (keydown.enter)="saveEditTopic()"
+                     (keydown.escape)="closeEditTopic()" />
+              <div class="tag-nav__edit-popover__actions">
+                <button type="button" class="tag-nav__edit-popover__btn tag-nav__edit-popover__btn--delete"
+                        (click)="requestDeleteTopic(tag, $event)">Delete</button>
+                <button type="button" class="tag-nav__edit-popover__btn tag-nav__edit-popover__btn--save"
+                        (click)="saveEditTopic()">Save</button>
+              </div>
+            </div>
+          }
         }
       </div>
     }
