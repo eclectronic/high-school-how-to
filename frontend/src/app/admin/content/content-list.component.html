@@ -8,6 +8,31 @@
     <div class="admin-error">{{ error() }}</div>
   }
 
+  <!-- Status filter -->
+  <div class="status-filter">
+    <button
+      type="button"
+      class="status-filter__btn"
+      [class.status-filter__btn--active]="selectedStatus() === null"
+      (click)="selectStatus(null)">
+      All
+    </button>
+    <button
+      type="button"
+      class="status-filter__btn"
+      [class.status-filter__btn--active]="selectedStatus() === 'DRAFT'"
+      (click)="selectStatus('DRAFT')">
+      Draft
+    </button>
+    <button
+      type="button"
+      class="status-filter__btn"
+      [class.status-filter__btn--active]="selectedStatus() === 'PUBLISHED'"
+      (click)="selectStatus('PUBLISHED')">
+      Published
+    </button>
+  </div>
+
   <!-- Tag filter -->
   @if (tags().length) {
     <div class="tag-filter">

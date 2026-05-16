@@ -90,7 +90,27 @@ export class ContentApiService {
   }
 
   adminSkeletonCreate(cardType: CardType, tagIds?: number[]) {
-    return this.http.post<ContentCardAdmin>('/api/admin/content', { cardType, tagIds: tagIds ?? [] });
+    const req: SaveCardRequest = {
+      title: '',
+      slug: '',
+      description: null,
+      cardType,
+      mediaUrl: null,
+      printMediaUrl: null,
+      mediaUrls: null,
+      thumbnailUrl: null,
+      coverImageUrl: null,
+      bodyJson: null,
+      bodyHtml: null,
+      backgroundColor: null,
+      textColor: null,
+      simpleLayout: false,
+      status: 'DRAFT',
+      tagIds: tagIds ?? [],
+      links: [],
+      templateTasks: [],
+    };
+    return this.http.post<ContentCardAdmin>('/api/admin/content', req);
   }
 
   adminCreateCard(req: SaveCardRequest) {

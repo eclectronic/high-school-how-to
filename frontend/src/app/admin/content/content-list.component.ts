@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ContentApiService } from '../../core/services/content-api.service';
-import { ContentCardAdmin, Tag } from '../../core/models/content.models';
+import { CardStatus, ContentCardAdmin, Tag } from '../../core/models/content.models';
 
 @Component({
   selector: 'app-content-list',
@@ -14,12 +14,18 @@ export class ContentListComponent implements OnInit {
   protected cards = signal<ContentCardAdmin[]>([]);
   protected tags = signal<Tag[]>([]);
   protected selectedTagSlug = signal<string | null>(null);
+  protected selectedStatus = signal<CardStatus | null>('DRAFT');
   protected loading = signal(false);
   protected error = signal<string | null>(null);
 
   protected filteredCards = computed(() => {
     const slug = this.selectedTagSlug();
-    const sorted = [...this.cards()].sort((a, b) => a.title.localeCompare(b.title));
+    const status = this.selectedStatus();
+    let sorted = [...this.cards()].sort((a, b) => a.title.localeCompare(b.title));
+
+    if (status) {
+      sorted = sorted.filter((c) => c.status === status);
+    }
     if (!slug) return sorted;
     return sorted.filter((c) => c.tags.some((t) => t.slug === slug));
   });
@@ -49,6 +55,10 @@ export class ContentListComponent implements OnInit {
 
   protected selectTag(slug: string | null) {
     this.selectedTagSlug.set(slug);
+  }
+
+  protected selectStatus(status: CardStatus | null) {
+    this.selectedStatus.set(status);
   }
 
   protected textPreview(card: ContentCardAdmin): string {
