@@ -1,0 +1,64 @@
+<div class="todo-edit"
+     [style.background]="backgroundColor || null"
+     [style.color]="textColor || null">
+
+  <div class="todo-edit__toolbar">
+    <button type="button" class="todo-edit__color-btn"
+            [style.background]="backgroundColor || '#3d8ed4'"
+            title="Change background color"
+            (click)="showColorPicker.set(!showColorPicker())">🎨</button>
+    <span class="todo-edit__count">{{ editTasks().length }}/50 tasks</span>
+  </div>
+
+  @if (showColorPicker()) {
+    <div class="todo-edit__color-overlay" (click)="showColorPicker.set(false)">
+      <div class="todo-edit__color-card" (click)="$event.stopPropagation()">
+        <app-swatch-picker
+          [selectedColor]="backgroundColor || '#3d8ed4'"
+          [showGradientToggle]="false"
+          (colorChange)="onColorChange($event)"
+          (escaped)="showColorPicker.set(false)" />
+      </div>
+    </div>
+  }
+
+  <div cdkDropList (cdkDropListDropped)="onTaskDrop($event)" class="todo-edit__tasks">
+    @if (editTasks().length === 0) {
+      <p class="todo-edit__empty">No tasks yet. Add one below!</p>
+    }
+    @for (task of editTasks(); track task.id) {
+      <div class="todo-edit__task" cdkDrag [cdkDragLockAxis]="'y'">
+        <span class="todo-edit__drag-handle" cdkDragHandle title="Drag to reorder">⋮⋮</span>
+        <span class="todo-edit__check" aria-hidden="true">☐</span>
+        <app-inline-title-edit
+          class="todo-edit__desc"
+          [title]="task.description"
+          (titleChange)="onTaskDescChange(task, $event)" />
+        <button type="button" class="todo-edit__delete-btn"
+                title="Delete task"
+                (click)="confirmDeleteTask(task)">✕</button>
+      </div>
+    }
+  </div>
+
+  <div class="todo-edit__add">
+    <input #taskInput
+           type="text"
+           class="todo-edit__add-input"
+           placeholder="Add a to-do…"
+           [(ngModel)]="newTaskDesc"
+           [disabled]="editTasks().length >= 50"
+           (keydown.enter)="addTask()" />
+    <button type="button" class="todo-edit__add-btn"
+            [disabled]="!newTaskDesc.trim() || editTasks().length >= 50"
+            title="Add task"
+            (click)="addTask()">+</button>
+  </div>
+</div>
+
+@if (deleteTarget()) {
+  <app-confirm-dialog
+    [itemName]="deleteTarget()!.description"
+    (confirmed)="onDeleteConfirmed()"
+    (cancelled)="onDeleteCancelled()" />
+}

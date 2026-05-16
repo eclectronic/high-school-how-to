@@ -1,6 +1,6 @@
 <nav class="site-nav" aria-label="Site navigation">
   <a routerLink="/" class="site-nav__logo" aria-label="High School How To — Home">
-    High School How To
+    <img src="/assets/images/logo-mark.png" alt="High School How To" class="site-nav__logo-img">
   </a>
 
   <ul class="site-nav__links" role="list">
@@ -29,7 +29,9 @@
 
   <div class="site-nav__cta">
     @if (isAuthenticated()) {
-      <a routerLink="/locker" class="site-nav__cta-btn site-nav__cta-btn--primary">My Locker</a>
+      <a routerLink="/locker" class="site-nav__cta-btn site-nav__cta-btn--locker"
+         [class.site-nav__cta-btn--locker-active]="activeRoute === 'locker'"
+         [style.background]="activeRoute === 'locker' ? null : lockerColor()">My Locker</a>
       <a routerLink="/account/profile" class="site-nav__avatar-btn" [class.site-nav__avatar-btn--active]="activeRoute === 'account'" [title]="firstName() || 'Account'">
         @if (avatarUrl()) {
           <img [src]="avatarUrl()!" class="site-nav__avatar-img" alt="Profile" referrerpolicy="no-referrer" />
@@ -44,7 +46,8 @@
       <a routerLink="/auth/login" class="site-nav__cta-btn site-nav__cta-btn--primary">Log In</a>
     }
     @if (isAdmin()) {
-      <a routerLink="/admin" class="site-nav__cta-btn site-nav__cta-btn--admin">Admin</a>
+      <app-edit-mode-toggle></app-edit-mode-toggle>
+      <a routerLink="/admin" class="site-nav__cta-btn site-nav__cta-btn--admin" title="Control Panel" aria-label="Control Panel">⚙</a>
     }
   </div>
 </nav>

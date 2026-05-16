@@ -56,23 +56,11 @@
             </label>
           </div>
         </div>
-      </div>
 
-      <!-- Tags -->
-      <div class="admin-card editor-section">
-        <h2>Tags <small>(select at least one)</small></h2>
-        <div class="tag-picker">
-          @for (tag of allTags(); track tag.id) {
-            <button
-              type="button"
-              class="tag-option"
-              [class.selected]="form.tagIds.has(tag.id)"
-              (click)="toggleTag(tag.id)"
-            >
-              {{ tag.name }}
-            </button>
-          }
-        </div>
+        <app-topic-chips
+          [tags]="selectedTopics()"
+          [allTags]="allTags()"
+          (change)="onTopicsChange($event)" />
       </div>
 
       <!-- Media fields -->
@@ -107,12 +95,18 @@
 
                   <div class="media-url-item__fields">
                     <div class="media-url-item__uploads">
-                      <label class="btn btn--secondary btn--sm upload-btn">
+                      <button type="button" class="btn btn--secondary btn--sm" (click)="openPicker({ index: i, field: 'url' })">
                         Image
+                      </button>
+                      <label class="btn btn--secondary btn--sm upload-btn">
+                        Upload
                         <input type="file" accept="image/*" hidden (change)="uploadMediaFile($event, i, 'url')" />
                       </label>
-                      <label class="btn btn--secondary btn--sm upload-btn">
+                      <button type="button" class="btn btn--secondary btn--sm" (click)="openPicker({ index: i, field: 'printUrl' })">
                         Print
+                      </button>
+                      <label class="btn btn--secondary btn--sm upload-btn">
+                        Upload Print
                         <input type="file" accept="image/*,application/pdf" hidden (change)="uploadMediaFile($event, i, 'printUrl')" />
                       </label>
                       @if (entry.printUrl) {
@@ -155,13 +149,17 @@
         }
 
         <div class="form-row">
-          <label>Thumbnail URL</label>
+          <label>Thumbnail</label>
           <div class="url-with-upload">
             <input [(ngModel)]="form.thumbnailUrl" placeholder="https://..." />
+            <button type="button" class="btn btn--secondary btn--sm" (click)="openPicker('thumbnailUrl')">Pick</button>
             <label class="btn btn--secondary btn--sm upload-btn">
               Upload
               <input type="file" accept="image/*" hidden (change)="uploadFile($event, 'thumbnailUrl')" />
             </label>
+            @if (form.thumbnailUrl) {
+              <button type="button" class="btn btn--secondary btn--sm" (click)="form.thumbnailUrl = ''" title="Remove thumbnail">Clear</button>
+            }
           </div>
           @if (form.thumbnailUrl) {
             <img class="img-preview" [src]="form.thumbnailUrl" alt="thumbnail preview" />
@@ -169,13 +167,17 @@
         </div>
 
         <div class="form-row">
-          <label>Cover Image URL <small>(used as hero)</small></label>
+          <label>Cover Image <small>(used as hero)</small></label>
           <div class="url-with-upload">
             <input [(ngModel)]="form.coverImageUrl" placeholder="https://..." />
+            <button type="button" class="btn btn--secondary btn--sm" (click)="openPicker('coverImageUrl')">Pick</button>
             <label class="btn btn--secondary btn--sm upload-btn">
               Upload
               <input type="file" accept="image/*" hidden (change)="uploadFile($event, 'coverImageUrl')" />
             </label>
+            @if (form.coverImageUrl) {
+              <button type="button" class="btn btn--secondary btn--sm" (click)="form.coverImageUrl = ''" title="Remove cover image">Clear</button>
+            }
           </div>
           @if (form.coverImageUrl) {
             <img class="img-preview" [src]="form.coverImageUrl" alt="cover preview" />
@@ -447,3 +449,10 @@
     </div>
   }
 </div>
+
+<app-media-picker
+  [open]="pickerOpen()"
+  [imagesOnly]="true"
+  (selected)="onPickerSelected($event)"
+  (closed)="pickerOpen.set(false)"
+/>

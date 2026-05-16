@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { map } from 'rxjs/operators';
 import {
+  CardType,
   ContentCard,
   ContentCardAdmin,
   ContentCardSummary,
@@ -73,11 +74,43 @@ export class ContentApiService {
 
   // Admin — content cards
   adminListCards() {
-    return this.http.get<ContentCardAdmin[]>('/api/admin/content');
+    return this.http.get<ContentCardAdmin[]>('/api/admin/content').pipe(
+      map((cards) => cards.map(normalizeMediaUrls)),
+    );
   }
 
   adminGetCard(id: number) {
     return this.http.get<ContentCardAdmin>(`/api/admin/content/${id}`);
+  }
+
+  adminGetCardBySlug(slug: string) {
+    return this.http.get<ContentCardAdmin>(`/api/admin/content/by-slug/${slug}`).pipe(
+      map(normalizeMediaUrls),
+    );
+  }
+
+  adminSkeletonCreate(cardType: CardType, tagIds?: number[]) {
+    const req: SaveCardRequest = {
+      title: '',
+      slug: '',
+      description: null,
+      cardType,
+      mediaUrl: null,
+      printMediaUrl: null,
+      mediaUrls: null,
+      thumbnailUrl: null,
+      coverImageUrl: null,
+      bodyJson: null,
+      bodyHtml: null,
+      backgroundColor: null,
+      textColor: null,
+      simpleLayout: false,
+      status: 'DRAFT',
+      tagIds: tagIds ?? [],
+      links: [],
+      templateTasks: [],
+    };
+    return this.http.post<ContentCardAdmin>('/api/admin/content', req);
   }
 
   adminCreateCard(req: SaveCardRequest) {
@@ -93,16 +126,18 @@ export class ContentApiService {
   }
 
   // Admin — image upload (thumbnail/cover images)
-  adminUploadImage(file: File) {
+  adminUploadImage(file: File, title?: string) {
     const formData = new FormData();
     formData.append('file', file);
+    if (title?.trim()) formData.append('title', title.trim());
     return this.http.post<ImageUploadResponse>('/api/admin/images/upload', formData);
   }
 
   // Admin — image upload for article body content (rich text editor)
-  adminUploadContentImage(file: File) {
+  adminUploadContentImage(file: File, title?: string) {
     const formData = new FormData();
     formData.append('file', file);
+    if (title?.trim()) formData.append('title', title.trim());
     return this.http.post<ImageUploadResponse>('/api/admin/images/upload/content', formData);
   }
 
@@ -121,7 +156,7 @@ export class ContentApiService {
  * Synthesizes mediaUrls from legacy scalar fields when an API response omits the new
  * field (cached responses, rolling-deploy window with an old API serving a new client).
  */
-function normalizeMediaUrls(card: ContentCard): ContentCard {
+function normalizeMediaUrls<T extends ContentCard>(card: T): T {
   if (!card.mediaUrls?.length && card.mediaUrl) {
     const entry: MediaUrlEntry = { url: card.mediaUrl, printUrl: card.printMediaUrl ?? null, alt: null };
     return { ...card, mediaUrls: [entry] };

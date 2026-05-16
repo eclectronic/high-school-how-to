@@ -223,7 +223,7 @@ describe('ContentViewerComponent', () => {
     expect(dots.length).toBe(0);
   });
 
-  it('renders multi-image infographic with chevrons and dots', () => {
+  it('renders multi-image infographic with prev/next chevrons', () => {
     initWithCard(makeCard({
       cardType: 'INFOGRAPHIC',
       mediaUrl: '/media/img1.jpg',
@@ -236,8 +236,6 @@ describe('ContentViewerComponent', () => {
     fixture.detectChanges();
     const chevrons = fixture.nativeElement.querySelectorAll('.infographic-carousel__chevron');
     expect(chevrons.length).toBe(2);
-    const dots = fixture.nativeElement.querySelectorAll('.infographic-carousel__dot');
-    expect(dots.length).toBe(3);
   });
 
   it('back-compat: renders infographic from legacy mediaUrl when mediaUrls is empty', () => {
@@ -309,5 +307,64 @@ describe('ContentViewerComponent', () => {
     expect(component['currentPrintUrl']()).toBe('/media/img1.pdf');
     component['carouselIndex'].set(1);
     expect(component['currentPrintUrl']()).toBeNull();
+  });
+
+  // ── Infographic keyboard carousel navigation ──────────────────────────────────
+
+  function pressKey(key: string): void {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+  }
+
+  it('ArrowRight advances carouselIndex when not at last slide', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrls: [
+        { url: '/media/img1.jpg', printUrl: null, alt: null },
+        { url: '/media/img2.jpg', printUrl: null, alt: null },
+        { url: '/media/img3.jpg', printUrl: null, alt: null },
+      ],
+    }));
+    expect(component['carouselIndex']()).toBe(0);
+    pressKey('ArrowRight');
+    expect(component['carouselIndex']()).toBe(1);
+  });
+
+  it('ArrowLeft decrements carouselIndex when not at first slide', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrls: [
+        { url: '/media/img1.jpg', printUrl: null, alt: null },
+        { url: '/media/img2.jpg', printUrl: null, alt: null },
+      ],
+    }));
+    component['carouselIndex'].set(1);
+    pressKey('ArrowLeft');
+    expect(component['carouselIndex']()).toBe(0);
+  });
+
+  it('ArrowRight at last slide does not advance carousel', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrls: [
+        { url: '/media/img1.jpg', printUrl: null, alt: null },
+        { url: '/media/img2.jpg', printUrl: null, alt: null },
+      ],
+    }));
+    component['carouselIndex'].set(1);
+    pressKey('ArrowRight');
+    expect(component['carouselIndex']()).toBe(1);
+  });
+
+  it('ArrowLeft at first slide does not decrement carousel', () => {
+    initWithCard(makeCard({
+      cardType: 'INFOGRAPHIC',
+      mediaUrls: [
+        { url: '/media/img1.jpg', printUrl: null, alt: null },
+        { url: '/media/img2.jpg', printUrl: null, alt: null },
+      ],
+    }));
+    expect(component['carouselIndex']()).toBe(0);
+    pressKey('ArrowLeft');
+    expect(component['carouselIndex']()).toBe(0);
   });
 });

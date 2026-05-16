@@ -1,7 +1,7 @@
-# High School How To — v8.0 Design Document
+# High School How To — v8 Design Document
 
-**Status**: Design open — collecting scope
-**Last updated**: 2026-04-25
+**Status**: Active — v8.3 implemented
+**Last updated**: 2026-05-09
 **Scope**: Upgrades to admin functionality
 
 ## Table of Contents
@@ -19,6 +19,8 @@
 11. [Frontend Changes](#11-frontend-changes)
 12. [Testing Requirements](#12-testing-requirements)
 13. [Implementation Phases](#13-implementation-phases)
+14. [v8.3 — Media Library](#14-v83--media-library)
+15. [Production Infrastructure Fixes (2026-05-05)](#15-production-infrastructure-fixes-2026-05-05)
 
 ---
 
@@ -507,3 +509,115 @@ The two `content-editor.component` items in the INFOGRAPHIC branch (upload butto
 | 9 | Implement `--target prod` path with typed-confirmation gating | Dry-run against a scratch RDS instance restores cleanly; safety prompts verified |
 | 10 | Commit initial `data/` snapshot generated from current prod | PR review of the generated JSON tree |
 | 11 | Cut v8.0.0 release (changelog, version bump, tag) | Both builds clean per release process |
+
+---
+
+## 14. v8.3 — Media Library
+
+**Shipped**: 2026-05-06
+
+### Problem
+
+Image uploads in the admin editor were fire-and-forget. Once a URL was saved on a content card, there was no index of uploaded assets, no way to browse or reuse them, and no way to know which cards referenced a given image. Authors had to keep their own records of uploaded URLs.
+
+### Design
+
+The core model: content cards continue to store image URLs as plain strings (no FK change). A new `media_assets` table is an **index** over those URLs — unique on `url`. Usage ("which cards reference this image") is computed at query time by matching the URL across all image columns on `content_cards`. This keeps the change additive and avoids migrating every existing image field.
+
+Assets are seeded two ways:
+
+1. **SQL backfill (changeset 0081)** — on first deploy, `SELECT DISTINCT` every URL from `content_cards.thumbnail_url`, `cover_image_url`, `media_url`, `print_media_url`, the `media_urls` JSONB array, and `<img src="…">` values embedded in `body_html`. One row per unique URL, `ON CONFLICT DO NOTHING`.
+2. **`MediaBackfillRunner`** — runs at every startup; lists all objects in the storage backend (`./media/` in dev, S3 in prod) and inserts rows for any file not already present. Idempotent via `existsByUrl` short-circuit.
+
+Going forward, every upload path — whether from the new `/admin/media` page or via the existing inline editor upload — writes a `media_assets` row immediately.
+
+### Database
+
+| Changeset | File | Description |
+|---|---|---|
+| 0080 | `v8-media-assets-0080.sql` | Creates `media_assets` table (id, url UNIQUE, filename, alt_text, mime_type, size_bytes, width, height, uploaded_at, uploaded_by_id FK nullable). Indexes on `lower(filename)`, `lower(alt_text)`, `uploaded_at DESC`. Rollback: `DROP TABLE media_assets`. |
+| 0081 | `v8-media-assets-backfill-0081.sql` | Seeds from all URL columns on `content_cards` including JSONB array entries and `<img src>` regex on `body_html`. Rollback: `DELETE FROM media_assets`. |
+
+### Backend
+
+**Package**: `com.highschoolhowto.media`
+
+| Class | Role |
+|---|---|
+| `MediaAsset` | JPA entity for `media_assets`. `@PrePersist` sets `uploadedAt`. |
+| `MediaAssetRepository` | `JpaRepository` + `search(query, pageable)` — case-insensitive LIKE on `filename` and `altText`. |
+| `MediaAssetService` | `list`, `upload` (store file → insert row, reads dimensions via `ImageIO`), `recordExisting` (idempotent upsert by URL), `patch` (alt text / filename), `delete` (checks usage first; throws 409 CONFLICT if in use), `usage` (JDBC query across all 5 image columns + LIKE on `body_html`). |
+| `MediaAssetController` | `@RequestMapping("/api/admin/media")` `@PreAuthorize("hasRole('ADMIN')")` — `GET`, `POST` (multipart), `PATCH /{id}`, `DELETE /{id}`, `GET /{id}/usage`. |
+| `MediaBackfillRunner` | `ApplicationRunner`; calls `storageService.listAll()` and inserts missing rows. Logs count on first run; no-op on subsequent boots. |
+
+**`StorageService` interface** gained two additions:
+- `default List<StoredObject> listAll()` — throws `UnsupportedOperationException` by default; implemented by both `LocalStorageService` (walks `mediaPath` with `Files.walk`) and `S3StorageService` (paginated `ListObjectsV2`, logs progress every 5 000 objects).
+- `record StoredObject(String key, long sizeBytes)` — nested record.
+
+**`ImageUploadController`** — all three upload endpoints (`/upload`, `/upload/content`, `/upload/badges`) now call `mediaAssetService.recordExisting(url, filename, mimeType, size)` after the storage write. This ensures inline uploads from the content editor also appear in the library without requiring the author to visit `/admin/media` first.
+
+### Frontend
+
+| File | Description |
+|---|---|
+| `core/services/media-api.service.ts` | `list(search, page, size)`, `upload(file, subfolder)`, `patch(id, altText, filename)`, `delete(id)`, `usage(id)`. Uses `HttpParams` for the list query. |
+| `admin/media/media-library.component` | `/admin/media` page. Thumbnail grid (auto-fill, `minmax(160px, 1fr)`), debounced search, paginator, drag-and-drop-free upload via file input, inline alt-text/filename edit modal, delete with usage-count warning modal. Shows count of referencing cards before allowing delete. |
+| `admin/media/media-picker.component` | Reusable modal (`[open]` input, `(selected)` and `(closed)` outputs). Same grid + search as the library page. "Upload" button uploads and auto-selects the new asset. Used by the content editor wherever an image field appears. |
+
+**Content editor updates** (`admin/content/content-editor.component`):
+- Added `pickerOpen = signal(false)` and `pickerTarget` (union of `'thumbnailUrl' | 'coverImageUrl' | { index, field }`).
+- `openPicker(target)` / `onPickerSelected(asset)` methods set the right form field from the returned URL.
+- Thumbnail and cover image rows each gained a **Pick** button alongside the existing Upload file input.
+- Each infographic image entry gained **Image** and **Print** pick buttons alongside their existing Upload inputs.
+- `<app-media-picker>` appended at the end of the template, wired to `pickerOpen()` / `onPickerSelected` / `pickerOpen.set(false)`.
+
+**Admin routes and nav**: `/admin/media` route added to `admin.routes.ts`; "Media Library" link added to the admin sidebar in `admin-shell.component.html`.
+
+### Delete safety
+
+`MediaAssetService.delete` checks usage before deleting. If any card references the URL (across `thumbnail_url`, `cover_image_url`, `media_url`, `print_media_url`, `media_urls::text LIKE`, or `body_html LIKE`), it throws `ApiException(CONFLICT)`. The library UI surfaces this as a usage-count warning modal that names the referencing cards; the delete button is still shown but requires confirmation.
+
+---
+
+## 15. Production Infrastructure Fixes (2026-05-06)
+
+These fixes were applied directly to AWS in response to two separate prod incidents. No code changes were required; all changes are in AWS configuration.
+
+### Image upload broken (AccessDenied + wrong URLs)
+
+**Root cause 1 — IAM**: The App Runner instance role `AppRunnerInstanceRoleForHighschoolhowto` had only `SecretsManagerReadWrite`. There was no S3 policy, so every `PutObject` call hit `AccessDenied`.
+
+**Fix**: Added inline policy `S3UploadsAccess` to the role:
+```json
+{
+  "Statement": [
+    { "Effect": "Allow", "Action": ["s3:PutObject", "s3:DeleteObject"],
+      "Resource": "arn:aws:s3:::highschoolhowto/uploads/*" },
+    { "Effect": "Allow", "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::highschoolhowto",
+      "Condition": { "StringLike": { "s3:prefix": "uploads/*" } } }
+  ]
+}
+```
+
+**Root cause 2 — CloudFront path mismatch**: The S3 origin for `highschoolhowto.com` uses `OriginPath: /prod`. The API uploads files to `s3://highschoolhowto/uploads/images/foo.jpg` and returns URLs like `https://highschoolhowto.com/uploads/images/foo.jpg`. CloudFront maps that URL to `s3://highschoolhowto/prod/uploads/images/foo.jpg` — the wrong key — causing 404s on every image preview.
+
+**Fix**: Added a second S3 origin (`S3-Uploads`, same bucket, no `OriginPath`, reusing OAC `E3OOXMRYEJDPTH`) and a `/uploads/*` cache behavior targeting it. The existing S3 bucket policy already grants CloudFront read access to `arn:aws:s3:::highschoolhowto/*`, so no bucket policy change was needed.
+
+CloudFront routing after the fix:
+
+| Path pattern | Origin | S3 key resolves to |
+|---|---|---|
+| `/api/*` | App Runner | — |
+| `/uploads/*` | S3 (no OriginPath) | `s3://highschoolhowto/uploads/…` ✓ |
+| `/*` (default) | S3 (`OriginPath: /prod`) | `s3://highschoolhowto/prod/…` ✓ |
+
+### API OOM restarts
+
+**Root cause**: The App Runner service was configured with 512 MB of memory. Spring Boot's JVM non-heap overhead (metaspace ~150 MB, code cache ~100 MB) left insufficient headroom for the heap. The Linux OOM killer terminated the container every 12–18 hours (exit code 137 = SIGKILL).
+
+**Fix**: Updated the App Runner service via `aws apprunner update-service`:
+- Memory: 512 MB → **1 GB** (CPU stayed at 256 units / 0.25 vCPU, which is valid for 1 GB)
+- Added `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError` as a runtime environment variable
+
+`MaxRAMPercentage=75` caps the JVM heap at ~768 MB, leaving ~256 MB for non-heap overhead. `ExitOnOutOfMemoryError` ensures that if the heap is ever exhausted the process exits cleanly (App Runner restarts it) rather than thrashing in a degraded state.

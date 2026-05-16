@@ -8,8 +8,13 @@ import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import java.util.ArrayList;
+import java.util.List;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
@@ -26,6 +31,23 @@ public class S3StorageService implements StorageService {
         this.s3Client = S3Client.builder()
                 .region(Region.of(properties.getRegion()))
                 .build();
+    }
+
+    @Override
+    public boolean objectExists(String key) {
+        String s3Key = keyPrefix("") + key;
+        try {
+            s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(properties.getBucket())
+                    .key(s3Key)
+                    .build());
+            return true;
+        } catch (NoSuchKeyException ex) {
+            return false;
+        } catch (Exception ex) {
+            log.warn("Unexpected error checking S3 key existence for {}: {}", s3Key, ex.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -106,6 +128,28 @@ public class S3StorageService implements StorageService {
         }
         return String.format("https://%s.s3.%s.amazonaws.com/%s",
                 properties.getBucket(), properties.getRegion(), key);
+    }
+
+    @Override
+    public List<StoredObject> listAll() {
+        List<StoredObject> results = new ArrayList<>();
+        String continuationToken = null;
+        int total = 0;
+        do {
+            ListObjectsV2Request.Builder builder = ListObjectsV2Request.builder()
+                    .bucket(properties.getBucket())
+                    .maxKeys(1000);
+            if (continuationToken != null) builder.continuationToken(continuationToken);
+            ListObjectsV2Response response = s3Client.listObjectsV2(builder.build());
+            for (var obj : response.contents()) {
+                results.add(new StoredObject(obj.key(), obj.size()));
+            }
+            total += response.contents().size();
+            if (total % 5000 == 0) log.info("S3 media scan: listed {} objects so far", total);
+            continuationToken = response.isTruncated() ? response.nextContinuationToken() : null;
+        } while (continuationToken != null);
+        log.info("S3 media scan complete: {} total objects", total);
+        return results;
     }
 
     private String extractKey(String urlOrKey) {

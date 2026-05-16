@@ -20,6 +20,44 @@
   margin-bottom: 1rem;
 }
 
+// Status filter bar
+.status-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+
+  &__btn {
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    border: 2px solid rgba(45, 26, 16, 0.15);
+    background: #fafafa;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #5f4f43;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+
+    &:hover {
+      border-color: #ff9966;
+      color: #2d1a10;
+    }
+
+    &--active {
+      background: #2d1a10;
+      border-color: #2d1a10;
+      color: #fffef9;
+
+      &:hover {
+        background: #4a2e1a;
+        border-color: #4a2e1a;
+        color: #fffef9;
+      }
+    }
+  }
+}
+
 // Tag filter bar
 .tag-filter {
   display: flex;

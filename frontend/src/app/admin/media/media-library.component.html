@@ -1,0 +1,115 @@
+<div class="media-library">
+  <div class="media-library__header">
+    <div>
+      <h1>Media Library</h1>
+      @if (!loading()) {
+        <span class="media-library__count">{{ totalElements }} images</span>
+      }
+    </div>
+    <button class="media-library__upload-btn" (click)="triggerUpload()" [disabled]="uploading()">
+      {{ uploading() ? 'Uploading…' : '+ Upload Image' }}
+    </button>
+  </div>
+
+  <div class="media-library__search">
+    <input
+      type="text"
+      placeholder="Search by filename or alt text…"
+      [(ngModel)]="search"
+      (ngModelChange)="onSearchChange()"
+      class="media-library__search-input"
+    />
+  </div>
+
+  @if (error()) {
+    <div class="media-library__error">{{ error() }}</div>
+  }
+  @if (success()) {
+    <div class="media-library__success">{{ success() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="media-library__loading">Loading…</div>
+  } @else {
+    <div class="media-library__grid">
+      @for (asset of assets(); track asset.id) {
+        <div class="media-card">
+          <div class="media-card__thumb">
+            <img [src]="asset.url" [alt]="asset.altText ?? ''" loading="lazy" />
+          </div>
+          <div class="media-card__info">
+            <span class="media-card__name" [title]="asset.url">{{ asset.filename ?? asset.url }}</span>
+            <span class="media-card__meta">{{ formatBytes(asset.sizeBytes) }}
+              @if (asset.width && asset.height) { · {{ asset.width }}×{{ asset.height }} }
+            </span>
+          </div>
+          <div class="media-card__actions">
+            <button (click)="openEdit(asset)" title="Edit alt text">Edit</button>
+            <button (click)="confirmDelete(asset)" class="media-card__delete-btn" title="Delete">Delete</button>
+          </div>
+        </div>
+      } @empty {
+        <p class="media-library__empty">No images found.</p>
+      }
+    </div>
+
+    @if (totalPages > 1) {
+      <div class="media-library__pagination">
+        <button (click)="prevPage()" [disabled]="page === 0">← Prev</button>
+        <span>Page {{ page + 1 }} of {{ totalPages }}</span>
+        <button (click)="nextPage()" [disabled]="page >= totalPages - 1">Next →</button>
+      </div>
+    }
+  }
+</div>
+
+<!-- Edit modal -->
+@if (editingAsset()) {
+  <div class="modal-backdrop" (click)="editingAsset.set(null)"></div>
+  <div class="edit-modal">
+    <h3>Edit Image</h3>
+    <img [src]="editingAsset()!.url" [alt]="editAltText" class="edit-modal__preview" />
+    <label>
+      Filename
+      <input type="text" [(ngModel)]="editFilename" />
+    </label>
+    <label>
+      Alt text
+      <input type="text" [(ngModel)]="editAltText" placeholder="Describe the image…" />
+    </label>
+    <div class="edit-modal__actions">
+      <button (click)="editingAsset.set(null)">Cancel</button>
+      <button class="edit-modal__save" (click)="saveEdit()">Save</button>
+    </div>
+  </div>
+}
+
+<!-- Delete confirm modal -->
+@if (confirmDeleteAsset()) {
+  <div class="modal-backdrop" (click)="cancelDelete()"></div>
+  <div class="delete-modal">
+    <h3>Delete Image?</h3>
+    <img [src]="confirmDeleteAsset()!.url" [alt]="confirmDeleteAsset()!.altText ?? ''" class="delete-modal__preview" />
+    @if (loadingUsage()) {
+      <p>Checking usage…</p>
+    } @else if (usageForDelete()?.count) {
+      <div class="delete-modal__warning">
+        <strong>Warning:</strong> This image is used by {{ usageForDelete()!.count }} card(s):
+        <ul>
+          @for (card of usageForDelete()!.cards; track card.id) {
+            <li>{{ card.title }}</li>
+          }
+        </ul>
+        Deleting it will break those cards.
+      </div>
+    } @else {
+      <p>This image is not used by any content cards.</p>
+    }
+    <div class="delete-modal__actions">
+      <button (click)="cancelDelete()">Cancel</button>
+      <button class="delete-modal__confirm" (click)="executeDelete()">Delete</button>
+    </div>
+  </div>
+}
+
+<input #fileInput type="file" accept="image/*" style="display:none" (change)="onFileSelected($event)" />

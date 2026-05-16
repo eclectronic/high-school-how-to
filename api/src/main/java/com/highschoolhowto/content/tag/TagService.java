@@ -70,12 +70,6 @@ public class TagService {
     @Transactional
     public void delete(Long id) {
         Tag tag = findById(id);
-        List<String> orphanedCardTitles = contentCardRepository.findCardTitlesWithOnlyTag(id);
-        if (!orphanedCardTitles.isEmpty()) {
-            String cardList = String.join(", ", orphanedCardTitles);
-            throw new ApiException(HttpStatus.CONFLICT, "Tag in use",
-                    "Cannot delete — " + orphanedCardTitles.size() + " card(s) would have no tags: " + cardList + ". Reassign them first.");
-        }
         tagRepository.delete(tag);
     }
 }

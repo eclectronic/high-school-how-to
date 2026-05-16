@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -20,6 +20,9 @@ import { TiptapEditorComponent } from './tiptap-editor.component';
 import { InlineTitleEditComponent } from '../../shared/inline-title-edit/inline-title-edit.component';
 import { SwatchPickerComponent } from '../../shared/swatch-picker/swatch-picker.component';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { MediaPickerComponent } from '../media/media-picker.component';
+import { TopicChipsComponent } from '../../shared/inline-edit/topic-chips.component';
+import { MediaAsset } from '../../core/services/media-api.service';
 
 interface LinkDraft {
   targetCardId: number;
@@ -59,6 +62,8 @@ interface CardForm {
     InlineTitleEditComponent,
     SwatchPickerComponent,
     ConfirmDialogComponent,
+    MediaPickerComponent,
+    TopicChipsComponent,
   ],
   templateUrl: './content-editor.component.html',
   styleUrl: './content-editor.component.scss',
@@ -71,6 +76,12 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
   protected saving = signal(false);
   protected error = signal<string | null>(null);
   protected allTags = signal<Tag[]>([]);
+
+  protected readonly selectedTagIds = signal(new Set<number>());
+  protected readonly selectedTopics = computed(() => {
+    const ids = this.selectedTagIds();
+    return this.allTags().filter((t) => ids.has(t.id));
+  });
 
   protected form: CardForm = {
     title: '',
@@ -103,6 +114,31 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
   protected showBgSwatchPicker = signal(false);
   protected showTextSwatchPicker = signal(false);
   protected deleteTaskIndex = signal<number | null>(null);
+
+  // Media picker
+  protected pickerOpen = signal(false);
+  private pickerTarget: 'thumbnailUrl' | 'coverImageUrl' | { index: number; field: 'url' | 'printUrl' } | null = null;
+
+  protected openPicker(target: 'thumbnailUrl' | 'coverImageUrl' | { index: number; field: 'url' | 'printUrl' }) {
+    this.pickerTarget = target;
+    this.pickerOpen.set(true);
+  }
+
+  protected onPickerSelected(asset: MediaAsset) {
+    this.pickerOpen.set(false);
+    if (!this.pickerTarget) return;
+    if (this.pickerTarget === 'thumbnailUrl') {
+      this.form.thumbnailUrl = asset.url;
+    } else if (this.pickerTarget === 'coverImageUrl') {
+      this.form.coverImageUrl = asset.url;
+    } else {
+      const { index, field } = this.pickerTarget;
+      const entries = [...this.mediaUrls()];
+      entries[index] = { ...entries[index], [field]: asset.url };
+      this.mediaUrls.set(entries);
+    }
+    this.pickerTarget = null;
+  }
 
   // Related content links
   protected links: LinkDraft[] = [];
@@ -191,6 +227,7 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
             simpleLayout: card.simpleLayout,
             tagIds: new Set(card.tags.map((t) => t.id)),
           };
+          this.selectedTagIds.set(new Set(card.tags.map((t) => t.id)));
           this.bodyJson = card.bodyJson;
           this.bodyHtml = card.bodyHtml;
           this.links = (card.links ?? []).map((l) => ({
@@ -390,12 +427,9 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
 
   // ── Thumbnail / cover image upload ────────────────────────────────────────
 
-  protected toggleTag(tagId: number) {
-    if (this.form.tagIds.has(tagId)) {
-      this.form.tagIds.delete(tagId);
-    } else {
-      this.form.tagIds.add(tagId);
-    }
+  protected onTopicsChange(tags: Tag[]): void {
+    this.form.tagIds = new Set(tags.map((t) => t.id));
+    this.selectedTagIds.set(new Set(tags.map((t) => t.id)));
   }
 
   protected uploadFile(event: Event, field: 'thumbnailUrl' | 'coverImageUrl') {
@@ -424,7 +458,7 @@ export class ContentEditorComponent implements OnInit, OnDestroy {
 
   protected save() {
     if (!this.form.tagIds.size) {
-      this.error.set('Select at least one tag');
+      this.error.set('Select at least one topic');
       return;
     }
 

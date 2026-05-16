@@ -86,9 +86,9 @@ describe('ContentEditorComponent', () => {
       fixture.detectChanges();
     });
 
-    it('hides the standalone Title input for TODO_LIST', () => {
+    it('shows the standalone Title input for TODO_LIST', () => {
       const titleInput = fixture.nativeElement.querySelector('.form-row input[placeholder="Getting Your Driver\'s License"]');
-      expect(titleInput).toBeNull();
+      expect(titleInput).not.toBeNull();
     });
 
     it('onTodoTitleChange syncs form.title', () => {

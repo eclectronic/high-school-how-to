@@ -1,25 +1,118 @@
-<div class="how-to-page">
+<div class="how-to-page" (click)="closeNewCardMenu(); closeNewTopicPopover(); closeEditTopic()">
   <app-site-nav activeRoute="how-to" />
-
-  <header class="how-to-page__header">
-    <h1 class="how-to-page__title">How To</h1>
-  </header>
 
   <!-- Tag filter bar -->
   <nav class="tag-nav" aria-label="Filter by topic">
     <button type="button" class="tag-nav__link"
             [class.tag-nav__link--active]="selectedTagSlug() === null"
-            (click)="selectTag(null)">
+            (click)="selectTag(null)"
+            (dragover)="$event.preventDefault()"
+            (drop)="$event.preventDefault()">
       All
     </button>
     @for (tag of availableTags(); track tag.id) {
-      <button type="button" class="tag-nav__link"
-              [class.tag-nav__link--active]="selectedTagSlug() === tag.slug"
-              (click)="selectTag(tag.slug)">
-        {{ tag.name }}
-      </button>
+      <div class="tag-nav__pill-wrap">
+        <button type="button" class="tag-nav__link"
+                [class.tag-nav__link--active]="selectedTagSlug() === tag.slug"
+                [class.tag-nav__link--drop-target]="editModeStore.enabled() && dragOverTagSlug() === tag.slug"
+                [class.tag-nav__link--already-tagged]="isAlreadyTagged(tag)"
+                (click)="selectTag(tag.slug)"
+                (dragover)="editModeStore.enabled() ? onPillDragOver($event, tag.slug) : null"
+                (dragleave)="onPillDragLeave()"
+                (drop)="editModeStore.enabled() ? onPillDrop($event, tag) : null">
+          {{ tag.name }}
+        </button>
+        @if (showNewTile()) {
+          <button type="button" class="tag-nav__edit-btn"
+                  (click)="openEditTopic(tag, $event)"
+                  [attr.aria-label]="'Edit topic ' + tag.name"
+                  title="Edit topic">✏</button>
+          @if (editingTopicTag()?.id === tag.id) {
+            <div class="tag-nav__edit-popover" (click)="$event.stopPropagation()">
+              <div class="tag-nav__edit-popover__header">Edit topic</div>
+              <input class="tag-nav__edit-popover__input" type="text"
+                     [(ngModel)]="editingTopicName"
+                     (keydown.enter)="saveEditTopic()"
+                     (keydown.escape)="closeEditTopic()" />
+              <div class="tag-nav__edit-popover__actions">
+                <button type="button" class="tag-nav__edit-popover__btn tag-nav__edit-popover__btn--delete"
+                        (click)="requestDeleteTopic(tag, $event)">Delete</button>
+                <button type="button" class="tag-nav__edit-popover__btn tag-nav__edit-popover__btn--save"
+                        (click)="saveEditTopic()">Save</button>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    @if (showNewTile()) {
+      <!-- Add Topic: sits right after the topic pills -->
+      <div class="action-btn-wrap">
+        <button type="button" class="action-btn action-btn--topic"
+                (click)="openNewTopicPopover($event)">
+          <span class="action-btn__plus">+</span>
+          <span class="action-btn__label">Topic</span>
+        </button>
+        @if (newTopicPopoverOpen()) {
+          <div class="new-topic-popover" (click)="$event.stopPropagation()">
+            <div class="new-topic-popover__header">Create new topic</div>
+            <label class="new-topic-popover__label">Name
+              <input class="new-topic-popover__input" type="text"
+                     [(ngModel)]="newTopicName"
+                     placeholder="e.g. Study Skills"
+                     (keydown.enter)="createTopic()"
+                     (keydown.escape)="closeNewTopicPopover()" />
+            </label>
+            @if (newTopicError()) {
+              <p class="new-topic-popover__error">{{ newTopicError() }}</p>
+            }
+            <div class="new-topic-popover__actions">
+              <button type="button" class="new-topic-popover__btn new-topic-popover__btn--cancel"
+                      (click)="closeNewTopicPopover()">Cancel</button>
+              <button type="button" class="new-topic-popover__btn new-topic-popover__btn--create"
+                      (click)="createTopic()">Create</button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Add How To: pushed to the far right -->
+      <div class="action-btn-wrap action-btn-wrap--push-right">
+        <button type="button" class="action-btn action-btn--howto"
+                (click)="openNewCardMenu($event)">
+          <span class="action-btn__plus">+</span>
+          <span class="action-btn__label">How To</span>
+        </button>
+        @if (newCardMenuOpen()) {
+          <div class="new-card-menu new-card-menu--right" (click)="$event.stopPropagation()">
+            <button class="new-card-menu__item" (click)="createCard('ARTICLE')">📄 Article</button>
+            <button class="new-card-menu__item" (click)="createCard('INFOGRAPHIC')">🖼 Infographic</button>
+            <button class="new-card-menu__item" (click)="createCard('VIDEO')">▶ Video</button>
+            <button class="new-card-menu__item" (click)="createCard('TODO_LIST')">☑ To-do list</button>
+          </div>
+        }
+      </div>
     }
   </nav>
+
+  @if (showNewTile()) {
+    <div class="status-filter" role="group" aria-label="Filter by status">
+      <button type="button" class="status-filter__btn"
+              [class.status-filter__btn--active]="statusFilter() === 'ALL'"
+              (click)="statusFilter.set('ALL')">All</button>
+      <button type="button" class="status-filter__btn"
+              [class.status-filter__btn--active]="statusFilter() === 'PUBLISHED'"
+              (click)="statusFilter.set('PUBLISHED')">Published</button>
+      <button type="button" class="status-filter__btn status-filter__btn--draft"
+              [class.status-filter__btn--active]="statusFilter() === 'DRAFT'"
+              (click)="statusFilter.set('DRAFT')">Draft</button>
+    </div>
+  }
+
+  @if (toastMessage()) {
+    <div class="edit-toast" role="status">{{ toastMessage() }}</div>
+  }
 
   <!-- Card grid -->
   @if (loading()) {
@@ -28,6 +121,20 @@
     <div class="card-grid">
       @for (card of filteredCards(); track card.id) {
         <a class="content-card" [routerLink]="['/content', card.slug]">
+          @if (editModeStore.enabled() && card.status === 'DRAFT') {
+            <span class="draft-badge">DRAFT</span>
+          }
+          @if (sessionStore.isAdmin() && editModeStore.enabled()) {
+            <button class="card-pencil-btn"
+                    (click)="navigateToEdit(card.slug, $event)"
+                    title="Edit" aria-label="Edit this card">✏</button>
+            <span class="card-drag-handle"
+                  draggable="true"
+                  (dragstart)="onDragStart($event, card)"
+                  (dragend)="onDragEnd()"
+                  title="Drag to a topic to assign"
+                  (click)="$event.preventDefault(); $event.stopPropagation()">⋮⋮</span>
+          }
           <div class="content-card__thumb-wrapper">
             @if (cardThumbnail(card)) {
               <img class="content-card__thumb"
@@ -67,10 +174,18 @@
           </div>
         </a>
       }
+
     </div>
 
-    @if (filteredCards().length === 0) {
+    @if (filteredCards().length === 0 && !showNewTile()) {
       <p class="how-to-page__empty">No content found.</p>
     }
   }
 </div>
+
+@if (pendingDeleteTag()) {
+  <app-confirm-dialog
+    [message]="deleteTopicDialogMessage()"
+    (confirmed)="confirmDeleteTopic()"
+    (cancelled)="cancelDeleteTopic()" />
+}

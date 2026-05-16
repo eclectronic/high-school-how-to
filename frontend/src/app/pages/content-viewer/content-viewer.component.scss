@@ -14,6 +14,44 @@ $breakpoint-desktop: 768px;
   color: $color-ink;
 }
 
+// ─── Infographic full-viewport layout ─────────────────────────────────────────
+// Propagates flex-column from the page shell down to the carousel track so the
+// image fills whatever space remains after the nav bar, with no magic numbers.
+
+.infographic-page {
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0.5rem;
+
+  .viewer-stage,
+  .viewer-content,
+  .viewer-article--infographic,
+  .infographic-carousel {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .infographic-carousel__track {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+
+  // height: auto (the default) only prevents overflow via max-height — it never
+  // causes growth. height: 100% + object-fit: contain fills the panel while
+  // preserving aspect ratio.
+  .infographic-panel img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    box-shadow: none;
+  }
+}
+
 // ─── Combined nav + header card ───────────────────────────────────────────────
 
 .viewer-nav {
@@ -29,6 +67,8 @@ $breakpoint-desktop: 768px;
     box-shadow: 0 8px 24px rgba($color-ink, 0.12);
 
     .viewer-desc {
+      display: block;
+      width: 100%;
       font-size: 0.8rem;
       white-space: nowrap;
       overflow: hidden;
@@ -70,6 +110,8 @@ $breakpoint-desktop: 768px;
   }
 
   &__title {
+    display: block;
+    width: 100%;
     margin: 0;
     font-size: clamp(1.1rem, 2.5vw, 1.6rem);
     line-height: 1.2;
@@ -124,6 +166,82 @@ $breakpoint-desktop: 768px;
   }
 }
 
+// ─── Edit mode ────────────────────────────────────────────────────────────────
+
+.edit-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.status-toggle {
+  display: flex;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  overflow: hidden;
+  background: #fff;
+
+  &__btn {
+    padding: 0.28rem 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #9ca3af;
+    transition: background 120ms ease, color 120ms ease;
+
+    &--active {
+      background: #111827;
+      color: #fff;
+    }
+  }
+}
+
+.edit-icon-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.9;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: opacity 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+  flex-shrink: 0;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+
+  &--discard {
+    background: #d1d5db;
+    color: #6b7280;
+    &.edit-icon-btn--has-changes { background: #f59e0b; color: #fff; }
+  }
+
+  &--delete { background: #dc2626; }
+
+  &--save {
+    background: #d1d5db;
+    color: #6b7280;
+    &.edit-icon-btn--has-changes { background: #22c55e; color: #fff; }
+  }
+}
+
+.edit-mode-on app-inline-title-edit:hover,
+.edit-mode-on .article-body:hover {
+  outline: 1px dashed rgba(217, 119, 6, 0.4);
+}
+
 // ─── Nav arrows ───────────────────────────────────────────────────────────────
 
 .viewer-arrow {
@@ -157,6 +275,10 @@ $breakpoint-desktop: 768px;
 }
 
 // ─── Content stage ────────────────────────────────────────────────────────────
+
+.viewer-topic-strip {
+  margin-bottom: 0.75rem;
+}
 
 .viewer-stage {
   // Simple block wrapper — no longer a three-column flex layout
@@ -234,6 +356,121 @@ $breakpoint-desktop: 768px;
     min-height: 240px;
     border: none;
   }
+
+  &--placeholder {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($color-ink, 0.06);
+    border: 2px dashed rgba($color-ink, 0.2);
+
+    span {
+      font-size: 0.9rem;
+      color: #5f4f43;
+    }
+  }
+}
+
+.video-edit-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 254, 249, 0.85);
+  border: 1px solid rgba($color-ink, 0.15);
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.video-url-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5f4f43;
+}
+
+.video-url-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.video-url-confirm {
+  background: #22c55e;
+  border: none;
+  color: #fff;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.9;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.12s, transform 0.12s, box-shadow 0.12s;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.video-url-input {
+  border: 1px solid rgba($color-ink, 0.25);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.875rem;
+  background: #fff;
+  color: $color-ink;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+
+  &:focus { outline: 2px solid #d97706; outline-offset: 1px; }
+}
+
+.video-thumb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.video-thumb-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #5f4f43;
+}
+
+.video-thumb-preview {
+  width: 60px;
+  height: 34px;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  border: 1px solid rgba($color-ink, 0.2);
+}
+
+.video-thumb-btn {
+  background: rgba($color-ink, 0.06);
+  border: 1px solid rgba($color-ink, 0.2);
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+
+  &:hover { background: rgba($color-ink, 0.12); }
+
+  &--clear {
+    border-color: #fca5a5;
+    color: #dc2626;
+    background: transparent;
+
+    &:hover { background: #fee2e2; }
+  }
 }
 
 // ─── INFOGRAPHIC ──────────────────────────────────────────────────────────────
@@ -241,10 +478,17 @@ $breakpoint-desktop: 768px;
 .infographic-panel {
   position: relative;
   cursor: zoom-in;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   img {
     display: block;
-    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
     border-radius: 1rem;
     box-shadow: 0 18px 36px rgba($color-ink, 0.2);
   }
@@ -582,6 +826,7 @@ $breakpoint-desktop: 768px;
 
   &__stage {
     flex: 1;
+    min-height: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -594,11 +839,12 @@ $breakpoint-desktop: 768px;
   }
 
   &__img {
+    display: block;
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
     transform-origin: center center;
-    pointer-events: none; // prevent browser drag-image ghost
+    pointer-events: none;
   }
 
   &__toolbar-sep {
@@ -622,13 +868,27 @@ $breakpoint-desktop: 768px;
     scroll-behavior: smooth;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+    height: calc(100vh - 13rem);
 
     &::-webkit-scrollbar { display: none; }
   }
 
   &__slide {
     flex: 0 0 100%;
+    height: 100%;
     scroll-snap-align: center;
+    position: relative;
+
+    &--drop-target .infographic-panel {
+      outline: 3px dashed #d97706;
+      outline-offset: 4px;
+    }
+
+    &--add {
+      cursor: pointer;
+      flex: 0 0 100%;
+      scroll-snap-align: center;
+    }
   }
 
   // Prev / next chevrons — shown on hover on desktop, hidden on mobile (swipe handles it)
@@ -669,30 +929,197 @@ $breakpoint-desktop: 768px;
     .infographic-carousel__track { overflow-x: hidden; }
   }
 
-  &__dots {
-    display: flex;
-    justify-content: center;
-    gap: 0.4rem;
-    margin-top: 0.6rem;
-  }
-
-  &__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba($color-ink, 0.25);
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    transition: background 0.15s;
-
-    &--active { background: $color-ink; }
-  }
-
   &__counter {
     text-align: center;
     font-size: 0.8rem;
     color: #5f4f43;
     margin-top: 0.4rem;
   }
+}
+
+// ─── Thumbnail strip ──────────────────────────────────────────────────────────
+
+.edit-filmstrip {
+  background: rgba(255, 254, 249, 0.9);
+  border: 2px solid rgba($color-ink, 0.12);
+  border-radius: 1.25rem;
+  padding: 0.5rem 1.25rem;
+  box-shadow: 0 8px 24px rgba($color-ink, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__thumbs {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 0.25rem 0;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  &__thumb-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding-top: 0.25rem;
+    border-top: 1px solid rgba($color-ink, 0.08);
+  }
+}
+
+.thumbnail-strip {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.5rem 0.25rem;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar { display: none; }
+
+  &__item {
+    flex-shrink: 0;
+    width: 72px;
+    height: 52px;
+    border-radius: 0.4rem;
+    border: 2px solid transparent;
+    overflow: hidden;
+    cursor: pointer;
+    padding: 0;
+    background: rgba($color-ink, 0.08);
+    transition: border-color 150ms, box-shadow 150ms;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+    }
+
+    &--active {
+      border-color: $color-ink;
+      box-shadow: 0 0 0 1px $color-ink;
+    }
+
+    &--drop-target {
+      border-color: #d97706;
+      box-shadow: 0 0 0 2px #d97706;
+    }
+
+    &[draggable="true"] { cursor: grab; }
+    &[draggable="true"]:active { cursor: grabbing; }
+  }
+}
+
+// ─── Infographic slide edit chrome ────────────────────────────────────────────
+
+.slide-btn {
+  background: rgba(255, 254, 249, 0.92);
+  border: 1px solid rgba(45, 26, 16, 0.3);
+  border-radius: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover { background: #fff; }
+
+  &--remove {
+    color: #dc2626;
+    &:hover { border-color: #dc2626; }
+  }
+}
+
+.slide-edit-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  background: rgba(255, 254, 249, 0.92);
+  border-top: 1px solid rgba(45, 26, 16, 0.1);
+  border-radius: 0 0 1rem 1rem;
+}
+
+.slide-alt-input {
+  flex: 1;
+  border: 1px solid rgba(45, 26, 16, 0.25);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  background: #fff;
+  color: #2d1a10;
+
+  &:focus {
+    outline: 2px solid #d97706;
+    outline-offset: 1px;
+  }
+}
+
+.slide-print-btn {
+  flex-shrink: 0;
+  background: rgba(45, 26, 16, 0.05);
+  border: 1px solid rgba(45, 26, 16, 0.2);
+  border-radius: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover { background: rgba(45, 26, 16, 0.1); }
+}
+
+.infographic-panel--add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px dashed rgba(45, 26, 16, 0.3);
+  border-radius: 0.5rem;
+  min-height: 200px;
+  background: rgba(255, 254, 249, 0.6);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+
+  &:hover {
+    border-color: #d97706;
+    background: rgba(254, 243, 199, 0.4);
+  }
+}
+
+.add-slide-icon {
+  font-size: 2.5rem;
+  color: #92400e;
+  line-height: 1;
+}
+
+.add-slide-label {
+  font-size: 0.9rem;
+  color: #92400e;
+  font-weight: 500;
 }

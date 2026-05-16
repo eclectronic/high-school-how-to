@@ -118,34 +118,110 @@
   margin: 0;
 }
 
-.tag-picker {
+.topic-chips-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(45, 26, 16, 0.1);
+
+  &__label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #8f7f73;
+    margin-right: 0.15rem;
+    white-space: nowrap;
+  }
 }
 
-.tag-option {
-  padding: 0.35rem 0.9rem;
+.topic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+  background: rgba(255, 92, 119, 0.1);
+  border: 1.5px solid rgba(255, 92, 119, 0.35);
   border-radius: 999px;
-  border: 2px solid #e0d0bc;
-  background: #fafafa;
-  font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  cursor: pointer;
+  color: #c0392b;
+
+  &__remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: rgba(192, 57, 43, 0.55);
+    padding: 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    font-family: inherit;
+    transition: color 0.12s;
+
+    &:hover { color: #c0392b; }
+  }
+}
+
+.topic-add-wrap {
+  position: relative;
+}
+
+.topic-add-btn {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1.5px dashed rgba(45, 26, 16, 0.28);
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
   color: #5f4f43;
-  transition: all 0.15s;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s, color 0.12s;
 
   &:hover {
     border-color: #ff9966;
     color: #2d1a10;
   }
+}
 
-  &.selected {
-    border-color: #ff5c77;
-    background: rgba(255, 92, 119, 0.1);
-    color: #c0392b;
-  }
+.topic-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid rgba(45, 26, 16, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(45, 26, 16, 0.12);
+  min-width: 140px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.topic-picker-option {
+  padding: 0.5rem 0.85rem;
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #2d1a10;
+  cursor: pointer;
+  transition: background 0.1s;
+
+  &:hover { background: #f0e8d8; }
+}
+
+.topic-picker-empty {
+  padding: 0.5rem 0.85rem;
+  font-size: 0.82rem;
+  color: #8f7f73;
+  font-style: italic;
 }
 
 .article-section-header {

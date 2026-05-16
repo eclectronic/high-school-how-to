@@ -7,6 +7,7 @@ interface SessionState {
   expiresAt: number | null;
   avatarUrl: string | null;
   firstName: string | null;
+  role: string | null;
 }
 
 const STORAGE_KEY = 'hsht.session';
@@ -21,11 +22,15 @@ export class SessionStore {
     expiresAt: null,
     avatarUrl: null,
     firstName: null,
+    role: null,
   });
 
   readonly isAuthenticated = computed(() => {
     const snapshot = this.state();
-    return Boolean(snapshot.accessToken && !this.isExpired(snapshot));
+    if (snapshot.accessToken && !this.isExpired(snapshot)) return true;
+    // Refresh token present means the server still considers the user authenticated;
+    // the interceptor will transparently obtain a new access token on the next request.
+    return Boolean(snapshot.refreshToken);
   });
 
   readonly avatarUrl = computed(() => this.state().avatarUrl);
@@ -33,8 +38,13 @@ export class SessionStore {
 
   readonly isAdmin = computed(() => {
     const snapshot = this.state();
-    if (!snapshot.accessToken || this.isExpired(snapshot)) return false;
-    return this.decodeRole(snapshot.accessToken) === 'ADMIN';
+    const hasLiveToken = Boolean(snapshot.accessToken && !this.isExpired(snapshot));
+    const hasSession = hasLiveToken || Boolean(snapshot.refreshToken);
+    if (!hasSession) return false;
+    // Prefer role decoded from the live JWT; fall back to the cached role for
+    // remember-me sessions that haven't refreshed yet on this page load.
+    const role = hasLiveToken ? this.decodeRole(snapshot.accessToken!) : snapshot.role;
+    return role === 'ADMIN';
   });
 
   constructor() {
@@ -49,6 +59,7 @@ export class SessionStore {
       expiresAt,
       avatarUrl: response.avatarUrl ?? null,
       firstName: response.firstName ?? null,
+      role: this.decodeRole(response.accessToken),
     };
     this.state.set(next);
 
@@ -66,7 +77,7 @@ export class SessionStore {
   }
 
   clearSession() {
-    this.state.set({ accessToken: null, refreshToken: null, expiresAt: null, avatarUrl: null, firstName: null });
+    this.state.set({ accessToken: null, refreshToken: null, expiresAt: null, avatarUrl: null, firstName: null, role: null });
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_KEY);
       window.sessionStorage.removeItem(STORAGE_KEY);
@@ -105,7 +116,7 @@ export class SessionStore {
       if (parsed.accessToken && !this.isExpired(parsed)) {
         this.state.set(parsed);
       } else if (parsed.refreshToken) {
-        this.state.set({ accessToken: null, refreshToken: parsed.refreshToken, expiresAt: null, avatarUrl: parsed.avatarUrl ?? null, firstName: parsed.firstName ?? null });
+        this.state.set({ accessToken: null, refreshToken: parsed.refreshToken, expiresAt: null, avatarUrl: parsed.avatarUrl ?? null, firstName: parsed.firstName ?? null, role: parsed.role ?? null });
         this.persistCurrent();
       } else {
         this.clearSession();

@@ -5,26 +5,12 @@ export const adminRoutes: Routes = [
     path: '',
     loadComponent: () => import('./shell/admin-shell.component').then((m) => m.AdminShellComponent),
     children: [
-      { path: '', redirectTo: 'content', pathMatch: 'full' },
+      { path: '', redirectTo: 'topics', pathMatch: 'full' },
+      { path: 'tags', redirectTo: 'topics', pathMatch: 'full' },
       {
-        path: 'content',
+        path: 'topics',
         loadComponent: () =>
-          import('./content/content-list.component').then((m) => m.ContentListComponent),
-      },
-      {
-        path: 'content/new',
-        loadComponent: () =>
-          import('./content/content-editor.component').then((m) => m.ContentEditorComponent),
-      },
-      {
-        path: 'content/:id/edit',
-        loadComponent: () =>
-          import('./content/content-editor.component').then((m) => m.ContentEditorComponent),
-      },
-      {
-        path: 'tags',
-        loadComponent: () =>
-          import('./tags/tag-manager.component').then((m) => m.TagManagerComponent),
+          import('./topics/topic-manager.component').then((m) => m.TopicManagerComponent),
       },
       {
         path: 'quotes',
@@ -51,6 +37,12 @@ export const adminRoutes: Routes = [
           import('./recommended-pins/recommended-pins.component').then(
             (m) => m.RecommendedPinsComponent,
           ),
+      },
+      { path: 'media', redirectTo: 'images', pathMatch: 'full' },
+      {
+        path: 'images',
+        loadComponent: () =>
+          import('./images/image-library.component').then((m) => m.ImageLibraryComponent),
       },
     ],
   },

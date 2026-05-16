@@ -3,6 +3,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppPreferencesApiService, AppPreferences, LockerTextSize } from '../../core/services/app-preferences-api.service';
+import { LockerColorStore } from '../../core/locker-color.store';
 import { deriveThemeFromColor, getPaletteGradient, Palette } from './palettes';
 import { AppPaneLayoutComponent, FONT_OPTIONS } from './app-pane-layout.component';
 import { AppSwipeContainerComponent } from './app-swipe-container.component';
@@ -18,6 +19,7 @@ import { SiteNavComponent } from '../../shared/site-nav/site-nav.component';
 })
 export class LockerShellComponent implements OnInit, OnDestroy {
   private readonly preferencesApi = inject(AppPreferencesApiService);
+  private readonly lockerColorStore = inject(LockerColorStore);
 
   protected readonly DEFAULT_LOCKER_COLOR = '#f5ede0';
 
@@ -64,7 +66,7 @@ export class LockerShellComponent implements OnInit, OnDestroy {
     this.checkMobile();
     this.setupResizeObserver();
     this.preferencesApi.getPreferences().subscribe({
-      next: prefs => this.preferences.set(prefs),
+      next: prefs => { this.preferences.set(prefs); this.lockerColorStore.set(prefs.lockerColor); },
     });
   }
 
@@ -119,8 +121,9 @@ export class LockerShellComponent implements OnInit, OnDestroy {
 
   protected onPreferencesChange(prefs: AppPreferences): void {
     this.preferences.set(prefs);
+    this.lockerColorStore.set(prefs.lockerColor);
     this.preferencesApi.updatePreferences(prefs).subscribe({
-      next: saved => this.preferences.set(saved),
+      next: saved => { this.preferences.set(saved); this.lockerColorStore.set(saved.lockerColor); },
     });
   }
 

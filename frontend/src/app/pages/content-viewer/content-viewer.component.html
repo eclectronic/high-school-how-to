@@ -1,4 +1,6 @@
-<div class="viewer-page">
+<div class="viewer-page"
+     [class.edit-mode-on]="isAdmin() && editMode()"
+     [class.infographic-page]="card()?.cardType === 'INFOGRAPHIC'">
   @if (loading()) {
     <p class="viewer-loading">Loading...</p>
   } @else if (error()) {
@@ -26,8 +28,21 @@
             </div>
           }
           <div class="viewer-nav__title-group">
-            <h1 class="viewer-nav__title">{{ card.title }}</h1>
-            @if (card.description) {
+            @if (isAdmin() && editMode()) {
+              <app-inline-title-edit
+                class="viewer-nav__title"
+                [title]="displayCard()?.title ?? card.title"
+                (titleChange)="editModeStore.markDirty({ title: $event })" />
+            } @else {
+              <h1 class="viewer-nav__title">{{ card.title }}</h1>
+            }
+            @if (isAdmin() && editMode()) {
+              <app-inline-title-edit
+                class="viewer-desc"
+                [title]="displayCard()?.description ?? ''"
+                placeholder="Add a description..."
+                (titleChange)="editModeStore.markDirty({ description: $event })" />
+            } @else if (card.description) {
               <p class="viewer-desc">{{ card.description }}</p>
             }
           </div>
@@ -48,7 +63,90 @@
               [title]="nextCard()?.title ?? 'No next item'"
               [attr.aria-label]="nextCard() ? 'Next: ' + nextCard()!.title : null">›</button>
           </div>
+          @if (isAdmin() && editMode() && adminCard()) {
+            <div class="edit-controls">
+              <button type="button" class="edit-icon-btn edit-icon-btn--delete"
+                      title="Delete card" aria-label="Delete card"
+                      (click)="deleteCard()">✕</button>
+              <div class="status-toggle" role="group" aria-label="Publication status">
+                <button type="button" class="status-toggle__btn"
+                        [class.status-toggle__btn--active]="displayCard()?.status === 'DRAFT'"
+                        (click)="setStatus('DRAFT')">Draft</button>
+                <button type="button" class="status-toggle__btn"
+                        [class.status-toggle__btn--active]="displayCard()?.status === 'PUBLISHED'"
+                        (click)="setStatus('PUBLISHED')">Published</button>
+              </div>
+              <button type="button" class="edit-icon-btn edit-icon-btn--discard"
+                      [class.edit-icon-btn--has-changes]="editModeStore.isDirty()"
+                      title="Discard changes" aria-label="Discard changes"
+                      (click)="editModeStore.discard()">↺</button>
+              <button type="button" class="edit-icon-btn edit-icon-btn--save"
+                      [class.edit-icon-btn--has-changes]="editModeStore.isDirty()"
+                      title="Save and return to How To" aria-label="Save and return to How To"
+                      (click)="saveAndExit()">✓</button>
+            </div>
+          }
         </div>
+      </div>
+    }
+
+    @if (isAdmin() && editMode() && adminCard()) {
+      <app-topic-chips
+        class="viewer-topic-strip"
+        [tags]="$any(displayCard())?.tags ?? []"
+        [allTags]="allTags()"
+        (change)="editModeStore.markDirty({ tags: $event })" />
+    }
+
+    @if (card.cardType === 'INFOGRAPHIC' && isAdmin() && editMode()) {
+      <div class="edit-filmstrip">
+        <div class="edit-filmstrip__main">
+          <div class="edit-filmstrip__thumbs" role="tablist" aria-label="Image thumbnails">
+            @for (entry of mediaUrls(); track $index; let i = $index) {
+              <button
+                type="button"
+                class="thumbnail-strip__item"
+                [class.thumbnail-strip__item--active]="carouselIndex() === i"
+                [class.thumbnail-strip__item--drop-target]="isAdmin() && editMode() && slideDropTargetIndex() === i"
+                (click)="setCarouselIndex(i)"
+                [attr.draggable]="isAdmin() && editMode() ? 'true' : 'false'"
+                (dragstart)="isAdmin() && editMode() && onSlideDragStart($event, i)"
+                (dragover)="isAdmin() && editMode() ? onSlideDragOver($event, i) : $event.preventDefault()"
+                (dragleave)="onSlideDragLeave()"
+                (drop)="isAdmin() && editMode() ? onSlideDrop($event, i) : $event.preventDefault()"
+                (dragend)="onSlideDragEnd()"
+                role="tab"
+                [attr.aria-selected]="carouselIndex() === i"
+                [attr.aria-label]="entry.alt || ('Image ' + (i + 1))"
+              >
+                <img [src]="entry.url" [alt]="entry.alt || ''" loading="lazy" draggable="false" />
+              </button>
+            }
+          </div>
+          @if (isAdmin() && editMode()) {
+            <div class="edit-filmstrip__actions">
+              <button type="button" class="slide-btn slide-btn--add"
+                      (click)="openSlidePicker('add', -1)">+ Add</button>
+              <button type="button" class="slide-btn slide-btn--remove"
+                      (click)="removeSlide(carouselIndex())" aria-label="Remove image">✕</button>
+            </div>
+          }
+        </div>
+        @if (isAdmin() && editMode()) {
+          <div class="edit-filmstrip__thumb-row">
+            <span class="video-thumb-label">Thumbnail</span>
+            <img class="video-thumb-preview"
+                 [src]="(displayCard()?.thumbnailUrl || adminCard()?.thumbnailUrl || mediaUrls()[0]?.url) ?? ''"
+                 alt="Thumbnail preview" />
+            <button type="button" class="video-thumb-btn"
+                    (click)="openSlidePicker('video-thumbnail', 0)">Pick</button>
+            @if (displayCard()?.thumbnailUrl || adminCard()?.thumbnailUrl) {
+              <button type="button" class="video-thumb-btn video-thumb-btn--clear"
+                      title="Revert to first image"
+                      (click)="editModeStore.markDirty({ thumbnailUrl: '' })">Clear</button>
+            }
+          </div>
+        }
       </div>
     }
 
@@ -66,6 +164,35 @@
                 }
               </header>
             }
+            @if (isAdmin() && editMode()) {
+              <div class="video-edit-controls">
+                <label class="video-url-label">YouTube URL</label>
+                <div class="video-url-row">
+                  <input #videoUrlInput type="text" class="video-url-input"
+                         placeholder="Paste a YouTube URL…"
+                         [value]="displayCard()?.mediaUrl ?? card.mediaUrl ?? ''"
+                         (change)="onVideoUrlChange($any($event.target).value)"
+                         (keydown.enter)="onVideoUrlChange(videoUrlInput.value)" />
+                  <button type="button" class="video-url-confirm"
+                          title="Apply URL" aria-label="Apply URL"
+                          (click)="onVideoUrlChange(videoUrlInput.value)">✓</button>
+                </div>
+                <div class="video-thumb-row">
+                  <span class="video-thumb-label">Thumbnail</span>
+                  @if (displayCard()?.thumbnailUrl ?? card.thumbnailUrl) {
+                    <img class="video-thumb-preview"
+                         [src]="displayCard()?.thumbnailUrl ?? card.thumbnailUrl"
+                         alt="Thumbnail preview" />
+                  }
+                  <button type="button" class="video-thumb-btn"
+                          (click)="openSlidePicker('video-thumbnail', 0)">Pick</button>
+                  @if (displayCard()?.thumbnailUrl ?? card.thumbnailUrl) {
+                    <button type="button" class="video-thumb-btn video-thumb-btn--clear"
+                            (click)="editModeStore.markDirty({ thumbnailUrl: '' })">Clear</button>
+                  }
+                </div>
+              </div>
+            }
             @if (safeEmbed()) {
               <div class="video-frame">
                 <iframe
@@ -75,6 +202,10 @@
                   allowfullscreen
                   [title]="card.title"
                 ></iframe>
+              </div>
+            } @else if (isAdmin() && editMode()) {
+              <div class="video-frame video-frame--placeholder">
+                <span>Enter a YouTube URL above to preview</span>
               </div>
             }
             @if (card.links.length > 0) {
@@ -92,16 +223,23 @@
                 </ul>
               </div>
             }
+            <!-- Video thumbnail picker -->
+            @if (isAdmin() && editMode() && pickerTarget()?.kind === 'video-thumbnail') {
+              <app-image-picker
+                [open]="true"
+                (selected)="onSlidePickerSelected($event)"
+                (closed)="pickerTarget.set(null)" />
+            }
           </article>
         }
 
         <!-- INFOGRAPHIC ────────────────────────────── -->
         @if (card.cardType === 'INFOGRAPHIC') {
           <article class="viewer-article viewer-article--infographic">
-            @if (mediaUrls().length > 0) {
+            @if (mediaUrls().length > 0 || (isAdmin() && editMode())) {
               <div
                 class="infographic-carousel"
-                [class.infographic-carousel--single]="!isMultiImage()"
+                [class.infographic-carousel--single]="!isMultiImage() && !(isAdmin() && editMode())"
                 role="region"
                 aria-roledescription="carousel"
                 aria-label="Infographic images"
@@ -115,9 +253,13 @@
                   @for (entry of mediaUrls(); track $index; let i = $index) {
                     <div
                       class="infographic-carousel__slide"
+                      [class.infographic-carousel__slide--drop-target]="isAdmin() && editMode() && slideDropTargetIndex() === i"
                       role="group"
                       aria-roledescription="slide"
                       [attr.aria-label]="'Image ' + (i + 1) + ' of ' + mediaUrls().length + (entry.alt ? ': ' + entry.alt : '')"
+                      (dragover)="isAdmin() && editMode() ? onSlideDragOver($event, i) : $event.preventDefault()"
+                      (dragleave)="onSlideDragLeave()"
+                      (drop)="isAdmin() && editMode() ? onSlideDrop($event, i) : $event.preventDefault()"
                     >
                       <div class="infographic-panel" (click)="openLightbox()">
                         @if (i === 0) {
@@ -139,8 +281,26 @@
                           [loading]="i === 0 ? 'eager' : 'lazy'"
                         />
                       </div>
+                      <!-- Alt text + print version (edit mode only) -->
+                      @if (isAdmin() && editMode()) {
+                        <div class="slide-edit-footer" (click)="$event.stopPropagation()">
+                          <input type="text" class="slide-alt-input"
+                                 placeholder="Alt text..."
+                                 [value]="entry.alt ?? ''"
+                                 (change)="updateSlideAlt(i, $any($event.target).value)" />
+                          <button type="button" class="slide-print-btn"
+                                  (click)="openSlidePicker('print', i)">
+                            @if (entry.printUrl) {
+                              📎 {{ filenameFromUrl(entry.printUrl) }}
+                            } @else {
+                              + Set print version
+                            }
+                          </button>
+                        </div>
+                      }
                     </div>
                   }
+
                 </div>
 
                 <!-- Prev / next chevrons (desktop only, multi-image) -->
@@ -162,25 +322,6 @@
                 }
               </div>
 
-              <!-- Dot indicator (multi-image, ≤8 images) -->
-              @if (isMultiImage() && mediaUrls().length <= 8) {
-                <div class="infographic-carousel__dots" aria-hidden="true">
-                  @for (entry of mediaUrls(); track $index; let i = $index) {
-                    <button
-                      type="button"
-                      class="infographic-carousel__dot"
-                      [class.infographic-carousel__dot--active]="carouselIndex() === i"
-                      (click)="setCarouselIndex(i)"
-                      [attr.aria-label]="'Go to image ' + (i + 1)"
-                    ></button>
-                  }
-                </div>
-              }
-              @if (isMultiImage() && mediaUrls().length > 8) {
-                <p class="infographic-carousel__counter" aria-live="polite">
-                  {{ carouselIndex() + 1 }} / {{ mediaUrls().length }}
-                </p>
-              }
             }
 
             @if (currentPrintUrl()) {
@@ -206,6 +347,14 @@
                 </ul>
               </div>
             }
+
+            <!-- Slide image picker -->
+            @if (isAdmin() && editMode() && pickerTarget() !== null) {
+              <app-image-picker
+                [open]="true"
+                (selected)="onSlidePickerSelected($event)"
+                (closed)="pickerTarget.set(null)" />
+            }
           </article>
         }
 
@@ -225,7 +374,15 @@
                 <img [src]="card.coverImageUrl" [alt]="card.title" loading="eager" />
               </div>
             }
-            @if (safeHtml()) {
+            @if (isAdmin() && editMode() && adminCard()) {
+              <app-tiptap-editor
+                class="article-body"
+                [initialJson]="adminCard()!.bodyJson"
+                [initialHtml]="adminCard()!.bodyHtml"
+                [backgroundColor]="adminCard()!.backgroundColor"
+                [textColor]="adminCard()!.textColor"
+                (contentChange)="onBodyChange($event)" />
+            } @else if (safeHtml()) {
               <div class="article-body"
                 [style.background-color]="card.backgroundColor || null"
                 [style.color]="card.textColor || null"
@@ -260,38 +417,48 @@
                 }
               </header>
             }
-            <hr class="viewer-divider" />
-            <ul class="todo-list-preview">
-              @for (task of card.templateTasks; track task.id) {
-                <li class="todo-list-preview__item">
-                  <span class="todo-list-preview__checkbox" aria-hidden="true">☐</span>
-                  {{ task.description }}
-                </li>
-              }
-            </ul>
-            <div class="todo-list-actions">
-              @if (lockerStatus()?.added) {
-                <a class="btn btn--primary" routerLink="/locker">
-                  View in My Locker
-                </a>
-              } @else {
-                <button
-                  class="btn btn--primary"
-                  [disabled]="lockerActionPending()"
-                  (click)="handleAddToLocker()">
-                  @if (lockerActionPending()) {
-                    Adding...
-                  } @else {
-                    ➕ Add to My Locker
-                  }
-                </button>
-              }
-              @if (lockerAddedToast()) {
-                <div class="locker-added-toast" role="status">
-                  ✅ Added to your To-do app! <a routerLink="/locker">Open My Locker</a>
-                </div>
-              }
-            </div>
+            @if (isAdmin() && editMode()) {
+              <app-todo-list-edit
+                [tasks]="displayCard()?.templateTasks ?? card.templateTasks"
+                [backgroundColor]="displayCard()?.backgroundColor ?? card.backgroundColor ?? null"
+                [textColor]="displayCard()?.textColor ?? card.textColor ?? null"
+                (tasksChange)="editModeStore.markDirty({ templateTasks: $event })"
+                (backgroundColorChange)="editModeStore.markDirty({ backgroundColor: $event })"
+                (textColorChange)="editModeStore.markDirty({ textColor: $event })" />
+            } @else {
+              <hr class="viewer-divider" />
+              <ul class="todo-list-preview">
+                @for (task of card.templateTasks; track task.id) {
+                  <li class="todo-list-preview__item">
+                    <span class="todo-list-preview__checkbox" aria-hidden="true">☐</span>
+                    {{ task.description }}
+                  </li>
+                }
+              </ul>
+              <div class="todo-list-actions">
+                @if (lockerStatus()?.added) {
+                  <a class="btn btn--primary" routerLink="/locker">
+                    View in My Locker
+                  </a>
+                } @else {
+                  <button
+                    class="btn btn--primary"
+                    [disabled]="lockerActionPending()"
+                    (click)="handleAddToLocker()">
+                    @if (lockerActionPending()) {
+                      Adding...
+                    } @else {
+                      ➕ Add to My Locker
+                    }
+                  </button>
+                }
+                @if (lockerAddedToast()) {
+                  <div class="locker-added-toast" role="status">
+                    ✅ Added to your To-do app! <a routerLink="/locker">Open My Locker</a>
+                  </div>
+                }
+              </div>
+            }
             @if (card.links.length > 0) {
               <div class="viewer-related">
                 <h2 class="viewer-related__heading">Related</h2>

@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +31,11 @@ public class LocalStorageService implements StorageService {
             @Value("${storage.local.url-prefix:/media/}") String urlPrefix) {
         this.mediaPath = mediaPath;
         this.urlPrefix = urlPrefix;
+    }
+
+    @Override
+    public boolean objectExists(String key) {
+        return Files.exists(Paths.get(mediaPath, "uploads", key));
     }
 
     @Override
@@ -82,5 +89,25 @@ public class LocalStorageService implements StorageService {
     @Override
     public String buildPublicUrl(String key) {
         return urlPrefix + key;
+    }
+
+    @Override
+    public List<StoredObject> listAll() {
+        Path root = Paths.get(mediaPath);
+        if (!Files.isDirectory(root)) return List.of();
+        List<StoredObject> results = new ArrayList<>();
+        try (var stream = Files.walk(root)) {
+            stream.filter(Files::isRegularFile).forEach(p -> {
+                try {
+                    String relativePath = root.relativize(p).toString().replace('\\', '/');
+                    results.add(new StoredObject(relativePath, Files.size(p)));
+                } catch (IOException ex) {
+                    log.warn("Could not stat {}: {}", p, ex.getMessage());
+                }
+            });
+        } catch (IOException ex) {
+            log.warn("Failed to walk local media dir {}: {}", root, ex.getMessage());
+        }
+        return results;
     }
 }

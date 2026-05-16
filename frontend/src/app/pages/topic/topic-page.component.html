@@ -1,4 +1,4 @@
-<div class="topic-page">
+<div class="topic-page" (click)="closeNewCardMenu()">
   <div class="topic-page__header">
     <a class="back-link" routerLink="/">Home</a>
     @if (tag(); as tag) {
@@ -16,34 +16,59 @@
   @if (loading()) {
     <p class="loading">Loading...</p>
   } @else {
-    @if (cards().length) {
-      <div class="card-grid">
-        @for (card of cards(); track card.id) {
-          <a class="content-card" [routerLink]="['/content', card.slug]" [queryParams]="{ tag: tag()?.slug }">
-            <div class="content-card__thumb-wrapper">
-              @if (cardThumbnail(card)) {
-                <img class="content-card__thumb" [class.content-card__thumb--infographic]="card.cardType === 'INFOGRAPHIC'" [src]="cardThumbnail(card)!" [alt]="card.title" loading="lazy" />
-              } @else {
-                <div class="content-card__thumb content-card__thumb--placeholder">
-                  <span>{{ card.cardType[0] }}</span>
-                </div>
-              }
-              @if (card.cardType === 'TODO_LIST') {
-                <span class="content-card__type-icon content-card__type-icon--todo" aria-label="To-Do List">☑</span>
-              }
+    <div class="card-grid">
+      @for (card of cards(); track card.id) {
+        <a class="content-card" [routerLink]="['/content', card.slug]" [queryParams]="{ tag: tag()?.slug }">
+          <div class="content-card__thumb-wrapper">
+            @if (sessionStore.isAdmin() && editModeStore.enabled() && card.status === 'DRAFT') {
+              <span class="draft-badge">DRAFT</span>
+            }
+            @if (cardThumbnail(card)) {
+              <img class="content-card__thumb" [class.content-card__thumb--infographic]="card.cardType === 'INFOGRAPHIC'" [src]="cardThumbnail(card)!" [alt]="card.title" loading="lazy" />
+            } @else {
+              <div class="content-card__thumb content-card__thumb--placeholder">
+                <span>{{ card.cardType[0] }}</span>
+              </div>
+            }
+            @if (card.cardType === 'TODO_LIST') {
+              <span class="content-card__type-icon content-card__type-icon--todo" aria-label="To-Do List">☑</span>
+            }
+          </div>
+          @if (sessionStore.isAdmin() && editModeStore.enabled()) {
+            <button class="card-pencil-btn"
+                    (click)="navigateToEdit(card.slug, $event)"
+                    title="Edit" aria-label="Edit this card">✏</button>
+          }
+          <div class="content-card__body">
+            <span class="content-card__type-badge">{{ card.cardType === 'TODO_LIST' ? 'To-Do List' : card.cardType }}</span>
+            <strong class="content-card__title">{{ card.title }}</strong>
+            @if (card.description) {
+              <p class="content-card__desc">{{ card.description }}</p>
+            }
+          </div>
+        </a>
+      }
+      @if (showNewTile()) {
+        <div class="new-card-tile" (click)="openNewCardMenu($event)">
+          <div class="new-card-tile__plus">+</div>
+          <div class="new-card-tile__label">New how-to</div>
+          @if (newCardMenuOpen()) {
+            <div class="new-card-menu" (click)="$event.stopPropagation()">
+              <button class="new-card-menu__item" (click)="createCard('ARTICLE')">📄 Article</button>
+              <button class="new-card-menu__item" (click)="createCard('INFOGRAPHIC')">🖼 Infographic</button>
+              <button class="new-card-menu__item" (click)="createCard('VIDEO')">▶ Video</button>
+              <button class="new-card-menu__item" (click)="createCard('TODO_LIST')">☑ To-do list</button>
             </div>
-            <div class="content-card__body">
-              <span class="content-card__type-badge">{{ card.cardType === 'TODO_LIST' ? 'To-Do List' : card.cardType }}</span>
-              <strong class="content-card__title">{{ card.title }}</strong>
-              @if (card.description) {
-                <p class="content-card__desc">{{ card.description }}</p>
-              }
-            </div>
-          </a>
-        }
-      </div>
-    } @else {
+          }
+        </div>
+      }
+    </div>
+    @if (!cards().length && !showNewTile()) {
       <p class="empty">No content yet for this topic.</p>
     }
+  }
+
+  @if (toastMessage()) {
+    <div class="edit-toast" role="status">{{ toastMessage() }}</div>
   }
 </div>

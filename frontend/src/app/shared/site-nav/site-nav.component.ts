@@ -2,11 +2,13 @@ import { Component, Input, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthApiService } from '../../core/services/auth-api.service';
 import { SessionStore } from '../../core/session/session.store';
+import { LockerColorStore } from '../../core/locker-color.store';
+import { EditModeToggleComponent } from '../edit-mode-toggle/edit-mode-toggle.component';
 
 @Component({
   selector: 'app-site-nav',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, EditModeToggleComponent],
   templateUrl: './site-nav.component.html',
   styleUrl: './site-nav.component.scss',
 })
@@ -15,6 +17,7 @@ export class SiteNavComponent {
   private readonly authApi = inject(AuthApiService);
   private readonly router = inject(Router);
 
+  protected readonly lockerColor = inject(LockerColorStore).color;
   protected readonly isAuthenticated = this.sessionStore.isAuthenticated;
   protected readonly isAdmin = this.sessionStore.isAdmin;
   protected readonly avatarUrl = this.sessionStore.avatarUrl;
