@@ -1,10 +1,6 @@
 <div class="how-to-page" (click)="closeNewCardMenu(); closeNewTopicPopover()">
   <app-site-nav activeRoute="how-to" />
 
-  <header class="how-to-page__header">
-    <h1 class="how-to-page__title">How To</h1>
-  </header>
-
   <!-- Tag filter bar -->
   <nav class="tag-nav" aria-label="Filter by topic">
     <button type="button" class="tag-nav__link"
@@ -26,10 +22,15 @@
         {{ tag.name }}
       </button>
     }
-    @if (sessionStore.isAdmin() && editModeStore.enabled()) {
-      <button type="button" class="tag-nav__link tag-nav__link--new"
-              (click)="openNewTopicPopover($event)">
-        + New topic
+
+    @if (showNewTile()) {
+      <!-- Add Topic: sits right after the topic pills -->
+      <div class="action-btn-wrap">
+        <button type="button" class="action-btn action-btn--topic"
+                (click)="openNewTopicPopover($event)">
+          <span class="action-btn__plus">+</span>
+          <span class="action-btn__label">Topic</span>
+        </button>
         @if (newTopicPopoverOpen()) {
           <div class="new-topic-popover" (click)="$event.stopPropagation()">
             <div class="new-topic-popover__header">Create new topic</div>
@@ -51,7 +52,24 @@
             </div>
           </div>
         }
-      </button>
+      </div>
+
+      <!-- Add How To: pushed to the far right -->
+      <div class="action-btn-wrap action-btn-wrap--push-right">
+        <button type="button" class="action-btn action-btn--howto"
+                (click)="openNewCardMenu($event)">
+          <span class="action-btn__plus">+</span>
+          <span class="action-btn__label">How To</span>
+        </button>
+        @if (newCardMenuOpen()) {
+          <div class="new-card-menu new-card-menu--right" (click)="$event.stopPropagation()">
+            <button class="new-card-menu__item" (click)="createCard('ARTICLE')">📄 Article</button>
+            <button class="new-card-menu__item" (click)="createCard('INFOGRAPHIC')">🖼 Infographic</button>
+            <button class="new-card-menu__item" (click)="createCard('VIDEO')">▶ Video</button>
+            <button class="new-card-menu__item" (click)="createCard('TODO_LIST')">☑ To-do list</button>
+          </div>
+        }
+      </div>
     }
   </nav>
 
@@ -120,20 +138,6 @@
         </a>
       }
 
-      @if (showNewTile()) {
-        <div class="new-card-tile" (click)="openNewCardMenu($event)">
-          <div class="new-card-tile__plus">+</div>
-          <div class="new-card-tile__label">New how-to</div>
-          @if (newCardMenuOpen()) {
-            <div class="new-card-menu" (click)="$event.stopPropagation()">
-              <button class="new-card-menu__item" (click)="createCard('ARTICLE')">📄 Article</button>
-              <button class="new-card-menu__item" (click)="createCard('INFOGRAPHIC')">🖼 Infographic</button>
-              <button class="new-card-menu__item" (click)="createCard('VIDEO')">▶ Video</button>
-              <button class="new-card-menu__item" (click)="createCard('TODO_LIST')">☑ To-do list</button>
-            </div>
-          }
-        </div>
-      }
     </div>
 
     @if (filteredCards().length === 0 && !showNewTile()) {
