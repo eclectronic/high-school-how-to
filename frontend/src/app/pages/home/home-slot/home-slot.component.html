@@ -1,0 +1,54 @@
+@if (card()) {
+  <div class="slot" [attr.data-type]="card()!.cardType.toLowerCase()">
+
+    <!-- ARTICLE -->
+    @if (card()!.cardType === 'ARTICLE') {
+      <div class="slot__article"
+        [style.background-color]="card()!.backgroundColor || null"
+        [style.color]="card()!.textColor || null">
+        <h2 class="slot__title">
+          @if (titleLink) {
+            <a [routerLink]="titleLink">{{ card()!.title }}</a>
+          } @else {
+            {{ card()!.title }}
+          }
+        </h2>
+        @if (safeHtml()) {
+          <div class="slot__body" [innerHTML]="safeHtml()!"></div>
+        }
+      </div>
+    }
+
+    <!-- INFOGRAPHIC -->
+    @if (card()!.cardType === 'INFOGRAPHIC') {
+      <div class="slot__infographic">
+        <h2 class="slot__title">{{ card()!.title }}</h2>
+        @if (mediaUrls().length > 0) {
+          <div class="slot__infographic-img">
+            <img [src]="mediaUrls()[0].url" [alt]="mediaUrls()[0].alt || card()!.title" loading="lazy" />
+          </div>
+        }
+      </div>
+    }
+
+    <!-- VIDEO -->
+    @if (card()!.cardType === 'VIDEO') {
+      <div class="slot__video">
+        <h2 class="slot__title">{{ card()!.title }}</h2>
+        @if (safeEmbed()) {
+          <div class="slot__video-frame">
+            <iframe
+              [src]="safeEmbed()!"
+              loading="lazy"
+              [title]="card()!.title"
+              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              frameborder="0"
+            ></iframe>
+          </div>
+        }
+      </div>
+    }
+
+  </div>
+}

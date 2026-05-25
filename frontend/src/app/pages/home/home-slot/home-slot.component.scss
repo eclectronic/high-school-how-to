@@ -1,0 +1,214 @@
+$color-ink: #2d1a10;
+
+:host {
+  display: block;
+}
+
+.slot {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.slot__title {
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  font-weight: 800;
+  color: $color-ink;
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slot__article {
+  background: rgba(255, 254, 249, 0.95);
+  border: 2px solid rgba($color-ink, 0.1);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba($color-ink, 0.1);
+  flex: 1;
+}
+
+.slot__body {
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: rgba($color-ink, 0.85);
+
+  p { margin: 0 0 0.75rem; }
+  p:last-child { margin-bottom: 0; }
+  ul, ol { padding-left: 1.25rem; margin: 0 0 0.75rem; }
+  h1, h2, h3 { margin: 1rem 0 0.4rem; font-family: var(--font-display, sans-serif); }
+  strong { font-weight: 700; }
+}
+
+.slot__infographic {
+  background: rgba(255, 254, 249, 0.95);
+  border: 2px solid rgba($color-ink, 0.1);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba($color-ink, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.slot__infographic-img {
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba($color-ink, 0.12);
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+.slot__img-placeholder {
+  height: 200px;
+  border: 2px dashed rgba($color-ink, 0.2);
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slot__pick-btn {
+  background: rgba($color-ink, 0.06);
+  border: 1px solid rgba($color-ink, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: $color-ink;
+
+  &:hover { background: rgba($color-ink, 0.1); }
+}
+
+.slot__video {
+  background: rgba(255, 254, 249, 0.95);
+  border: 2px solid rgba($color-ink, 0.1);
+  border-radius: 1.25rem;
+  padding: 1.5rem;
+  box-shadow: 0 8px 24px rgba($color-ink, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.slot__video-frame {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba($color-ink, 0.12);
+
+  iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  &--placeholder {
+    background: rgba($color-ink, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 0;
+    height: 200px;
+    color: rgba($color-ink, 0.4);
+    font-style: italic;
+  }
+}
+
+.slot__video-url-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.slot__create {
+  min-height: 120px;
+  border: 2px dashed rgba($color-ink, 0.25);
+  border-radius: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(255, 254, 249, 0.92);
+}
+
+.slot__create-label {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba($color-ink, 0.75);
+
+  code {
+    font-weight: 700;
+    background: rgba($color-ink, 0.08);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+}
+
+.slot__create-btns {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.slot__create-btn {
+  background: rgba(255, 254, 249, 0.95);
+  border: 1px solid rgba($color-ink, 0.25);
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $color-ink;
+  cursor: pointer;
+
+  &:hover { background: rgba($color-ink, 0.06); }
+}
+
+.slot__create-spinner {
+  font-size: 0.875rem;
+  color: rgba($color-ink, 0.45);
+  font-style: italic;
+}
+
+.slot__empty-admin {
+  min-height: 120px;
+  border: 2px dashed rgba($color-ink, 0.2);
+  border-radius: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(255, 254, 249, 0.92);
+  color: rgba($color-ink, 0.65);
+  font-style: italic;
+  font-size: 0.9rem;
+  text-align: center;
+
+  code {
+    font-style: normal;
+    font-weight: 700;
+    background: rgba($color-ink, 0.08);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+  }
+}
+
+.slot__video-url-input {
+  flex: 1;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba($color-ink, 0.2);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  background: rgba(255, 254, 249, 0.9);
+}

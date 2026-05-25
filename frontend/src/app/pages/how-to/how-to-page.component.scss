@@ -11,8 +11,6 @@ $tape-border: rgba($color-ink, 0.14);
 }
 
 .how-to-page {
-  max-width: 1100px;
-  margin: 0 auto;
   padding: clamp(1rem, 3vw, 2.5rem) clamp(0.75rem, 4vw, 3rem) 3rem;
   display: flex;
   flex-direction: column;
@@ -91,7 +89,7 @@ $tape-border: rgba($color-ink, 0.14);
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1.5rem;
   padding-top: 18px; // room for tape/pin decorations on top row
 

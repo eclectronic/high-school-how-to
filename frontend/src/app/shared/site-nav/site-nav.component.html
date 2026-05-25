@@ -1,30 +1,43 @@
-<nav class="site-nav" aria-label="Site navigation">
+<!-- Desktop nav (≥ 768px) -->
+<nav class="site-nav site-nav--desktop" aria-label="Site navigation">
   <a routerLink="/" class="site-nav__logo" aria-label="High School How To — Home">
     <img src="/assets/images/logo-mark.png" alt="High School How To" class="site-nav__logo-img">
   </a>
 
   <ul class="site-nav__links" role="list">
     <li>
-      <a routerLink="/how-to"
-         class="site-nav__link"
-         [class.site-nav__link--active]="activeRoute === 'how-to'">
-        How To
-      </a>
+      <a routerLink="/how-to" class="site-nav__link" [class.site-nav__link--active]="activeRoute === 'how-to'">How&nbsp;To</a>
     </li>
     <li>
-      <a routerLink="/about"
-         class="site-nav__link"
-         [class.site-nav__link--active]="activeRoute === 'about'">
-        About
-      </a>
+      <a routerLink="/about" class="site-nav__link" [class.site-nav__link--active]="activeRoute === 'about'">About</a>
     </li>
     <li>
-      <a routerLink="/help"
-         class="site-nav__link"
-         [class.site-nav__link--active]="activeRoute === 'help'">
-        Help
-      </a>
+      <a routerLink="/help" class="site-nav__link" [class.site-nav__link--active]="activeRoute === 'help'">Help</a>
     </li>
+    @if (socialLinks.length > 0) {
+      <li class="site-nav__socials-wrapper">
+        <button type="button"
+          class="site-nav__link site-nav__socials-btn"
+          [class.site-nav__link--active]="socialsOpen()"
+          [attr.aria-expanded]="socialsOpen()"
+          aria-haspopup="true"
+          (click)="toggleSocials()">
+          Socials ▾
+        </button>
+        @if (socialsOpen()) {
+          <div class="site-nav__socials-dropdown" role="menu">
+            @for (link of socialLinks; track link.id) {
+              <a [href]="link.url" target="_blank" rel="noreferrer"
+                class="site-nav__socials-item" role="menuitem"
+                (click)="socialsOpen.set(false)">
+                <span class="site-nav__socials-icon" [innerHTML]="platformIcon(link.platform)"></span>
+                <span>{{ link.displayName }}</span>
+              </a>
+            }
+          </div>
+        }
+      </li>
+    }
   </ul>
 
   <div class="site-nav__cta">
@@ -43,7 +56,7 @@
       </a>
       <button class="site-nav__cta-btn site-nav__cta-btn--logout" (click)="logout()">Log Out</button>
     } @else {
-      <a routerLink="/auth/login" class="site-nav__cta-btn site-nav__cta-btn--primary">Log In</a>
+      <a routerLink="/auth/login" class="site-nav__cta-btn site-nav__cta-btn--primary">Log In / Sign Up</a>
     }
     @if (isAdmin()) {
       <app-edit-mode-toggle></app-edit-mode-toggle>
@@ -51,3 +64,70 @@
     }
   </div>
 </nav>
+
+<!-- Mobile top bar (< 768px) -->
+<nav class="site-nav site-nav--mobile" aria-label="Site navigation">
+  <a routerLink="/" class="site-nav__logo" aria-label="High School How To — Home">
+    <img src="/assets/images/logo-mark.png" alt="High School How To" class="site-nav__logo-img">
+  </a>
+
+  <div class="site-nav__mobile-cta">
+    @if (isAuthenticated()) {
+      <a routerLink="/locker" class="site-nav__cta-btn site-nav__cta-btn--locker"
+         [style.background]="lockerColor()">My Locker</a>
+    } @else {
+      <a routerLink="/auth/login" class="site-nav__cta-btn site-nav__cta-btn--primary">Log In / Sign Up</a>
+    }
+  </div>
+
+  <button type="button" class="site-nav__hamburger" aria-label="Open menu" (click)="toggleDrawer()">
+    <span class="site-nav__hamburger-bar"></span>
+    <span class="site-nav__hamburger-bar"></span>
+    <span class="site-nav__hamburger-bar"></span>
+  </button>
+</nav>
+
+<!-- Drawer backdrop -->
+@if (drawerOpen()) {
+  <div class="site-nav__backdrop" aria-hidden="true" (click)="closeDrawer()"></div>
+}
+
+<!-- Drawer -->
+<div class="site-nav__drawer" [class.site-nav__drawer--open]="drawerOpen()" role="dialog" aria-label="Navigation menu" [attr.aria-hidden]="!drawerOpen()">
+  <button type="button" class="site-nav__drawer-close" aria-label="Close menu" (click)="closeDrawer()">✕</button>
+
+  <nav class="site-nav__drawer-links" aria-label="Drawer navigation">
+    <a routerLink="/how-to" class="site-nav__drawer-link" (click)="closeDrawer()">How&nbsp;To</a>
+    <a routerLink="/about" class="site-nav__drawer-link" (click)="closeDrawer()">About</a>
+    <a routerLink="/help" class="site-nav__drawer-link" (click)="closeDrawer()">Help</a>
+
+    @if (socialLinks.length > 0) {
+      <button type="button" class="site-nav__drawer-link site-nav__drawer-socials-toggle"
+        [attr.aria-expanded]="drawerSocialsOpen()"
+        (click)="toggleDrawerSocials()">
+        Socials {{ drawerSocialsOpen() ? '▲' : '▾' }}
+      </button>
+      @if (drawerSocialsOpen()) {
+        <div class="site-nav__drawer-socials">
+          @for (link of socialLinks; track link.id) {
+            <a [href]="link.url" target="_blank" rel="noreferrer"
+              class="site-nav__drawer-social-link" (click)="closeDrawer()">
+              <span class="site-nav__socials-icon" [innerHTML]="platformIcon(link.platform)"></span>
+              <span>{{ link.displayName }}</span>
+            </a>
+          }
+        </div>
+      }
+    }
+
+    <div class="site-nav__drawer-divider"></div>
+
+    @if (isAuthenticated()) {
+      <button type="button" class="site-nav__drawer-link site-nav__drawer-link--action" (click)="logout(); closeDrawer()">Log Out</button>
+    }
+    @if (isAdmin()) {
+      <a routerLink="/admin" class="site-nav__drawer-link" (click)="closeDrawer()">⚙ Admin</a>
+      <app-edit-mode-toggle></app-edit-mode-toggle>
+    }
+  </nav>
+</div>

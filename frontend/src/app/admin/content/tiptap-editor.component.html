@@ -17,6 +17,19 @@
     <button type="button" class="toolbar-btn" (click)="setAlign('center')" title="Align Center">↔</button>
     <button type="button" class="toolbar-btn" (click)="setAlign('right')" title="Align Right">→</button>
     <span class="toolbar-sep"></span>
+    <button type="button" class="toolbar-btn" [class.active]="isActive('link')" (click)="openLinkInput()" title="Link">🔗</button>
+    @if (linkInputOpen()) {
+      <div class="toolbar-link-row">
+        <input #linkInput type="text" class="toolbar-link-input" placeholder="https://… or /page"
+          [value]="linkInputValue()"
+          (input)="linkInputValue.set($any($event.target).value)"
+          (keydown.enter)="applyLink()"
+          (keydown.escape)="cancelLink()" />
+        <button type="button" class="toolbar-link-apply" (click)="applyLink()">Apply</button>
+        <button type="button" class="toolbar-link-cancel" (click)="cancelLink()">✕</button>
+      </div>
+    }
+    <span class="toolbar-sep"></span>
     <button type="button" class="toolbar-btn toolbar-btn--image" (click)="triggerImageUpload()" [disabled]="uploadingImage()" title="Insert Image">
       @if (uploadingImage()) { ⏳ } @else { 🖼 }
     </button>

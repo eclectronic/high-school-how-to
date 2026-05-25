@@ -19,6 +19,7 @@ import { TextAlign } from '@tiptap/extension-text-align';
 import { Underline } from '@tiptap/extension-underline';
 import { ContentApiService } from '../../core/services/content-api.service';
 
+
 @Component({
   selector: 'app-tiptap-editor',
   standalone: true,
@@ -28,6 +29,7 @@ import { ContentApiService } from '../../core/services/content-api.service';
 export class TiptapEditorComponent implements OnInit, OnDestroy {
   @ViewChild('editorEl', { static: true }) editorEl!: ElementRef<HTMLDivElement>;
   @ViewChild('imageFileInput') imageFileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('linkInput') linkInput!: ElementRef<HTMLInputElement>;
   @Input() initialJson: string | null = null;
   @Input() initialHtml: string | null = null;
   @Input() backgroundColor: string | null = null;
@@ -35,6 +37,8 @@ export class TiptapEditorComponent implements OnInit, OnDestroy {
   @Output() contentChange = new EventEmitter<{ json: string; html: string }>();
 
   protected uploadingImage = signal(false);
+  protected linkInputOpen = signal(false);
+  protected linkInputValue = signal('');
 
   private editor!: Editor;
   private readonly api = inject(ContentApiService);
@@ -106,6 +110,29 @@ export class TiptapEditorComponent implements OnInit, OnDestroy {
 
   unsetLink() {
     this.editor.chain().focus().unsetLink().run();
+  }
+
+  openLinkInput() {
+    if (this.isActive('link')) {
+      this.unsetLink();
+      return;
+    }
+    const existing = this.editor.getAttributes('link')['href'] ?? '';
+    this.linkInputValue.set(existing);
+    this.linkInputOpen.set(true);
+    setTimeout(() => this.linkInput?.nativeElement.focus(), 0);
+  }
+
+  applyLink() {
+    const url = this.linkInputValue().trim();
+    if (url) this.setLink(url);
+    this.linkInputOpen.set(false);
+    this.linkInputValue.set('');
+  }
+
+  cancelLink() {
+    this.linkInputOpen.set(false);
+    this.linkInputValue.set('');
   }
 
   triggerImageUpload() {

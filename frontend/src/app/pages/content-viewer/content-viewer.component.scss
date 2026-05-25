@@ -168,6 +168,13 @@ $breakpoint-desktop: 768px;
 
 // ─── Edit mode ────────────────────────────────────────────────────────────────
 
+.edit-save-error {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #dc2626;
+  padding: 0.25rem 0.5rem 0;
+}
+
 .edit-controls {
   display: flex;
   align-items: center;

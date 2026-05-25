@@ -1,0 +1,100 @@
+<div class="admin-page">
+  <div class="admin-page__header">
+    <h1>Home Layout</h1>
+    <button
+      class="btn btn--primary"
+      (click)="save()"
+      [disabled]="saving()"
+    >
+      @if (saving()) {
+        Saving…
+      } @else if (saved()) {
+        Saved ✓
+      } @else {
+        Save
+      }
+    </button>
+  </div>
+
+  @if (error()) {
+    <div class="admin-error">{{ error() }}</div>
+  }
+
+  <p class="admin-hint">
+    Configure the rows that appear below the hero on the home page. Drag-free reorder with the arrow buttons.
+  </p>
+
+  <div class="section-list">
+    @for (section of sections(); track section.id; let i = $index; let last = $last) {
+      <div class="admin-card section-card">
+        <div class="section-card__controls">
+          <div class="section-card__arrows">
+            <button
+              class="btn btn--icon"
+              title="Move up"
+              [disabled]="i === 0"
+              (click)="moveUp(i)"
+            >▲</button>
+            <button
+              class="btn btn--icon"
+              title="Move down"
+              [disabled]="last"
+              (click)="moveDown(i)"
+            >▼</button>
+          </div>
+
+          <div class="section-card__body">
+            <div class="layout-toggle">
+              <button
+                class="btn btn--toggle"
+                [class.btn--toggle--active]="section.layout === 'full'"
+                (click)="setLayout(i, 'full')"
+              >Full width</button>
+              <button
+                class="btn btn--toggle"
+                [class.btn--toggle--active]="section.layout === 'split'"
+                (click)="setLayout(i, 'split')"
+              >Split (50/50)</button>
+            </div>
+
+            @if (section.layout === 'full') {
+              <div class="form-row">
+                <label>Slot tag</label>
+                <input
+                  [(ngModel)]="section.slot1Tag"
+                  placeholder="e.g. home-video"
+                />
+              </div>
+            } @else {
+              <div class="split-row">
+                <div class="form-row">
+                  <label>Left slot</label>
+                  <input
+                    [(ngModel)]="section.slot1Tag"
+                    placeholder="e.g. home-how-to"
+                  />
+                </div>
+                <div class="form-row">
+                  <label>Right slot</label>
+                  <input
+                    [ngModel]="section.slot2Tag"
+                    (ngModelChange)="section.slot2Tag = $event"
+                    placeholder="e.g. home-locker"
+                  />
+                </div>
+              </div>
+            }
+          </div>
+
+          <button
+            class="btn btn--danger btn--sm section-card__delete"
+            title="Remove section"
+            (click)="removeSection(i)"
+          >×</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <button class="btn btn--secondary add-btn" (click)="addSection()">+ Add section</button>
+</div>

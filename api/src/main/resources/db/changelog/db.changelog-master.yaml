@@ -129,3 +129,7 @@ databaseChangeLog:
       file: db/changelog/v8-media-assets-0080.sql
   - include:
       file: db/changelog/v8-media-assets-backfill-0081.sql
+  - include:
+      file: db/changelog/v10-social-links-0082.sql
+  - include:
+      file: db/changelog/v10-home-layout-0083.sql

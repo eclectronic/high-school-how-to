@@ -44,6 +44,11 @@ export const adminRoutes: Routes = [
         loadComponent: () =>
           import('./images/image-library.component').then((m) => m.ImageLibraryComponent),
       },
+      {
+        path: 'home-layout',
+        loadComponent: () =>
+          import('./home-layout/home-layout.component').then((m) => m.HomeLayoutComponent),
+      },
     ],
   },
 ];

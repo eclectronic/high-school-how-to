@@ -316,8 +316,13 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
         this.isSaving.set(false);
         onSuccess?.();
       },
-      error: () => {
-        this.editModeStore.setError('Save failed. Please try again.');
+      error: (err) => {
+        const violations = err?.error?.violations as Array<{ field: string; message: string }> | undefined;
+        const tagViolation = violations?.find(v => v.field === 'tagIds');
+        const msg = tagViolation
+          ? 'A topic is required before saving. Add one using the topic bar below.'
+          : (err?.error?.detail ?? 'Save failed. Please try again.');
+        this.editModeStore.setError(msg);
         this.isSaving.set(false);
       },
     });

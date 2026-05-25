@@ -87,6 +87,9 @@
             </div>
           }
         </div>
+        @if (isAdmin() && editMode() && editModeStore.lastError()) {
+          <div class="edit-save-error" role="alert">⚠ {{ editModeStore.lastError() }}</div>
+        }
       </div>
     }
 

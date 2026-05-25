@@ -65,6 +65,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/content/cards/*/locker-status").authenticated()
                         .requestMatchers("/api/content/cards", "/api/content/cards/**").permitAll()
                         .requestMatchers("/api/pages/home/layout").permitAll()
+                        .requestMatchers("/api/home-layout").permitAll()
+                        .requestMatchers("/api/social-links").permitAll()
                         .requestMatchers("/api/quotes/today").permitAll()
                         .requestMatchers("/api/color-palette").permitAll()
                         .requestMatchers("/media/uploads/**").permitAll()

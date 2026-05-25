@@ -1,74 +1,88 @@
-<section class="home">
-  <!-- ── Site nav ── -->
+<div class="home-page">
   <app-site-nav />
 
-  <!-- ── Top strip: socials + CTAs ── -->
-  <div class="home__top-strip">
-    <figure class="home__socials" aria-label="Follow High School How To on social media">
-      <img src="/assets/images/home-socials.png" alt="" aria-hidden="true" loading="lazy" />
-      <a class="home__social-link home__social-link--instagram"
-         href="https://www.instagram.com/highschoolhowto"
-         target="_blank" rel="noreferrer" aria-label="Instagram"></a>
-      <a class="home__social-link home__social-link--youtube"
-         href="https://www.youtube.com/@HighSchool-HowTo"
-         target="_blank" rel="noreferrer" aria-label="YouTube"></a>
-    </figure>
+  <main class="home-main">
 
-    <div class="home__hero-ctas">
-      <a routerLink="/how-to" class="home__cta-btn home__cta-btn--primary">Explore How To</a>
-      @if (isAuthenticated()) {
-        <a routerLink="/locker" class="home__cta-btn home__cta-btn--secondary">My Locker</a>
-      } @else {
-        <a routerLink="/auth/signup" class="home__cta-btn home__cta-btn--secondary">Sign Up — It's Free</a>
-      }
-    </div>
-  </div>
-
-  <!-- ── Hero: logo + tagline ── -->
-  <header class="home__hero">
-    <div class="home__hero-intro">
-      <figure class="home__logo-pinned">
-        <span class="home__card-tape" aria-hidden="true"></span>
-        <img src="/assets/images/logo.png" alt="High School How To illustrated logo" loading="lazy" />
-      </figure>
-
-      <div class="home__note-stack">
-        <div class="home__note-card" aria-label="High School How To note">
-          <span class="home__note-card-tape" aria-hidden="true"></span>
-          <div class="note-card note-card--wide" [style.background-color]="cardColor(0)">
-            <p class="note-card__copy">
-              <span class="note-card__line">Helping you navigate, organize, and lock in for school.</span>
-            </p>
-            <p class="note-card__sub">
-              Videos, infographics, and checklists to help you stay on top of high school — from study tips to college prep.
-            </p>
-          </div>
-        </div>
+    <!-- ── Hero row: logo + tagline + about ── -->
+    <section class="hero">
+      <div class="hero__logo-col">
+        <figure class="hero__logo-pinned">
+          <span class="hero__logo-tape" aria-hidden="true"></span>
+          <img src="/assets/images/logo.png" alt="High School How To" loading="eager" />
+        </figure>
       </div>
-    </div>
-  </header>
+      <div class="hero__tagline-card">
+        @if (attachments.tagline === 'tape') {
+          <span class="card-tape" aria-hidden="true"></span>
+        } @else {
+          <span [class]="pinClass(attachments.tagline)" aria-hidden="true"></span>
+        }
+        <p class="hero__tagline-main">Helping you navigate, organize, and lock in for school.</p>
+        <p class="hero__tagline-sub">Videos, infographics, and checklists to help you stay on top of high school — from study tips to college prep.</p>
+      </div>
+      <a class="hero__about-slot" routerLink="/about" aria-label="Learn about High School How To">
+        @if (attachments.about === 'tape') {
+          <span class="card-tape" aria-hidden="true"></span>
+        } @else {
+          <span [class]="pinClass(attachments.about)" aria-hidden="true"></span>
+        }
+        <app-home-slot slotTag="about" />
+      </a>
+    </section>
 
-  <!-- ── Quote of the Day ── -->
-  @if (quote()) {
-    <div class="home__quote-card" [style.background-color]="cardColor(1)">
-      <span class="home__quote-card-tape" aria-hidden="true"></span>
-      <p class="home__quote-label">Quote of the Day</p>
-      <blockquote class="home__quote-text">"{{ quote()!.quoteText }}"</blockquote>
-      @if (quote()!.attribution) {
-        <p class="home__quote-attribution">— {{ quote()!.attribution }}</p>
+    <!-- ── How-To + Locker post-its ── -->
+    <section class="promo-row" aria-label="Quick links">
+      <a class="postit postit--howto" routerLink="/how-to" aria-label="Browse how-to guides">
+        @if (attachments.howto === 'tape') {
+          <span class="card-tape" aria-hidden="true"></span>
+        } @else {
+          <span [class]="pinClass(attachments.howto)" aria-hidden="true"></span>
+        }
+        <h2 class="postit__heading">How-To Guides</h2>
+        <ul class="postit__list">
+          <li>Study strategies &amp; note-taking</li>
+          <li>Time management &amp; planning</li>
+          <li>College prep &amp; applications</li>
+          <li>Test-taking tips</li>
+          <li>Organization &amp; productivity</li>
+        </ul>
+        <span class="postit__cta">Browse all guides →</span>
+      </a>
+
+      <a class="postit postit--locker" routerLink="/locker" aria-label="Open your study locker">
+        @if (attachments.locker === 'tape') {
+          <span class="card-tape" aria-hidden="true"></span>
+        } @else {
+          <span [class]="pinClass(attachments.locker)" aria-hidden="true"></span>
+        }
+        <h2 class="postit__heading">Study Locker</h2>
+        <ul class="postit__list">
+          <li>Notes &amp; quick captures</li>
+          <li>To-do lists &amp; task tracking</li>
+          <li>Focus timer</li>
+          <li>Shortcut cheat sheets</li>
+        </ul>
+        <p class="postit__signup">Sign in or sign up free to unlock your personal study tools.</p>
+        <span class="postit__cta">Open your locker →</span>
+      </a>
+    </section>
+
+    @for (section of sections(); track section.id) {
+      @if (section.layout === 'split') {
+        <section class="slots-row">
+          <div class="slots-row__col">
+            <app-home-slot [slotTag]="section.slot1Tag" />
+          </div>
+          <div class="slots-row__col">
+            <app-home-slot [slotTag]="section.slot2Tag!" />
+          </div>
+        </section>
+      } @else {
+        <section class="full-section">
+          <app-home-slot [slotTag]="section.slot1Tag" />
+        </section>
       }
-    </div>
-  }
+    }
 
-  <!-- ── Footer ── -->
-  <footer class="home__footer">
-    <a routerLink="/about" class="home__footer-link">About</a>
-    <a routerLink="/help" class="home__footer-link">Help</a>
-    @if (isAuthenticated()) {
-      <button type="button" class="home__footer-btn" (click)="handleLogout()">Log out</button>
-    }
-    @if (isAdmin()) {
-      <a routerLink="/admin" class="home__footer-link">Admin</a>
-    }
-  </footer>
-</section>
+  </main>
+</div>

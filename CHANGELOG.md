@@ -1,5 +1,27 @@
 # Changelog
 
+## [10.0.0] — 2026-05-25
+
+### Home page redesign — corkboard post-its, socials nav, hamburger drawer, full-width how-to
+
+v10 transforms the home page from a minimal landing screen into a richly styled corkboard with colorful post-it notes. The layout is built around four cards — a sky-blue tagline, a peach About card, a yellow How-To card, and a lavender Locker card — each attached to the board with randomly chosen tape or a colored thumbtack pin (red, blue, green, or yellow). Tape is weighted to appear roughly twice as often as any single pin color; the selection is random on each page load.
+
+**Hero.** The logo sits in its own column on the left, spanning both the tagline and About cards. The tagline card carries the existing site description copy in the Miras Handwriting font at bold size. The About card is a full-card link to `/about` and renders the CMS-driven about content via the existing content slot system, with the card's chrome stripped so the peach post-it shell is the container.
+
+**Promo row.** Below the hero, the How-To and Locker cards sit side by side (480 px each, centered). Both are full-card links. The How-To card lists the guide categories as a bullet list; the Locker card lists the study tools and includes a sign-in prompt for unauthenticated visitors. All headings across the four cards use Miras Handwriting at 1.8 rem with an underline treatment.
+
+**Mobile layout.** On screens narrower than 768 px the hero collapses to a flex column: tagline, then the logo image displayed inline (centered, 180 px wide), then the About card. The How-To and Locker cards stack full-width below. The logo is rendered in normal document flow rather than as a background image, so it's fully visible between the two cards.
+
+**Edit mode removed from home page.** The inline edit-mode bar and all `EditModeStore` / `SessionStore` wiring have been removed from the home page. The page is now read-only for all users; content changes go through the admin UI on other pages.
+
+**Socials dropdown.** A "Socials" pill has been added to the desktop nav between Help and the CTA. It opens a dropdown with platform links fetched from the new `GET /api/social-links` API. The pill hides itself if no links are enabled. Initial platforms: Instagram and YouTube (seeded via Liquibase); TikTok is seeded with a null URL and stays hidden until set by an admin.
+
+**Mobile hamburger drawer.** Below 768 px the nav collapses to a top bar (logo + primary CTA + ☰ button) with a right-side slide-in drawer. The drawer contains all nav links, an inline Socials expand, and admin-only items. A backdrop tap, ☰ button, Escape key, or any link tap closes the drawer.
+
+**How-to page.** The how-to page's container no longer has a `max-width` cap, so the heading and card grid fill the full viewport width. The card grid column width was bumped from 200 px to 220 px minimum so cards use available space more effectively.
+
+**Backend.** A new `social_links` table and REST API (`GET /api/social-links`, `GET/PUT /api/admin/social-links`) were added, along with a `home_layout_sections` table for the admin-configurable dynamic sections below the promo row. The `/api/social-links` endpoint was added to `SecurityConfig.permitAll()` so unauthenticated home page loads never trigger a login redirect.
+
 ## [9.1.0] — 2026-05-16
 
 ### Inline-authoring polish — edit UX, keyboard navigation, locker button, admin filters
