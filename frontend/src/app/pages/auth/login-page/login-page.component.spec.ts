@@ -4,7 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { of, throwError } from 'rxjs';
-import { LoginPageComponent } from './login-page.component';
+import { LoginPageComponent, extractProblemDetail } from './login-page.component';
 import { AuthApiService } from '../../../core/services/auth-api.service';
 import { SessionStore } from '../../../core/session/session.store';
 
@@ -132,4 +132,65 @@ describe('LoginPageComponent', () => {
     tick(100);
     expect(authApiSpy.googleSignIn).toHaveBeenCalledWith(jasmine.objectContaining({ rememberMe: true }));
   }));
+
+  it('signup form rejects 10-char password with no digit', () => {
+    component['signupForm'].setValue({ firstName: 'A', lastName: 'B', email: 'x@x.com', password: 'abcdefghij' });
+    expect(component['signupForm'].valid).toBeFalse();
+    expect(component['signupForm'].controls.password.errors?.['pattern']).toBeTruthy();
+  });
+
+  it('signup form accepts 10-char password that includes a digit', () => {
+    component['signupForm'].setValue({ firstName: 'A', lastName: 'B', email: 'x@x.com', password: 'password12' });
+    expect(component['signupForm'].valid).toBeTrue();
+  });
+
+  it('submitSignup surfaces backend ProblemDetails.detail on 400', fakeAsync(() => {
+    // This is the regression for the bug where a 4xx (other than 409) fell through
+    // to a generic "We could not submit your signup" instead of showing the
+    // specific server-side reason. Mai's signup hit this exact path.
+    const problemBody = {
+      type: 'about:blank',
+      title: 'Password does not meet requirements',
+      status: 400,
+      detail: 'Password must be at least 10 characters long. Password must include a number.',
+      traceId: 'abc',
+      violations: [],
+    };
+    authApiSpy.register.and.returnValue(throwError(() => new HttpErrorResponse({ status: 400, error: problemBody })));
+    component['setMode']('signup');
+    component['signupForm'].setValue({ firstName: 'J', lastName: 'D', email: 'j@test.com', password: 'password1234' });
+    component['submitSignup']();
+    tick(100);
+    expect(component['error']()).toBe(problemBody.detail);
+  }));
+});
+
+describe('extractProblemDetail', () => {
+  it('returns null when there is no body', () => {
+    expect(extractProblemDetail(new HttpErrorResponse({ status: 400 }))).toBeNull();
+  });
+
+  it('prefers violations.message over detail when present', () => {
+    const error = new HttpErrorResponse({
+      status: 400,
+      error: { detail: 'fallback', violations: [{ field: 'password', message: 'specific' }] },
+    });
+    expect(extractProblemDetail(error)).toBe('specific');
+  });
+
+  it('joins multiple violation messages with a space', () => {
+    const error = new HttpErrorResponse({
+      status: 400,
+      error: { violations: [{ message: 'one.' }, { message: 'two.' }] },
+    });
+    expect(extractProblemDetail(error)).toBe('one. two.');
+  });
+
+  it('falls back to detail when violations is empty', () => {
+    const error = new HttpErrorResponse({
+      status: 400,
+      error: { detail: 'fallback', violations: [] },
+    });
+    expect(extractProblemDetail(error)).toBe('fallback');
+  });
 });

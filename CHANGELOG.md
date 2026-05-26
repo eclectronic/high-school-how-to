@@ -1,5 +1,21 @@
 # Changelog
 
+## [10.0.1] — 2026-05-26
+
+### Signup bug fix — password validation, mobile name fields, URL sync
+
+This patch fixes a registration bug that blocked users with a valid 10-character password from creating an account.
+
+**Password validation.** The `RegistrationRequest` DTO had `@Size(min = 12)` while the `PasswordPolicyValidator` (and the frontend label) both said the minimum was 10 characters. A 10- or 11-character password passed frontend validation but was silently rejected by Spring bean validation with a generic 400 — surfacing as "We could not submit your signup. Please try again." The `@Size` constraint has been removed from all three password DTOs (`RegistrationRequest`, `ResetPasswordRequest`, `UpdatePasswordRequest`); `PasswordPolicyValidator` is now the single source of truth (minimum 10 characters, must include a number). The signup form label now reads "min 10 characters, including a number" and the frontend validator enforces the digit requirement so the form catches the error before submitting.
+
+**Better error messages.** Signup errors from the backend that don't fit a known category (409 duplicate, 5xx server error) now surface the actual `detail` field from the Spring `ProblemDetails` response instead of the generic fallback. If the server returns field-level `violations`, those are shown instead. This means future validation failures arrive with a specific, actionable message rather than "We could not submit your signup."
+
+**Mobile name fields.** The First name / Last name row on the signup form was overflowing to the right on narrow phones. The grid cells now have `min-width: 0` to prevent intrinsic-size overflow, all form inputs get `width: 100%; box-sizing: border-box`, and the two fields stack vertically on screens ≤ 480 px where side-by-side is too cramped.
+
+**URL sync.** Switching between Sign In and Create Account modes on the login page now updates the browser URL to `/auth/login` or `/auth/signup` respectively (using `replaceUrl: true` so the mode switch doesn't add a browser history entry). Deep-linking to `/auth/signup` continues to open the signup form directly.
+
+**Tests.** A new `PasswordPolicyValidatorTest` covers the minimum length, digit requirement, null input, and both violations together. Three new integration specs in `AuthFlowIntegSpec` lock in the contract: 10-character passwords are accepted, 9-character passwords return a 400 with the rule in `detail`, and no-digit passwords return a 400 with the rule in `detail`. Seven new frontend specs cover the digit validator, the 400-surfacing behavior, and the `extractProblemDetail` helper.
+
 ## [10.0.0] — 2026-05-25
 
 ### Home page redesign — corkboard post-its, socials nav, hamburger drawer, full-width how-to

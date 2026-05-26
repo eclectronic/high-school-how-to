@@ -44,7 +44,7 @@ export class LoginPageComponent {
     firstName: ['', [Validators.required]],
     lastName: ['', [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(10)]],
+    password: ['', [Validators.required, Validators.minLength(10), Validators.pattern(/.*\d.*/)]],
   });
 
   protected readonly forgotForm = this.fb.nonNullable.group({
@@ -71,6 +71,8 @@ export class LoginPageComponent {
     this.mode.set(mode);
     this.error.set(null);
     this.info.set(null);
+    const path = mode === 'signup' ? '/auth/signup' : '/auth/login';
+    this.router.navigate([path], { replaceUrl: true });
   }
 
   protected onGoogleIdToken(idToken: string): void {
@@ -159,6 +161,10 @@ export class LoginPageComponent {
     if (error instanceof HttpErrorResponse) {
       if (error.status === 409) return 'That email is already registered. Try logging in.';
       if (error.status >= 500) return 'The server had a hiccup. Try again shortly.';
+      if (error.status === 400) {
+        const detail = extractProblemDetail(error);
+        if (detail) return detail;
+      }
     }
     return 'We could not submit your signup. Please try again.';
   }
@@ -170,4 +176,17 @@ export class LoginPageComponent {
     }
     return 'Something went wrong. Please try again.';
   }
+}
+
+// Pulls a user-readable message out of a Spring ProblemDetails body
+// ({ detail, violations: [{ field, message }] }). Prefers violations
+// when present (more specific), falls back to detail.
+export function extractProblemDetail(error: HttpErrorResponse): string | null {
+  const body = error.error as { detail?: string; violations?: { field?: string; message?: string }[] } | null;
+  if (!body || typeof body !== 'object') return null;
+  if (Array.isArray(body.violations) && body.violations.length > 0) {
+    const messages = body.violations.map(v => v.message).filter((m): m is string => !!m);
+    if (messages.length > 0) return messages.join(' ');
+  }
+  return typeof body.detail === 'string' && body.detail.length > 0 ? body.detail : null;
 }

@@ -1,8 +1,8 @@
 package com.highschoolhowto.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
+// Length/complexity is enforced by PasswordPolicyValidator (single source of truth).
 public record ResetPasswordRequest(
         @NotBlank String token,
-        @NotBlank @Size(min = 12) String newPassword) {}
+        @NotBlank String newPassword) {}

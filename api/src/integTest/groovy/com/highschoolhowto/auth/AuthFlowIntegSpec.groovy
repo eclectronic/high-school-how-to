@@ -128,6 +128,63 @@ class AuthFlowIntegSpec extends BaseIntegrationSpec {
         refreshedAuthBody.refreshToken
     }
 
+    // Regression: the RegistrationRequest DTO previously required @Size(min = 12)
+    // while the policy validator allowed 10. The mismatch silently rejected any
+    // 10- or 11-char password at the bean-validation boundary with a generic 400.
+    // These specs lock in the contract that the policy validator is the single
+    // source of truth for password rules.
+    def "registration accepts a 10-character password with a digit"() {
+        given:
+        def payload = [
+                email    : uniqueEmail(),
+                password : "password12", // exactly 10 chars, includes a digit
+                firstName: "Min",
+                lastName : "Length"
+        ]
+
+        when:
+        def response = postJson("/api/auth/register", payload).andReturn().response
+
+        then:
+        response.status == 202
+    }
+
+    def "registration rejects a 9-character password and returns the rule in detail"() {
+        given:
+        def payload = [
+                email    : uniqueEmail(),
+                password : "short123", // 8 chars
+                firstName: "Too",
+                lastName : "Short"
+        ]
+
+        when:
+        def response = postJson("/api/auth/register", payload).andReturn().response
+        def body = objectMapper.readValue(response.contentAsString, Map)
+
+        then:
+        response.status == 400
+        body.detail?.contains("at least 10 characters")
+    }
+
+    def "registration rejects a password with no digit and returns the rule in detail"() {
+        given:
+        def payload = [
+                email    : uniqueEmail(),
+                password : "no-digit-here-at-all",
+                firstName: "No",
+                lastName : "Digit"
+        ]
+
+        when:
+        def response = postJson("/api/auth/register", payload).andReturn().response
+        def body = objectMapper.readValue(response.contentAsString, Map)
+
+        then:
+        response.status == 400
+        body.detail?.contains("number")
+    }
+
     private static String uniqueEmail() {
         "user-${UUID.randomUUID()}@example.com"
     }
