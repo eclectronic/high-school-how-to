@@ -7,6 +7,8 @@
   @if (!loading()) {
     <div class="notes-app__list-view">
       @if (notes().length > 0) {
+        <div class="notes-app__sort-row">
+        <span class="notes-app__sort-label">Sort:</span>
         <div class="notes-app__sort-bar" role="radiogroup" aria-label="Sort notes">
           <button
             type="button"
@@ -44,6 +46,7 @@
             title="Custom order — drag to arrange"
             (click)="setSortMode('custom')"
           >Custom</button>
+        </div>
         </div>
       }
 
@@ -125,7 +128,7 @@
 
       <!-- Floating toolbar — overlays content area -->
       <div class="notes-app__detail-toolbar" [style.background]="toolbarBg(selectedNote()!.color)">
-        <button type="button" class="notes-app__back-btn" (click)="goBack()" title="Done" aria-label="Done">✓</button>
+        <button type="button" class="notes-app__nav-back-btn" (click)="goBack()" title="Back to notes" aria-label="Back to notes">‹</button>
         <app-inline-title-edit
           #noteTitle
           class="notes-app__note-title"
@@ -147,6 +150,7 @@
             title="Delete note"
             (click)="confirmDeleteNote(selectedNote()!)"
           >✕</button>
+          <button type="button" class="notes-app__done-btn" (click)="goBack()" title="Done" aria-label="Done">✓</button>
         </div>
       </div>
 

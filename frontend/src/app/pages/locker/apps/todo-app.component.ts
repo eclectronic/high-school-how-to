@@ -56,6 +56,8 @@ export class TodoAppComponent implements OnInit, AfterViewChecked {
   private pendingListTitleFocus = false;
   protected deleteListTarget = signal<TaskList | null>(null);
   protected deleteTaskTarget = signal<{ listId: string; taskId: string; desc: string } | null>(null);
+  protected showNumbers = signal(false);
+  protected toggleShowNumbers(): void { this.showNumbers.update(v => !v); }
   protected showColorPickerForList = signal<string | null>(null);
   protected showDueDateForTask = signal<string | null>(null);
   protected dueDateTask = computed(() => {
@@ -335,6 +337,8 @@ export class TodoAppComponent implements OnInit, AfterViewChecked {
   }
 
   protected onTaskKeydown(event: KeyboardEvent, task: TaskItem): void {
+    const tag = (event.target as HTMLElement).tagName.toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
     switch (event.key) {
       case ' ':
         event.preventDefault();

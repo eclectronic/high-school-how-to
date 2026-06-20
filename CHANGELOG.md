@@ -1,5 +1,21 @@
 # Changelog
 
+## [10.0.2] — 2026-06-20
+
+### Locker — todo and notes UX polish
+
+A focused round of usability improvements to the todo and notes locker apps.
+
+**Navigation.** Both the todo and notes detail views now have a `‹` back chevron on the left side of the toolbar — the standard position users expect for "go back." The green ✓ done button remains on the right for users who prefer an explicit "save and close" action. Previously the green check was the only way back, which wasn't obvious to new users.
+
+**Sort label.** The sort control pill in both apps now has a plain "Sort:" label to its left, making the purpose of the Name / Custom / Created / Updated buttons immediately clear.
+
+**Todo editing.** Pressing space while typing in a task's description field no longer accidentally toggles the task's completed state. The keyboard shortcut is now suppressed when focus is inside an input element.
+
+**Todo number toggle.** A `#` button in the todo detail view toolbar toggles position numbers on each task row, useful for referencing items by order.
+
+**Inline edit button.** The commit (save) button in the inline text editor is now a small green circle with a white checkmark, consistent with the locker's done-button pattern. The pencil hint icon is now the ✏️ emoji and appears only when hovering over the row rather than always being faintly visible.
+
 ## [10.0.1] — 2026-05-26
 
 ### Signup bug fix — password validation, mobile name fields, URL sync

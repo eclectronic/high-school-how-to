@@ -7,6 +7,8 @@
   @if (!loading() && view() === 'list') {
     <div class="todo-app__list-view">
       @if (lists().length > 0) {
+        <div class="todo-app__sort-row">
+        <span class="todo-app__sort-label">Sort:</span>
         <div class="todo-app__sort-bar" role="radiogroup" aria-label="Sort lists">
           <button
             type="button"
@@ -26,6 +28,7 @@
             title="Custom order — drag to arrange"
             (click)="setSortMode('custom')"
           >Custom</button>
+        </div>
         </div>
       }
 
@@ -95,7 +98,7 @@
       (keydown)="onDetailKeydown($event)"
     >
       <div class="todo-app__detail-header" [style.background]="toolbarBg(selectedList()!.color)">
-        <button type="button" class="todo-app__back-btn" (click)="goBack()" title="Done" aria-label="Done">✓</button>
+        <button type="button" class="todo-app__nav-back-btn" (click)="goBack()" title="Back to lists" aria-label="Back to lists">‹</button>
         <app-inline-title-edit
           #listTitle
           class="todo-app__list-title"
@@ -104,6 +107,14 @@
           (advanceFocus)="focusTaskInput()"
         />
         <div class="todo-app__header-actions">
+          <button
+            type="button"
+            class="todo-app__num-toggle"
+            [class.todo-app__num-toggle--active]="showNumbers()"
+            title="Toggle item numbers"
+            aria-label="Toggle item numbers"
+            (click)="toggleShowNumbers()"
+          >#</button>
           <button
             type="button"
             class="todo-list-row__color-btn"
@@ -117,6 +128,7 @@
             title="Delete list"
             (click)="confirmDeleteList(selectedList()!)"
           >✕</button>
+          <button type="button" class="todo-app__done-btn" (click)="goBack()" title="Done" aria-label="Done">✓</button>
         </div>
       </div>
 
@@ -129,7 +141,7 @@
           <p class="todo-app__no-tasks">No tasks yet. Add one below!</p>
         }
 
-        @for (task of selectedList()!.tasks; track task.id) {
+        @for (task of selectedList()!.tasks; track task.id; let i = $index) {
           <div
             class="todo-task"
             [class.todo-task--done]="task.completed"
@@ -144,6 +156,9 @@
               title="Drag to reorder"
               aria-label="Drag to reorder"
             >⋮⋮</span>
+            @if (showNumbers()) {
+              <span class="todo-task__num">{{ i + 1 }}</span>
+            }
             <label class="todo-task__check-label">
               <input
                 type="checkbox"

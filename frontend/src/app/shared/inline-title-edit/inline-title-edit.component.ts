@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms';
         } @else {
           <span class="title-placeholder">{{ placeholder || 'Title' }}</span>
         }
-        <span class="title-edit-hint" aria-hidden="true">✏</span>
+        <span class="title-edit-hint" aria-hidden="true">✏️</span>
       </span>
     } @else {
       <span class="title-edit">
@@ -39,13 +39,11 @@ import { FormsModule } from '@angular/forms';
       cursor: pointer;
 
       .title-edit-hint {
-        font-size: 0.7em;
-        opacity: 0;
+        font-size: 0.9em;
+        opacity: var(--title-edit-hint-opacity, 0);
         margin-left: 0.3em;
         transition: opacity 0.15s;
       }
-
-      &:hover .title-edit-hint { opacity: 0.5; }
     }
 
     .title-edit {
@@ -70,16 +68,24 @@ import { FormsModule } from '@angular/forms';
     }
 
     .title-commit-btn {
-      background: none;
+      background: #22c55e;
       border: none;
+      color: #fff;
       cursor: pointer;
-      font-size: 0.9rem;
-      color: #2d1a10;
-      padding: 0.1rem 0.25rem;
-      opacity: 0.7;
-      transition: opacity 0.15s;
+      width: 1.25rem;
+      height: 1.25rem;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0;
+      flex-shrink: 0;
+      opacity: 0.9;
+      transition: opacity 0.15s, transform 0.15s;
 
-      &:hover { opacity: 1; }
+      &:hover { opacity: 1; transform: scale(1.1); }
     }
   `]
 })
