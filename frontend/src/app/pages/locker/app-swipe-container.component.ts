@@ -2,7 +2,9 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  EventEmitter,
   Input,
+  Output,
   QueryList,
   ViewChild,
   ViewChildren,
@@ -37,6 +39,7 @@ const APP_DEFS: { type: string; label: string; icon: string }[] = [
 })
 export class AppSwipeContainerComponent implements AfterViewInit {
   @Input() palette!: Palette;
+  @Output() helpRequest = new EventEmitter<string>();
 
   @ViewChild('scrollContainer') scrollContainer!: ElementRef<HTMLDivElement>;
   @ViewChildren('page') pages!: QueryList<ElementRef<HTMLDivElement>>;

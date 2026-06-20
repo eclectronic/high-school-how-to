@@ -11,6 +11,7 @@
       <!-- Mobile: swipeable app pages -->
       <app-swipe-container
         [palette]="activePalette()"
+        (helpRequest)="helpOverlaySlug.set($event)"
       />
     } @else {
       <!-- Desktop: pane layout -->
@@ -28,9 +29,18 @@
         (fontFamilyChange)="onFontFamilyChange($event)"
         (textSizeChange)="onTextSizeChange($event)"
         (appColorChange)="onAppColorChange($event)"
+        (helpRequest)="helpOverlaySlug.set($event)"
       />
     }
   </main>
+
+  @if (helpOverlaySlug()) {
+    <app-help-overlay
+      [slug]="helpOverlaySlug()!"
+      [fontFamily]="fontCss()"
+      (closed)="helpOverlaySlug.set(null)"
+    />
+  }
 
   @if (showAnimation()) {
     <app-locker-opening-animation

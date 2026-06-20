@@ -8,12 +8,13 @@ import { deriveThemeFromColor, getPaletteGradient, Palette } from './palettes';
 import { AppPaneLayoutComponent, FONT_OPTIONS } from './app-pane-layout.component';
 import { AppSwipeContainerComponent } from './app-swipe-container.component';
 import { LockerOpeningAnimationComponent } from './locker-opening-animation.component';
+import { HelpOverlayComponent } from './help-overlay.component';
 import { SiteNavComponent } from '../../shared/site-nav/site-nav.component';
 
 @Component({
   selector: 'app-locker-shell',
   standalone: true,
-  imports: [CommonModule, AppPaneLayoutComponent, AppSwipeContainerComponent, LockerOpeningAnimationComponent, SiteNavComponent],
+  imports: [CommonModule, AppPaneLayoutComponent, AppSwipeContainerComponent, LockerOpeningAnimationComponent, HelpOverlayComponent, SiteNavComponent],
   templateUrl: './locker-shell.component.html',
   styleUrl: './locker-shell.component.scss',
 })
@@ -46,6 +47,7 @@ export class LockerShellComponent implements OnInit, OnDestroy {
   protected isMobile = signal(false);
   protected focusedPaneIndex = signal(0);
   protected showAnimation = signal(true);
+  protected helpOverlaySlug = signal<string | null>(null);
 
   protected activePalette = computed<Palette>(() =>
     deriveThemeFromColor(this.preferences().lockerColor ?? this.DEFAULT_LOCKER_COLOR)
@@ -66,7 +68,13 @@ export class LockerShellComponent implements OnInit, OnDestroy {
     this.checkMobile();
     this.setupResizeObserver();
     this.preferencesApi.getPreferences().subscribe({
-      next: prefs => { this.preferences.set(prefs); this.lockerColorStore.set(prefs.lockerColor); },
+      next: prefs => {
+        this.preferences.set(prefs);
+        this.lockerColorStore.set(prefs.lockerColor);
+        if (!prefs.activeApps || prefs.activeApps.length === 0) {
+          this.helpOverlaySlug.set('help-apps');
+        }
+      },
     });
   }
 

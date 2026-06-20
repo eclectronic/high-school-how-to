@@ -192,7 +192,7 @@ export class ContentViewerComponent implements OnInit, OnDestroy {
     const current = this.card();
     if (!current || cards.length < 2) return null;
     const idx = cards.findIndex((c) => c.id === current.id);
-    return idx < cards.length - 1 ? cards[idx + 1] : null;
+    return idx !== -1 && idx < cards.length - 1 ? cards[idx + 1] : null;
   });
 
   constructor() {

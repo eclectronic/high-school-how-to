@@ -67,6 +67,7 @@ export class AppPaneLayoutComponent implements OnChanges {
   @Output() fontFamilyChange = new EventEmitter<string | null>();
   @Output() textSizeChange = new EventEmitter<LockerTextSize>();
   @Output() appColorChange = new EventEmitter<{ appType: string; color: string | null }>();
+  @Output() helpRequest = new EventEmitter<string>();
 
   protected readonly allAppDefs = ALL_APP_DEFS;
   protected readonly fontOptions = FONT_OPTIONS;

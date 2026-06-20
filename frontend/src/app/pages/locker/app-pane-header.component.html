@@ -8,28 +8,16 @@
   </div>
 
   <div class="pane-header__actions">
-    <!-- Info tooltip -->
-    <div class="pane-header__info-wrap">
+    @if (appDef.helpSlug) {
       <button
         type="button"
         class="pane-header__icon-btn"
         [style.color]="textColor"
         aria-label="App help"
-        (click)="toggleTooltip($event); $event.stopPropagation()"
+        title="Help"
+        (click)="onHelpClick(); $event.stopPropagation()"
       >ℹ</button>
-
-      @if (showTooltip() && tooltipPos()) {
-        <div
-          class="pane-header__tooltip"
-          [style.top]="tooltipPos()!.top"
-          [style.left]="tooltipPos()!.left"
-          (click)="$event.stopPropagation()"
-        >
-          <p>{{ appDef.helpText }}</p>
-          <button type="button" class="pane-header__tooltip-close" (click)="hideTooltip()">✕</button>
-        </div>
-      }
-    </div>
+    }
 
     <!-- Per-app color dot -->
     @if (appColor) {

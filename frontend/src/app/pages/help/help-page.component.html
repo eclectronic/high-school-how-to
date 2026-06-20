@@ -16,6 +16,7 @@
           <a
             class="postit"
             [routerLink]="['/content', article.slug]"
+            [queryParams]="{ tag: 'help' }"
             [style.background-color]="cardColor(i, article)"
             [style.transform]="'rotate(' + cardRotation(i) + 'deg)'"
           >

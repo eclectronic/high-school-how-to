@@ -1,5 +1,19 @@
 # Changelog
 
+## [10.0.3] — 2026-06-20
+
+### Locker — contextual help overlay, help article improvements, navigation fix
+
+**Help overlay.** Every locker tool now has a working ℹ button that opens a full help article in a centered overlay, replacing the previous janky tooltip. The overlay renders the real CMS article — including formatted text, headings, and images — and can be dismissed with ✕, Escape, or a backdrop click. A "Full article →" link navigates to the complete help page. The overlay is rendered at the locker shell level so it displays correctly in all cases including mobile, where it goes full-screen. On first visit to the locker with no apps open, the general app help article opens automatically as a welcome guide.
+
+**Font consistency.** The help overlay now uses the user's selected locker font, so the content reads in the same style as the rest of their locker.
+
+**Help content.** Each tool's help article (To-dos, Notes, Timer, Pins) now includes a keyboard shortcuts section covering all relevant key bindings for that tool. The Pins help article slug has been renamed from `help-shortcuts` to `help-pins` for clarity (Liquibase changeset 0084).
+
+**Help page navigation fix.** Clicking a help article from the help page and then using the next/prev arrows no longer shows how-to articles. Help cards are now scoped to the `help` tag for navigation, and a guard prevents a missing card from accidentally landing on the first card in the list.
+
+**To-do and notes sort bars.** The "Sort:" label is now rendered outside the pill — no longer inside with a mismatched opacity.
+
 ## [10.0.2] — 2026-06-20
 
 ### Locker — todo and notes UX polish

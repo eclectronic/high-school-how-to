@@ -107,6 +107,7 @@
               [canClose]="true"
               (close)="onClose(appType)"
               (colorPickerRequest)="showColorPickerForApp.set(appType)"
+              (helpRequest)="helpRequest.emit($event)"
             />
           </div>
 
@@ -166,4 +167,5 @@
       </div>
     </div>
   }
+
 </div>

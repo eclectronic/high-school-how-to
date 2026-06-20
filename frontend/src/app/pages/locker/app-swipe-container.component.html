@@ -7,6 +7,7 @@
         [paletteGradient]="getPaletteGradient(appType)"
         [paneIndex]="i"
         [showWindowButtons]="false"
+        (helpRequest)="helpRequest.emit($event)"
       />
       <div class="swipe-page__app">
         @switch (appType) {
