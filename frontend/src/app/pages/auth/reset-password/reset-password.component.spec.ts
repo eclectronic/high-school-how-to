@@ -36,19 +36,19 @@ describe('ResetPasswordComponent', () => {
   it('submits reset when token present', async () => {
     await setup('token123');
     authApi.resetPassword.and.returnValue(of(new HttpResponse<void>({ status: 200 })));
-    component['form'].setValue({ newPassword: 'longpasswordhere', confirmPassword: 'longpasswordhere' });
+    component['form'].setValue({ newPassword: 'longpassword123', confirmPassword: 'longpassword123' });
 
     TestBed.runInInjectionContext(() => component['submit']());
     expect(authApi.resetPassword).toHaveBeenCalledWith({
       token: 'token123',
-      newPassword: 'longpasswordhere'
+      newPassword: 'longpassword123'
     });
     expect(component['complete']()).toBeTrue();
   });
 
   it('shows error when token is missing', async () => {
     await setup(undefined);
-    component['form'].setValue({ newPassword: 'longpasswordhere', confirmPassword: 'longpasswordhere' });
+    component['form'].setValue({ newPassword: 'longpassword123', confirmPassword: 'longpassword123' });
 
     TestBed.runInInjectionContext(() => component['submit']());
     expect(component['error']()).toContain('Reset token missing');
