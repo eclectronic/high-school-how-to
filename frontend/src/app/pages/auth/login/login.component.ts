@@ -89,7 +89,7 @@ export class LoginComponent {
   }
 
   private returnUrl(): string {
-    return this.route.snapshot.queryParamMap.get('returnUrl') || '/locker';
+    return this.route.snapshot.queryParamMap.get('returnUrl') || '/';
   }
 
   private humanizeError(error: unknown): string {

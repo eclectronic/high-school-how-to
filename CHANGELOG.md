@@ -1,5 +1,11 @@
 # Changelog
 
+## [10.0.4] — 2026-06-21
+
+### Post-login redirect fix
+
+Logging in no longer automatically sends users to the locker. After a successful login, users are now returned to the home page unless they were explicitly redirected to login from a specific destination (e.g. clicking My Locker while signed out, which continues to land them in their locker as before).
+
 ## [10.0.3] — 2026-06-20
 
 ### Locker — contextual help overlay, help article improvements, navigation fix

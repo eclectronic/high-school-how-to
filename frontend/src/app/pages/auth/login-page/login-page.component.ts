@@ -144,7 +144,7 @@ export class LoginPageComponent {
   }
 
   private returnUrl(): string {
-    return this.route.snapshot.queryParamMap.get('returnUrl') || '/locker';
+    return this.route.snapshot.queryParamMap.get('returnUrl') || '/';
   }
 
   private humanizeLoginError(error: unknown): string {
