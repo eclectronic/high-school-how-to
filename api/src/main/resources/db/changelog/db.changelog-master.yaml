@@ -135,3 +135,5 @@ databaseChangeLog:
       file: db/changelog/v10-home-layout-0083.sql
   - include:
       file: db/changelog/v10-rename-help-shortcuts-0084.sql
+  - include:
+      file: db/changelog/v10-help-keyboard-content-0085.sql
